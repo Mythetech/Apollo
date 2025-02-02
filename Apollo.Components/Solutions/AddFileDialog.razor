@@ -1,0 +1,77 @@
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Add File
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-1" @ref="_form">
+            <MudTextField @ref="_nameField" @bind-Value="_name" Label="New Name" Error="@_error" ErrorText="@_errorMessage" Validation="Validate()"></MudTextField>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Inject]
+    SolutionsState State { get; set; }
+
+    private MudTextField<string> _nameField;
+
+    private string _name = "";
+
+    private bool _error = false;
+
+    private string _errorMessage = "";
+
+    private MudForm? _form;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _name = "Untitled.cs";
+            
+            StateHasChanged();
+
+            await Task.Delay(50);
+            
+            await _nameField.FocusAsync();
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_form.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
+        
+        MudDialog.Close(DialogResult.Ok(_name));
+    }
+
+    private bool Validate()
+    {
+        bool duplicate = State.Project.Items.Any(x => x.Name.Equals(_name));
+        _error = duplicate;
+        if (_error)
+        {
+            _errorMessage = "Duplicate Name";
+        }
+        else
+        {
+            _errorMessage = "";
+        }
+
+        return _error;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

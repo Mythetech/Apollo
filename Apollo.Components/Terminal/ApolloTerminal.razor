@@ -1,0 +1,132 @@
+@using System.Text.RegularExpressions
+@using Apollo.Components.Console
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Terminal.Models
+@using Microsoft.JSInterop
+@implements IDisposable
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<div class="terminal-container">
+    <div class="terminal-output">
+        @foreach (var (idx, entry) in CommandService.Entries.Index())
+        {
+            <div id="@($"terminal-line-{idx}")">
+                <EntryListItem Entry="entry" />
+            </div>
+        }
+    </div>
+    <div class="terminal-input">
+        <span class="prompt">$</span>
+        <input @bind-value="_currentCommand" 
+               @bind-value:event="oninput"
+               @onkeydown="HandleKeyDown"
+               type="text"
+               @ref="_outputElement"
+               class="command-input" />
+    </div>
+</div>
+
+@code {
+    private string _currentCommand = "";
+    private ElementReference _outputElement;
+    
+    protected override void OnInitialized()
+    {
+        CommandService.TerminalStateChanged += StateHasChanged;
+        CommandService.Terminal = this;
+        CommandService.AddEntry(StaticText.Apollo);
+        CommandService.AddEntry(StaticText.Welcome);
+        CommandService.AddEntry(string.Empty); 
+    }
+
+    [Inject] protected IJSRuntime JS { get; set; } = default!;
+
+    [Inject] protected IScrollManager ScrollManager { get; set; } = default!;
+
+    [Inject] protected IMessageBus MessageBus { get; set; } = default!;
+
+    [Inject] private TerminalState CommandService { get; set; } = default!;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                if (string.IsNullOrWhiteSpace(_currentCommand)) return;
+                
+                CommandService.AddEntry(_currentCommand, isCommand: true);
+                CommandService.AddToHistory(_currentCommand);
+                
+                await HandleCommand(_currentCommand);
+                
+                _currentCommand = "";
+                StateHasChanged();
+                await Task.Yield();
+                await ScrollManager.ScrollToListItemAsync("terminal-line-" + (CommandService.Entries.Count - 1));
+                break;
+
+            case "ArrowUp":
+                var prevCommand = CommandService.GetPreviousCommand();
+                if (prevCommand != null)
+                {
+                    _currentCommand = prevCommand;
+                    StateHasChanged();
+                }
+                break;
+
+            case "ArrowDown":
+                var nextCommand = CommandService.GetNextCommand();
+                if (nextCommand != null)
+                {
+                    _currentCommand = nextCommand;
+                    StateHasChanged();
+                }
+                break;
+        }
+    }
+
+    private async Task HandleCommand(string command)
+    {
+        try 
+        {
+            await CommandService.ExecuteAsync(command);
+        }
+        catch (CommandNotFoundException ex)
+        {
+            CommandService.AddEntry($"Command not found: {ex.Command}. Type 'help' for available commands.", TerminalEntryType.Error);
+        }
+        catch (Exception ex)
+        {
+            CommandService.AddEntry(ex.Message, TerminalEntryType.Error);
+        }
+    }
+
+    public void Clear() => CommandService.Clear();
+
+    public void AddLog(string message, ConsoleSeverity severity = ConsoleSeverity.Info)
+    {
+        var type = severity switch
+        {
+            ConsoleSeverity.Error => TerminalEntryType.Error,
+            ConsoleSeverity.Warning => TerminalEntryType.Warning,
+            ConsoleSeverity.Success => TerminalEntryType.Success,
+            _ => TerminalEntryType.Info
+        };
+        
+        CommandService.AddEntry(message, type);
+    }
+
+    public void Dispose()
+    {
+        CommandService.TerminalStateChanged -= StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _outputElement.FocusAsync();
+        }
+    }
+} 

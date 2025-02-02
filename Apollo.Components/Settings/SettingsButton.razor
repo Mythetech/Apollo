@@ -1,0 +1,18 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Settings.Commands
+@using Apollo.Components.Theme
+@inject IMessageBus Bus
+
+<MudTooltip Text="Settings">
+    <MudIconButton Icon="@ApolloIcons.Settings"
+                   Color="Color.Inherit"
+                   Edge="Edge.Start"
+                   OnClick="OpenSettingsDialog" />
+</MudTooltip>
+
+@code {
+    private async Task OpenSettingsDialog()
+    {
+        await Bus.PublishAsync(new OpenSettingsDialog());
+    }
+} 

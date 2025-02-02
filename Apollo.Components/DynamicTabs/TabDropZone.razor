@@ -1,0 +1,234 @@
+@using Apollo.Components.DynamicTabs.Commands
+@using Microsoft.JSInterop
+@using Apollo.Components.Editor
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+@inject IJSRuntime JS
+
+@if (Identifier == DropZones.Floating)
+{ 
+    foreach (var floatingItem in GetFloatingItems())
+    {
+        <div class="floating-window-container"
+             style="@GetFloatingPosition(floatingItem)">
+            <div class="floating-window mud-elevation-8 rounded glassmorphic" 
+                 id="@floatingItem.TabId"
+                 @onclick="@(() => BringToFront(floatingItem))">
+                <div class="floating-window-titlebar mud-dark pa-2 rounded-top d-flex align-center"
+                     @onmousedown="@(e => HandleTitlebarMouseDown(e, floatingItem))"
+                     @onmousemove="@(e => HandleTitlebarMouseMove(e, floatingItem))"
+                     @onmouseup="@(e => HandleTitlebarMouseUp(e, floatingItem))"
+                     style="cursor: move;">
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator" Class="mr-2" />
+                    <TabMenu Tab="@floatingItem" />
+                    <MudSpacer />
+                    <ApolloIconButton Icon="@ApolloIcons.Minimize" 
+                                      Size="Size.Small"
+                                      Tooltip="Minimize"
+                                  OnClick="@(() => HandleMinimize(floatingItem))" />
+                    <ApolloIconButton Icon="@ApolloIcons.Close" 
+                                      Size="Size.Small"
+                                      Tooltip="Close"
+                                  OnClick="@(() => HandleClose(floatingItem))" />
+                </div>
+                <div class="pa-2" style="height: calc(100% - 48px); overflow: auto;">
+                    <DynamicComponent Type="@floatingItem.ComponentType" Parameters="@GetParameters(floatingItem)" />
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <MudDropZone T="DynamicTabView" 
+                 Identifier="@Identifier"
+                 Class="@GetDropZoneClass()">
+        @if (!HasActiveItems)
+        {
+            <div class="empty-dropzone-indicator d-flex align-center justify-center">
+                <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                    <MudText Typo="Typo.body2">Drop items here</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        @GetDropZoneDescription()
+                    </MudText>
+                </MudStack>
+            </div>
+        }
+    </MudDropZone>
+    @if (ActiveItem != null)
+    {
+        <div class="mud-width-full overflow-y-auto p-2">
+            <DynamicComponent Type="@ActiveItem.ComponentType" Parameters="@GetParameters(ActiveItem)" />
+        </div>
+    }
+}
+
+@code {
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+    
+    private DynamicTabView? ActiveItem => Items?.FirstOrDefault(x => x.AreaIdentifier.Equals(Identifier) && x.IsActive);
+    private IEnumerable<DynamicTabView> GetFloatingItems() => 
+        Items?.Where(x => x.AreaIdentifier.Equals(DropZones.Floating)) ?? Enumerable.Empty<DynamicTabView>();
+
+    private bool _isDragging;
+    private Dictionary<Guid, (double Left, double Top)> _windowPositions = new();
+    private Dictionary<Guid, int> _windowZIndexes = new();
+    private int _topZIndex = 1200;
+    private double _dragStartX;
+    private double _dragStartY;
+    private DynamicTabView? _dragTarget;
+    private Dictionary<Guid, string> _minimizedFrom = new();
+
+    private bool HasActiveItems => Items?.Any(x => x.AreaIdentifier.Equals(Identifier)) ?? false;
+
+    private async Task UpdateTabAsync(ViewItemSelectedArgs args)
+    {
+        await Bus.PublishAsync(new UpdateTabLocation(args.TabId, args.Dropzone));
+    }
+
+    private string GetDropZoneClass()
+    {
+        var baseClass = "mud-width-full d-flex flex-row justify-center align-center gap-6 rounded bg-dark";
+        if (!HasActiveItems)
+        {
+            baseClass += " empty-dropzone";
+        }
+
+        return baseClass;
+    }
+
+    private string GetDropZoneIcon() => Identifier switch
+    {
+        DropZones.Left => Icons.Material.Filled.ChevronLeft,
+        DropZones.Right => Icons.Material.Filled.ChevronRight,
+        DropZones.Bottom => Icons.Material.Filled.ExpandMore,
+        DropZones.Docked => Icons.Material.Filled.Dock,
+        _ => Icons.Material.Filled.Add
+    };
+
+    private string GetDropZoneDescription() => Identifier switch
+    {
+        DropZones.Left => "Side panel",
+        DropZones.Right => "Side panel",
+        DropZones.Bottom => "Bottom panel",
+        DropZones.Docked => "Docked panel",
+        _ => "Drop zone"
+    };
+
+    private string GetFloatingPosition(DynamicTabView item)
+    {
+        if (!_windowPositions.ContainsKey(item.TabId))
+        {
+            var count = _windowPositions.Count;
+            _windowPositions[item.TabId] = (100 + (count * 20), 100 + (count * 20));
+        }
+        
+        var (left, top) = _windowPositions[item.TabId];
+        var zIndex = _windowZIndexes.GetValueOrDefault(item.TabId, 1200);
+        return $"left:{Math.Max(0, left)}px;top:{Math.Max(0, top)}px;z-index:{zIndex};";
+    }
+
+    private async Task HandleTitlebarMouseDown(MouseEventArgs e, DynamicTabView item)
+    {
+        _isDragging = true;
+        _dragTarget = item;
+        var (left, top) = _windowPositions[item.TabId];
+        _dragStartX = e.ClientX - left;
+        _dragStartY = e.ClientY - top;
+        BringToFront(item);
+    }
+
+    private void HandleTitlebarMouseMove(MouseEventArgs e, DynamicTabView item)
+    {
+        if (!_isDragging || _dragTarget?.TabId != item.TabId) return;
+        
+        _windowPositions[item.TabId] = (
+            e.ClientX - _dragStartX,
+            e.ClientY - _dragStartY
+        );
+        
+        StateHasChanged();
+    }
+
+    private void HandleTitlebarMouseUp(MouseEventArgs e, DynamicTabView item)
+    {
+        _isDragging = false;
+        _dragTarget = null;
+    }
+
+    private Task HandleDrop(MudItemDropInfo<DynamicTabView> dropInfo)
+    {
+        if (dropInfo.Item != null)
+        {
+            dropInfo.Item.AreaIdentifier = Identifier;
+            dropInfo.Item.IsActive = true;
+            
+            // Deactivate other tabs in this zone
+            foreach (var tab in Items.Where(t => 
+                t.AreaIdentifier == Identifier && 
+                t.TabId != dropInfo.Item.TabId))
+            {
+                tab.IsActive = false;
+            }
+            
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void HandleClose(DynamicTabView? tab)
+    {
+        if (tab == null) return;
+        tab.AreaIdentifier = DropZones.None;
+        _windowPositions.Remove(tab.TabId);
+        _windowZIndexes.Remove(tab.TabId);
+        StateHasChanged();
+    }
+
+    private async Task HandleMinimize(DynamicTabView tab)
+    {
+        _minimizedFrom[tab.TabId] = tab.AreaIdentifier;
+        await Bus.PublishAsync(new UpdateTabLocation(tab.TabId, DropZones.Docked));
+        tab.AreaIdentifier = DropZones.Docked;
+        StateHasChanged();
+    }
+
+    private Task HandleRestore(DynamicTabView tab)
+    {
+        if (_minimizedFrom.TryGetValue(tab.TabId, out var originalZone))
+        {
+            tab.AreaIdentifier = originalZone;
+            _minimizedFrom.Remove(tab.TabId);
+            StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    [Parameter] public string? Identifier { get; set; } = default!;
+
+    [Parameter] public bool AllowReorder { get; set; } = false;
+
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter] public List<DynamicTabView> Items { get; set; } = default!;
+
+    private Dictionary<string, object> GetParameters(DynamicTabView item)
+    {
+        item.Parameters ??= new();
+
+        item.Parameters.TryAdd("Instance", item);
+
+        return item.Parameters;
+    }
+
+    private void BringToFront(DynamicTabView item)
+    {
+        _topZIndex++;
+        _windowZIndexes[item.TabId] = _topZIndex;
+        StateHasChanged();
+    }
+}

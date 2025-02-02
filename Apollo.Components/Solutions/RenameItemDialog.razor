@@ -1,0 +1,79 @@
+<MudDialog Class="pa-1">
+    <TitleContent>
+        Rename Folder
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-4" @ref="_form">
+            <MudText>@Item.Name</MudText>
+            <MudTextField @ref="_renameField" @bind-Value="_rename" Label="New Name" Error="@_error" ErrorText="@_errorMessage" Validation="Validate()"></MudTextField>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Inject]
+    SolutionsState State { get; set; }
+    
+    [Parameter]
+    public ISolutionItem Item { get; set; }
+
+    private MudTextField<string> _renameField;
+
+    private string _rename = "";
+
+    private bool _error = false;
+
+    private string _errorMessage = "";
+
+    private MudForm? _form;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        { 
+            _rename = Item.Name;
+
+            await _renameField.FocusAsync();
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_form.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
+        
+        State.RenameItemAsync(Item, _rename);
+        
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private bool Validate()
+    {
+        bool duplicate = State.Project.Items.Any(x => x.Name.Equals(_rename));
+        _error = duplicate;
+        if (_error)
+        {
+            _errorMessage = "Duplicate Name";
+        }
+        else
+        {
+            _errorMessage = "";
+        }
+
+        return _error;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

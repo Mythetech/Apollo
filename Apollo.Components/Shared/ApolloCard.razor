@@ -1,0 +1,9 @@
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<MudCard Outlined="true" Style="@($"height:100%;{Style}")" Class="@($"flex-grow-1 {Class}")">
+@ChildContent
+</MudCard>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+}

@@ -1,0 +1,62 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using MudBlazor.Utilities
+@inject AppState State
+
+<div class="@($"mud-width-full mud-height-full pa-4 {(IsSelected ? "boxshadow-primary": "")}")" 
+     style="@GetCardStyle()">
+    <div class="d-flex align-center justify-space-between flex-wrap">
+        <MudText Class="ellipsis" Style="@($"color: {GetTextColor()}")">@Title</MudText>
+        <MudChip T="string" Color="@(IsSelected ? Color.Success : Color.Primary)" 
+                Icon="@(IsSelected ? Icons.Material.Filled.Check : "")">
+            <MudText>@ChipText</MudText>
+        </MudChip>
+    </div>
+    <MudText Typo="Typo.subtitle2" Style="@($"color: {GetTextColor()}")">@Description</MudText>
+    
+    <MudStack Row="true" Class="mt-4" Justify="Justify.SpaceBetween">
+        <ThemePreviewButton
+            Color="@(State.IsDarkMode ? CardTheme.PaletteDark.Primary : CardTheme.PaletteLight.Primary)"  
+            Icon="@ApolloIcons.Build" 
+            Tooltip="Primary"/>
+        
+        <ThemePreviewButton 
+            Color="@(State.IsDarkMode ? CardTheme.PaletteDark.Secondary : CardTheme.PaletteLight.Secondary)"   
+            Icon="@ApolloIcons.Folder" 
+            Tooltip="Secondary"/>
+        
+        <ThemePreviewButton 
+            Color="@(State.IsDarkMode ? CardTheme.PaletteDark.Tertiary : CardTheme.PaletteLight.Tertiary)"   
+            Icon="@ApolloIcons.Settings"
+            Tooltip="Tertiary"/>
+
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; }
+    [Parameter] public string Description { get; set; }
+    [Parameter] public string ChipText { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public string TextColor { get; set; } = "#fff";
+    [Parameter] public MudTheme CardTheme { get; set; }
+
+    private MudColor GetTextColor()
+    {
+        return State.IsDarkMode ? CardTheme.PaletteDark.TextPrimary : CardTheme.PaletteLight.TextPrimary;
+    }
+
+    private string GetCardStyle()
+    {
+        if (State.IsDarkMode)
+        {
+            var darkPalette = CardTheme.PaletteDark;
+            return $"background: {darkPalette.Surface}; min-height: 120px; border: 1px solid {darkPalette.Secondary}; border-radius: var(--mud-default-borderradius)";
+        }
+        else
+        {
+            var palette = CardTheme.PaletteLight;
+            return $"background: {palette.Surface}; min-height: 120px; border: 1px solid {palette.Secondary}; border-radius: var(--mud-default-borderradius)";
+        }
+    }
+} 

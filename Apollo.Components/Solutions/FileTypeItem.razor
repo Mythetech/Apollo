@@ -1,0 +1,31 @@
+
+    <MudLink Color="@(Active ? Color.Tertiary : Color.Inherit)" OnClick="@(FileClicked)" Underline="Underline.None" Class="@(Active ? "apollo-active-tab mud-width-full" : "mud-width-full")">
+        
+        <span>@File.Prefix</span>
+        @if (!string.IsNullOrWhiteSpace(File.Extension))
+        {
+            <span style="color:var(--mud-palette-success)">@File.Extension</span>
+        }
+    </MudLink>
+    
+@code {
+    [Parameter]
+    public SolutionFile File { get; set; }
+    
+    [Parameter]
+    public EventCallback<SolutionFile> OnClick { get; set; }
+    
+    [Parameter]
+    public bool Active { get; set; }
+
+    public async Task FileClicked()
+    {
+        if(OnClick.HasDelegate)
+            await OnClick.InvokeAsync(File);
+    }
+
+    public Task PromptFileRename()
+    {
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,374 @@
+@using System.Text.Json
+@using Apollo.Components.Analysis
+@using Apollo.Components.Solutions
+@using BlazorMonaco
+@using Microsoft.JSInterop
+@using OmniSharp.Models.Diagnostics
+@using OmniSharp.Models.v1.Completion
+@using CompletionContext = BlazorMonaco.Languages.CompletionContext
+@using CompletionItem = BlazorMonaco.Languages.CompletionItem
+@using CompletionItemKind = BlazorMonaco.Languages.CompletionItemKind
+@using CompletionList = BlazorMonaco.Languages.CompletionList
+@using CompletionTriggerKind = BlazorMonaco.Languages.CompletionTriggerKind
+@using Global = BlazorMonaco.Languages.Global
+@using Position = BlazorMonaco.Position
+@using Range = BlazorMonaco.Range
+@using KeyCode = BlazorMonaco.KeyCode
+@using Command = BlazorMonaco.Languages.Command
+@using InsertTextRule = BlazorMonaco.Languages
+@implements IDisposable
+
+<StandaloneCodeEditor @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
+
+@code {
+    [Inject] SolutionsState SolutionsState { get; set; } = default!;
+    [Inject] CodeAnalysisState CodeAnalysisState { get; set; } = default!;
+    [Inject] CodeAnalysisConsoleService Console { get; set; } = default!;
+    [Inject] IJSRuntime JsRuntime { get; set; } = default!;
+
+    private List<TextModel> _files = [];
+
+    private bool _editorReady = false;
+
+    private StandaloneEditorConstructionOptions DefaultOptions(StandaloneCodeEditor editor) =>
+        new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "csharp",
+            Value = SolutionsState.ActiveFile.Data,
+        };
+
+    private StandaloneCodeEditor? _editor;
+
+    public async Task SetEditorFile(string uri)
+    {
+        /*
+        var file = _files.FirstOrDefault(x => x.Uri.Equals(uri));
+        if (file == null)
+            return;
+
+        await _editor.SetModel(file);
+
+        var s = await file.GetValue(default, true);
+        Console.WriteLine(s);
+  */
+        await _editor.SetValue(((SolutionFile)SolutionsState.Project.Items.First(x => x is SolutionFile && x.Uri.Equals(uri))).Data);
+    }
+
+    public async Task<string> GetCodeAsync()
+    {
+        if (!_editorReady)
+            return "";
+
+        return await _editor.GetValue();
+    }
+
+    public async Task SetCodeAsync(string code)
+    {
+        if (!_editorReady)
+            return;
+
+        await _editor.SetValue(code);
+    }
+
+    protected override void OnInitialized()
+    {
+        SolutionsState.BuildRequested += HandleBuildRequested;
+        SolutionsState.ActiveFileChanged += async (file) => await HandleFileChanged(file);
+        SolutionsState.ActiveFileChangeRequested += async (file) => await HandleBeforeFileChanged(file);
+        SolutionsState.SaveProjectRequested += SaveActiveFileAsync;
+        SolutionsState.SolutionFilesChanged += async () => await HandleIfProjectClosedAsync();
+    }
+
+    protected async Task HandleIfProjectClosedAsync()
+    {
+        if (!SolutionsState.HasActiveSolution || SolutionsState.Project == null)
+            await _editor?.SetValue("");
+    }
+
+    protected async Task HandleBeforeFileChanged(SolutionFile file)
+    {
+        await SaveActiveFile(file);
+    }
+
+    protected async Task SaveActiveFile(SolutionFile file)
+    {
+        if (_editor == null && file == null)
+            return;
+
+        var data = await _editor.GetValue();
+        file.Data = data;
+    }
+
+    protected async Task HandleFileChanged(SolutionFile file)
+    {
+        try
+        {
+            if (_editor == null)
+                return;
+
+            _diagnosticDebounceTimer?.Dispose();
+            
+            // Clear markers before switching
+            await BlazorMonaco.Editor.Global.SetModelMarkers(
+                JsRuntime, 
+                await _editor.GetModel(), 
+                "owner", 
+                []
+            );
+
+            if (file != null)
+            {
+                await SetCodeAsync(file.Data);
+                // Force immediate diagnostics for file switch
+                //await GetDiagnosticsAsync(new ModelContentChangedEvent());
+                
+                // Set up debounce for subsequent changes
+                _diagnosticDebounceTimer = new Timer(async _ =>
+                {
+                    await InvokeAsync(async () => 
+                    {
+                        if (_editor != null)
+                        {
+                            var currentContent = await _editor.GetValue();
+                            if (currentContent != file.Data)
+                            {
+                                await GetDiagnosticsAsync(new ModelContentChangedEvent());
+                            }
+                        }
+                    });
+                }, null, debounceMilliseconds, Timeout.Infinite);
+            }
+            else
+            {
+                await SetCodeAsync("");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.AddError($"Error switching files: {ex.Message}");
+        }
+    }
+
+    private async Task HandleBuildRequested()
+    {
+        await SaveActiveFileAsync();
+
+    }
+
+    private async Task SaveActiveFileAsync()
+    {
+        if (_editor == null)
+            return;
+        try
+        {
+            string value = await _editor.GetValue();
+            SolutionsState.UpdateActiveFile(value);
+        }
+        catch
+        {
+            System.Console.WriteLine("Error update active file");
+        }
+    }
+
+    protected async Task Initialize()
+    {
+        _editorReady = true;
+        await _editor.AddCommand((int)KeyMod.CtrlCmd | (int)KeyCode.KeyS, async (args) =>
+        {
+            await SaveActiveFileAsync();
+        });
+
+        await BlazorMonaco.Languages.Global.RegisterCompletionItemProvider(JsRuntime, "csharp", async (modelUri, position, context) =>
+        {
+            try
+            {
+                Console.AddTrace("Completion item request");
+                var code = await _editor.GetValue();
+                
+                var completionRequest = new CompletionRequest
+                {
+                    FileName = SolutionsState.ActiveFile.Uri,
+                    Line = position.LineNumber - 1,
+                    Column = position.Column - 1,
+                    CompletionTrigger = (OmniSharp.Models.v1.Completion.CompletionTriggerKind)context.TriggerKind,
+                    TriggerCharacter = context.TriggerCharacter?[0]
+                };
+
+                Console.AddTrace($"Requesting completion with trigger '{completionRequest.TriggerCharacter}' at {completionRequest.Line}:{completionRequest.Column}");
+
+                var completions = await CodeAnalysisState.GetCompletionAsync(code, JsonSerializer.Serialize(completionRequest));
+                
+                if (completions?.Items == null || !completions.Items.Any())
+                {
+                    Console.AddTrace("No completions returned");
+                    return new CompletionList();
+                }
+
+                Console.AddTrace($"Got {completions.Items.Count} completion items");
+
+                return new CompletionList
+                {
+                    Suggestions = completions.Items
+                        .Where(item => item != null)
+                        .Select(item => new CompletionItem
+                        {
+                            LabelAsString = item.Label,
+                            Kind = MapCompletionKind(item.Kind),
+                            Detail = item.Detail,
+                            DocumentationAsObject = new MarkdownString { Value = item.Documentation },
+                            InsertText = item.TextEdit?.NewText,
+                            FilterText = item.FilterText,
+                            SortText = item.SortText,
+                            Preselect = item.Preselect,
+                            CommitCharacters = item.CommitCharacters?.Select(c => c.ToString()).ToList(),
+                            RangeAsObject = item.TextEdit != null ? new Range(
+                                item.TextEdit.StartLine + 1,
+                                item.TextEdit.StartColumn,
+                                item.TextEdit.EndLine + 1,
+                                item.TextEdit.EndColumn
+                            ) : null,
+                            InsertTextRules = CompletionItemInsertTextRule.InsertAsSnippet
+                        }).ToList(),
+                    Incomplete = completions.IsIncomplete
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.AddError($"Completion error: {ex.Message}");
+                Console.AddTrace(ex.StackTrace ?? string.Empty);
+                return new CompletionList();
+            }
+        });
+    }
+
+    private CompletionItemKind MapCompletionKind(OmniSharp.Models.v1.Completion.CompletionItemKind kind)
+    {
+        return kind switch
+        {
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Class => CompletionItemKind.Class,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Method => CompletionItemKind.Method,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Field => CompletionItemKind.Field,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Property => CompletionItemKind.Property,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Variable => CompletionItemKind.Variable,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Interface => CompletionItemKind.Interface,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Enum => CompletionItemKind.Enum,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.EnumMember => CompletionItemKind.EnumMember,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Keyword => CompletionItemKind.Keyword,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Snippet => CompletionItemKind.Snippet,
+            OmniSharp.Models.v1.Completion.CompletionItemKind.Text => CompletionItemKind.Text,
+            _ => CompletionItemKind.Text
+        };
+    }
+
+    private Timer? _diagnosticDebounceTimer;
+    private const int debounceMilliseconds = 500;
+
+    private async Task OnModelDidChangeHandler(ModelContentChangedEvent evt)
+    {
+        if (_diagnosticDebounceTimer != null)
+        {
+            await _diagnosticDebounceTimer.DisposeAsync();
+        }
+
+        _diagnosticDebounceTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () => 
+            {
+                await GetDiagnosticsAsync(evt);
+            });
+        }, null, debounceMilliseconds, Timeout.Infinite);
+    }
+
+    private async Task GetDiagnosticsAsync(ModelContentChangedEvent evt)
+    {
+        if (!SolutionsState.HasActiveSolution) return;
+        
+        try 
+        {
+            var currentContent = await _editor.GetValue();
+            var solution = SolutionsState.Project.ToContract();
+            
+            var activeFile = solution.Items.FirstOrDefault(i => i.Path == SolutionsState.ActiveFile.Uri);
+            if (activeFile != null)
+            {
+                activeFile.Content = currentContent;
+            }
+
+            Console.AddTrace($"Sending solution with files:");
+            foreach (var item in solution.Items)
+            {
+                Console.AddTrace($"{item.Path}: {item.Content}");
+            }
+
+            var diagnostics = await CodeAnalysisState.GetDiagnosticsAsync(
+                solution,
+                SolutionsState.ActiveFile.Uri
+            );
+            
+            // Always clear existing markers first
+            await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", []);
+
+            // Only set new markers if we have diagnostics
+            if (diagnostics?.Any() == true)
+            {
+                await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", 
+                    diagnostics.Select(x =>
+                    {
+                        if (x.FilePath != SolutionsState.ActiveFile.Uri)
+                        {
+                            return null;
+                        }
+                        
+                        var mark = new MarkerData()
+                        {
+                            StartLineNumber = x.StartPosition,
+                            StartColumn = x.StartColumn,
+                            EndLineNumber = x.EndPosition,
+                            EndColumn = x.EndColumn,
+                            Message = x.Message,
+                            Severity = (MarkerSeverity)x.Severity
+                        };
+                        string markerMsg = $"{x.Message}, line {x.StartPosition} ({x.StartColumn}-{x.EndColumn})";
+                    switch ((MarkerSeverity)x.Severity)
+                    {
+                        case MarkerSeverity.Hint:
+                            Console.AddTrace("[Trace] " + markerMsg);
+                            break;
+                        case MarkerSeverity.Info:
+                            Console.AddInfo("[Info] " + markerMsg);
+                            break;
+                        case MarkerSeverity.Warning:
+                            Console.AddWarning("[Warning] " + markerMsg);
+                            break;
+                        case MarkerSeverity.Error:
+                            Console.AddError("[Error] " + markerMsg);
+                            break;
+                        default:
+                            Console.AddInfo("[Info] " + markerMsg);
+                            break;
+                    }
+                    
+                    return mark;
+                    })
+                    .Where(m => m != null).ToList());
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.AddError($"Diagnostics error: {ex.Message}");
+            Console.AddTrace(ex.StackTrace ?? "No stack trace");
+        }
+    }
+    
+    public void Dispose()
+    {
+        _editor?.Dispose();
+        _diagnosticDebounceTimer?.Dispose();
+        SolutionsState.BuildRequested -= HandleBuildRequested;
+        SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
+        SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);
+        SolutionsState.SaveProjectRequested -= SaveActiveFileAsync;
+    }
+
+}

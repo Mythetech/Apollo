@@ -1,0 +1,49 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.DynamicTabs.Commands
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+
+<MudMenu Label="View" Dense="true" ListClass="d-flex flex-column" ActivationEvent="MouseEvent.MouseOver">
+    @foreach (var tab in Tabs)
+    {
+        <MudMenu Label="@tab.Name" Dense="true" Style="max-width: 200px;">
+            <TabViewSelectionMenuItems
+                Tab="@tab"
+                LeftViewMenuSelected="LeftViewMenuSelected"
+                RightViewMenuSelected="RightViewMenuSelected"
+                BottomViewMenuSelected="BottomViewMenuSelected"
+                HideViewMenuSelected="HideViewMenuSelected"
+                DockedBottomViewMenuSelected="DockedBottomViewMenuSelected"
+                FloatingViewMenuSelected="FloatingViewMenuSelected"
+                />
+        </MudMenu>
+    }
+    <MudDivider />
+    <MudMenuItem Disabled="FloatingTabCount < 1" OnClick="@(() => Bus.PublishAsync(new CloseAllFloatingWindows()))">
+        <MudStack Row Spacing="1" Wrap="Wrap.NoWrap" AlignItems="AlignItems.Center">
+            Close Floating
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">(@FloatingTabCount)</MudText>
+            <MudSpacer/>
+            <MudIcon Icon="@ApolloIcons.Close" Size="Size.Small" Color="Color.Error"/>
+        </MudStack>
+    </MudMenuItem>
+</MudMenu>
+@code {
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+    
+    [Parameter] public List<DynamicTabView> Tabs { get; set; }
+    
+    [Parameter] public EventCallback<ViewItemSelectedArgs> LeftViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> RightViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> BottomViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> HideViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> DockedBottomViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> FloatingViewMenuSelected { get; set; }
+
+    private bool IsHidden (DynamicTabView tab) => tab.AreaIdentifier.Equals(DropZones.None);
+
+    private IEnumerable<DynamicTabView> FloatingTabs() => Tabs?.Where(x => x.AreaIdentifier.Equals(DropZones.Floating)) ?? [];
+
+    private int FloatingTabCount => FloatingTabs()?.Count() ?? 0;
+}

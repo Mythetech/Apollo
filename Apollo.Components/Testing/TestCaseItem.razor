@@ -1,0 +1,42 @@
+@using Apollo.Components.Shared
+<MudStack Row="true" AlignItems="AlignItems.Center">
+    @if (Test.Result == TestResult.NotRun)
+    {
+        <MudIcon Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.TwoTone.QuestionMark" /> 
+    }
+    else if (Test.Result == TestResult.Passed)
+    {
+        <MudIcon Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.TwoTone.CheckCircle" /> 
+    }
+    else if (Test.Result == TestResult.Failed)
+    {
+        <MudTooltip Text="@Test.ErrorMessage">
+            <MudIcon Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.TwoTone.Error" />
+        </MudTooltip>
+    }
+    else
+    {
+        <MudTooltip Text="Skipped">
+            <MudIcon Size="Size.Small" Color="Color.Inherit" Icon="@Icons.Material.TwoTone.IndeterminateCheckBox" />
+        </MudTooltip>
+    }
+    
+    <MudText>@Test.Name</MudText>
+    
+    @if (Test.ElapsedMilliseconds != null)
+    {
+        <MudChip T="string" Color="Color.Primary" Variant="Variant.Text">@Test.ElapsedMilliseconds</MudChip> 
+    }
+    <MudSpacer />
+    <MudTooltip Text="Run Test">
+        <MudIconButton Icon="@Icons.Material.TwoTone.PlayArrow" OnClick="RunTestClicked" Disabled="@Test.Skip"   />
+    </MudTooltip>
+</MudStack>
+
+@code {
+    [Parameter]
+    public TestCase Test { get; set; }
+    
+    [Parameter]
+    public EventCallback RunTestClicked { get; set; }
+}

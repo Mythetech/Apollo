@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apollo Editor</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="_content/Apollo.Components/app.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Gotu&display=swap" rel="stylesheet">
+
+    <link href="Apollo.Client.styles.css" rel="stylesheet" /> 
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+</head>
+
+<body>
+    <div id="app">
+        <div id="ui" class="loading-container">
+            <div class="brand">
+                <img src="./apollo-logo.png" alt="Apollo" class="logo" />
+                <span class="brand-text">Apollo</span>
+            </div>
+            <div class="sun">
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_fire"><div class="sun_fire_inner"></div></div>
+                <div class="sun_border"></div>
+            </div>
+            <div class="loading-ray"></div>
+            <div class="cover"></div>
+            <div class="loading-overlay">
+                <div class="eclipse-progress">
+                    <div class="progress-arc"></div>
+                </div>
+                <div class="loading-progress-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_content/BlazorMonaco/jsInterop.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.min.js"></script>
+    <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/Apollo.Components/app.js" type="module"></script>
+    <script src="_content/MudBlazor/Mudblazor.min.js"></script>
+    <script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
+</body>
+
+</html>

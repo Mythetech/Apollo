@@ -1,0 +1,179 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using MouseEvent = MudBlazor.MouseEvent
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Theme
+
+    @if (string.IsNullOrWhiteSpace(ParentName))
+    {
+        @*
+        var folder = Items.OfType<Folder>().FirstOrDefault(x => x.Uri.EndsWith(State.Project.Name));
+        if (folder != null)
+        {
+            <MudTreeViewItem T="ISolutionItem" Text="@folder?.Name"  Expanded="true" OnClick="() => { }" OnDoubleClick="() => { }">
+                <BodyContent>
+                    <MudStack AlignItems="AlignItems.Center" Row="true" Class="mud-width-full">
+                        <MudText>@folder.Name</MudText>
+                        <MudSpacer/>
+                        <ApolloIconButton Tooltip="Add File" Icon="@Icons.Material.TwoTone.Add" OnClick="@(async () => await PromptAddFile(folder))"/>
+                        <ApolloIconButton Tooltip="Add Folder" Icon="@Icons.Material.TwoTone.CreateNewFolder" OnClick="@(() => AddFolder(folder))"/>
+                        <ApolloIconButton Tooltip="Rename" Icon="@Icons.Material.TwoTone.Edit" OnClick="@(async () => await PromptRenameFolder(folder))"/>
+                    </MudStack>
+                </BodyContent>
+                <ChildContent>
+                    <SolutionTree Items="@folder.Items" ParentName="@folder.Name" OnFileSelected="OnFileSelected" OnRenameFile="OnRenameFile" OnMoveFile="OnMoveFile"/>
+                </ChildContent>
+            </MudTreeViewItem>
+            
+        }
+        *@
+    }
+    else
+    {
+        @if (Items != null)
+        {
+            foreach (var item in Items.Where(x => x.Name != ParentName))
+            {
+                if (item is Folder folder)
+                {
+                    <MudTreeViewItem T="ISolutionItem" Text="@folder.Name" Expanded="true" OnClick="() => {}" OnDoubleClick="() => {}">
+                        <BodyContent>
+                            <MudStack AlignItems="AlignItems.Center" Row="true" Class="mud-width-full">
+                                <MudText>@folder.Name</MudText>
+                                <MudSpacer />
+                                <ApolloIconButton Tooltip="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@(async () => await PromptAddFile(folder))"/>
+                                <ApolloIconButton Tooltip="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@(() => AddFolder(folder))"/>
+                                <ApolloIconButton Tooltip="Rename" Icon="@Icons.Material.TwoTone.Edit" OnClick="@(async () => await PromptRenameFolder(folder))" />
+                                <ApolloIconButton Tooltip="Delete" Icon="@ApolloIcons.Delete" OnClick="@(async () => await DeleteFolder(folder))" />
+                            </MudStack>
+                        </BodyContent>
+                        <ChildContent>
+                            <SolutionTree Items="@(folder.Items)" ParentName="@folder.Name" OnFileSelected="OnFileSelected" OnRenameFile="OnRenameFile" OnMoveFile="OnMoveFile"/>    
+                        </ChildContent>
+                        </MudTreeViewItem>
+                }
+                else if (item is SolutionFile file)
+                {
+                    <MudMenu ActivationEvent="@MouseEvent.RightClick" Dense="true" Class="d-flex" ListClass="mw-160">
+                        <ActivatorContent>
+                            <FileTypeItem File="@((SolutionFile)item)" OnClick="async () => await OnFileSelected.InvokeAsync(file)"/>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <FileMenuItem Name="Open" Icon="@Icons.Material.TwoTone.FileOpen" OnClick="async () => await OnFileSelected.InvokeAsync(file)"/>
+                            <FileMenuItem Name="Rename" Icon="@Icons.Material.TwoTone.Edit" OnClick="async () => await OnRenameFile.InvokeAsync(file)"/>
+                            <FileMenuItem Name="Move" Icon="@ApolloIcons.Move" OnClick="@(async () => await MoveFile(file))" />
+                            <FileMenuItem Name="Delete" Icon="@ApolloIcons.Delete" OnClick="@(async () => await DeleteFile(file))" />
+                        </ChildContent>
+                    </MudMenu>
+                }
+            }
+        }
+    }
+
+@code {
+    [Parameter] public List<ISolutionItem> Items { get; set; } = new();
+    [Parameter] public string? ParentName { get; set; } = default;
+    [Parameter] public EventCallback<SolutionFile> OnFileSelected { get; set; }
+    [Parameter] public EventCallback<SolutionFile> OnRenameFile { get; set; }
+    [Parameter] public EventCallback<SolutionFile> OnMoveFile { get; set; }
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    
+    [Inject]
+    protected SolutionsState State { get; set; }
+    
+    [Inject]
+    protected IDialogService DialogService { get; set; }
+
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+
+    protected async Task PromptAddFile(Folder folder)
+    {
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<AddFileDialog>($"Add File", options);
+        var dialogResult = await dialog.Result;
+        
+        if(dialogResult == null || dialogResult.Canceled || dialogResult.Data == null)
+            return;
+
+        string fileName = (string)dialogResult.Data;
+        State.AddFile(fileName, folder);
+    }
+
+    protected async Task PromptRenameFolder(Folder item)
+    {
+        var parameters = new DialogParameters()
+        {
+            {"Item", item}
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<RenameItemDialog>($"Rename {item.Name}", parameters, options);
+        var dialogResult = await dialog.Result;
+        
+        if(dialogResult == null || dialogResult.Canceled || dialogResult.Data == null)
+            return;
+
+        bool result = (bool)dialogResult.Data;
+    }
+
+    protected void AddFolder(Folder folder)
+    {
+        State.AddFolder("New Folder", folder);
+    }
+
+    private async Task DeleteFile(SolutionFile file)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete File",
+            $"Are you sure you want to delete {file.Name}?",
+            yesText: "Delete",
+            cancelText: "Cancel"
+        );
+        
+        if (result == true)
+        {
+            await Bus.PublishAsync(new DeleteFile(file));
+        }
+    }
+    
+    private async Task DeleteFolder(Folder folder)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Folder",
+            $"Are you sure you want to delete folder {folder.Name} and all its contents?",
+            yesText: "Delete",
+            cancelText: "Cancel"
+        );
+        
+        if (result == true)
+        {
+            await Bus.PublishAsync(new DeleteFolder(folder));
+        }
+    }
+
+    private async Task MoveFile(SolutionFile file)
+    {
+        var parameters = new DialogParameters
+        {
+            ["File"] = file
+        };
+        
+        var dialog = await DialogService.ShowAsync<MoveFileDialog>("Move File", parameters);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled && result.Data is Folder destinationFolder)
+        {
+            await Bus.PublishAsync(new MoveFile(file, destinationFolder));
+        }
+    }
+}

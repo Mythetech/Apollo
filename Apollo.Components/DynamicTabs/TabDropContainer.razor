@@ -1,0 +1,92 @@
+@using Microsoft.AspNetCore.Components
+@using MouseEvent = MudBlazor.MouseEvent
+@using Apollo.Components.Editor
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<MudPaper Class="@Class" Outlined="false" Style="@($"background:var(--mud-palette-surface);height:100%")">
+    <MudDropContainer Class="mud-height-full" Style="@Style" @ref="_dropContainer" T="DynamicTabView"
+                      Items="@Items"
+                      ItemsSelector="@ItemsSelector"
+                      ItemsClassSelector="@((view, s) => "p-2")"
+                      ItemDropped="HandleDropEvent"
+                      ApplyDropClassesOnDragStarted="true"
+                      CanDropClass="boxshadow-primary">
+        <ChildContent>
+            @ChildContent
+        </ChildContent>
+        <ItemRenderer>
+            <TabMenu
+                Tab="@context"
+                />
+        </ItemRenderer>
+    </MudDropContainer>
+</MudPaper>
+
+@code {
+    [Parameter] public string Identifier { get; set; } = $"tabdropzone-{Guid.NewGuid().ToString()[0..7]}";
+
+    [Parameter] public List<DynamicTabView> Items { get; set; } = default!;
+
+    [Parameter] public Func<DynamicTabView, string, bool> ItemsSelector { get; set; } = default!;
+
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter] public RenderFragment<DynamicTabView> ItemRenderer { get; set; } = default!;
+
+    [Parameter] public EventCallback DropEventHandled { get; set; } = default!;
+
+    private MudDropContainer<DynamicTabView>? _dropContainer = default!;
+
+    protected async Task HandleDropEvent(MudItemDropInfo<DynamicTabView> args)
+    {
+        var previousZone = args.Item.AreaIdentifier;
+
+        args.Item.AreaIdentifier = args.DropzoneIdentifier;
+        args.Item.AreaIndex = args.IndexInZone;
+
+        ActivateInternal(args.Item, true, previousZone);
+
+        if (DropEventHandled.HasDelegate)
+            await DropEventHandled.InvokeAsync();
+
+        StateHasChanged();
+    }
+
+    public void Refresh()
+    {
+        _dropContainer?.Refresh();
+    }
+
+    protected void ActivateInternal(DynamicTabView item, bool forceActive = false, string previousZone = "")
+    {
+        if (item.IsActive && !forceActive)
+        {
+            item.IsActive = false;
+            return;
+        }
+
+        foreach (var tab in Items.Where(x => x.AreaIdentifier.Equals(item.AreaIdentifier) && x.IsActive))
+        {
+            tab.IsActive = false;
+        }
+
+        item.IsActive = true;
+
+        if (!string.IsNullOrWhiteSpace(previousZone) && !Items.Any(x => x.AreaIdentifier.Equals(previousZone) && x.IsActive))
+        {
+            var tabToActivate = Items.Where(x => x.AreaIdentifier.Equals(previousZone)).OrderByDescending(x => x.AreaIndex).FirstOrDefault();
+            if (tabToActivate != null)
+                tabToActivate.IsActive = true;
+        }
+
+        _dropContainer?.Refresh();
+        StateHasChanged();
+    }
+
+    protected void HandleItemActivated(DynamicTabView item)
+    {
+        ActivateInternal(item, true);
+    }
+}

@@ -1,0 +1,21 @@
+@using Apollo.Components.Shared
+@implements IDisposable
+
+<ApolloIconButton Color="Color.Tertiary"
+                  Size="Size.Small"
+                  OnClick="@(TabViewState.DockOpen ? TabViewState.CloseDock : TabViewState.OpenDock)"
+                  Tooltip="@(TabViewState.DockOpen ? "Collapse Dock" : "Expand Dock")"
+                  Icon="@(TabViewState.DockOpen ? Icons.Material.Filled.KeyboardArrowDown : Icons.Material.Filled.KeyboardArrowUp)"/>
+@code {
+    [Inject] protected TabViewState TabViewState { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        TabViewState.TabViewStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        TabViewState.TabViewStateChanged -= StateHasChanged;
+    }
+}

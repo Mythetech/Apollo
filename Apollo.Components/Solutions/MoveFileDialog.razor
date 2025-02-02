@@ -1,0 +1,55 @@
+@using Apollo.Components.Shared
+@inject SolutionsState State
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudText>Current Location: @GetRelativePath(File.Uri)</MudText>
+            <MudSelect T="Folder" Label="Destination Folder" @bind-Value="_selectedFolder">
+                @foreach (var folder in _availableFolders)
+                {
+                    <MudSelectItem Value="@folder">@GetRelativePath(folder.Uri)</MudSelectItem>
+                }
+            </MudSelect>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton OnClick="Submit" Text="Move" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public SolutionFile File { get; set; }
+    
+    private Folder _selectedFolder;
+    private List<Folder> _availableFolders = new();
+    
+    protected override void OnInitialized()
+    {
+        // Get root folder and all other folders except the current one
+        var rootFolder = State.Project.GetRootFolder();
+        var folders = State.Project.GetFolders()
+            .Where(f => !File.Uri.StartsWith(f.Uri) && f != rootFolder)
+            .ToList();
+            
+        _availableFolders = new List<Folder> { rootFolder };
+        _availableFolders.AddRange(folders);
+            
+        _selectedFolder = _availableFolders.FirstOrDefault();
+    }
+    
+    private string GetRelativePath(string uri)
+    {
+        return uri.Replace($"virtual/{State.Project.Name}/", "").TrimStart('/');
+    }
+    
+    private void Submit()
+    {
+        if (_selectedFolder == null) return;
+        MudDialog.Close(DialogResult.Ok(_selectedFolder));
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 

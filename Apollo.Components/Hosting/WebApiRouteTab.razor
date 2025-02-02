@@ -1,0 +1,141 @@
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.DynamicTabs.Commands
+@using Apollo.Components.Hosting.Commands
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Shared
+@using Apollo.Components.Shared.ApolloNotificationBar
+@using Apollo.Components.Solutions
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Theme
+@using Apollo.Contracts.Solutions
+@using Apollo.Components.Hosting
+@using Apollo.Contracts.Hosting
+@implements IDisposable
+<div class="d-flex pa-2 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
+    @if (Service.Hosting)
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Class="text-nowrap">Web Host Running</MudText>
+            <MudProgressLinear Class="mx-4 flex-shrink-1" Indeterminate="true" Color="Color.Success" Rounded="true" />
+            <ApolloIconButton Color="Color.Error" Icon="@ApolloIcons.Stop" Tooltip="Stop" OnClick="@(async() => await Bus.PublishAsync(new Shutdown()))" />
+            <MudToggleGroup Value="@_routeParamDisplay"  
+                            ValueChanged="@((s) => { _routeParamDisplay = s; StateHasChanged(); })"
+                            Style="min-width: 15%;height: 60%;"
+                            T="string" Outlined="@true" Size="Size.Small" Color="Color.Tertiary">
+                <MudToggleItem Value="@("key")">
+                    <MudTooltip Text="Show Variables">
+                        <MudIcon Icon="@ApolloIcons.Key"/>
+                    </MudTooltip>
+                </MudToggleItem>
+                <MudToggleItem Value="@("values")">
+                    <MudTooltip Text="Show Values">
+                        <MudIcon Icon="@ApolloIcons.Values"/>
+                    </MudTooltip>
+                </MudToggleItem>
+            </MudToggleGroup>
+        </MudStack> 
+        <MudStack Class="mx-2" Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudTooltip Text="Web Host Uptime">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@Service.Uptime.ToString((@"hh\:mm\:ss"))</MudText>
+            </MudTooltip>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">@(Service.Routes?.Count ?? 0) Routes</MudText>
+        </MudStack>
+
+        <MudDivider DividerType="DividerType.Middle" Class="my-2" />
+        
+        @if (Service.Routes?.Count() < 1)
+        {
+            <MudText>No Routes</MudText>
+        }
+        else
+        {
+            @foreach (var route in Service?.Routes ?? [])
+            {
+                <ApiRouteListItem ShowValues="ShowValues" Model="@route" OnRouteSegmentChanged="@((segment) => UpdateRoute(route, segment))" OnExecuteRouteClicked="@(async (model) => await ExecuteRoute(model.GetValuedRoute()))" />
+            }
+        }
+    }
+    else
+    {
+        <MudContainer Class="d-flex pa-4 flex-column my-4">
+            <MudStack Spacing="6" Class="mud-height-full" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                <MudText Typo="Typo.h6">Web host not running</MudText>
+                <MudText>Run a WebApi project to discover routes and test your api in an emulated browser sandbox</MudText>
+                <MudButton 
+                    StartIcon="@ApolloIcons.Run" 
+                    Color="Color.Success" 
+                    Variant="Variant.Filled" 
+                    Style="width: 50%;"
+                    Disabled="@(State.Project?.ProjectType != ProjectType.WebApi)"
+                    OnClick="@(async () => await Bus.PublishAsync(new RunSolution()))">
+                    Run
+                </MudButton>
+                <MudButton 
+                    StartIcon="@ApolloIcons.Solution" 
+                    Variant="Variant.Outlined" 
+                    Style="width: 50%"
+                    OnClick="@(async () => await Bus.PublishAsync(new PromptCreateNewSolution(ProjectType.WebApi)))">
+                    Create Web API
+                </MudButton>
+            </MudStack>
+        </MudContainer>
+    }
+</div>
+@code {
+
+    [Inject] protected IHostingService Service { get; set; } = default!;
+    
+    [Inject] protected IJsApiService JsApiService { get; set; } = default!;
+
+    [Inject] protected ISnackbar Snackbar { get; set; } = default!;
+
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+
+    [Inject] protected SolutionsState State { get; set; } = default!;
+
+    private string _routeParamDisplay = "key";
+
+    private bool ShowValues => _routeParamDisplay.Equals("values");
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Service.OnHostingStateChanged += StateHasChangedAsync;
+        Service.OnRoutesChanged += StateHasChangedAsync;
+        Service.OnUptimeChanged += TimerStateHasChanged;
+    }
+
+    protected async Task StateHasChangedAsync() => await Task.FromResult(StateHasChanged);
+
+    protected void TimerStateHasChanged(TimeSpan ts) => StateHasChanged();
+    
+    public void Dispose()
+    {
+        Service.OnHostingStateChanged -= StateHasChangedAsync;
+        Service.OnRoutesChanged -= StateHasChangedAsync;
+        Service.OnUptimeChanged -= TimerStateHasChanged;
+    }
+    
+    private async Task ExecuteRoute(RouteInfo route)
+    {
+        try
+        {
+            await Service.SendAsync(route.Method, route.Pattern);
+            await Bus.PublishAsync(new FocusTab("Web Host")); 
+        }
+        catch (Exception ex)
+        {
+            Snackbar.AddApolloNotification(ex.Message, Severity.Error);
+        }
+    }
+
+    private void UpdateRoute(RouteViewModel route, RouteSegment segment)
+    {
+        StateHasChanged();
+    }
+
+    public override string Name { get; set; } = "Web Api";
+    public override Type ComponentType { get; set; } = typeof(WebApiRouteTab);
+    public override string DefaultArea  => DropZones.Right;
+}

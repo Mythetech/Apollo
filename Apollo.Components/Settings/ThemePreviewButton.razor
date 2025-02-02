@@ -1,0 +1,16 @@
+@using MudBlazor.Utilities
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<MudTooltip Text="@Tooltip">
+    <MudIconButton Color="@MudBlazor.Color.Inherit" Icon="@Icon" Class="@Class" Style="@($"color:{Color.Value}!important;")" Disabled="@Disabled" />
+</MudTooltip>
+
+@code {
+    [Parameter] public string Tooltip { get; set; } = "";
+
+    [Parameter] public string Icon { get; set; } = "";
+
+    [Parameter] public MudColor Color { get; set; } = Colors.Shades.Black;
+    
+    [Parameter] public bool Disabled { get; set; } = false;
+}

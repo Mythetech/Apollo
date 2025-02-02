@@ -1,0 +1,92 @@
+@using Apollo.Components.Shared
+@using Apollo.Components.Shared.ApolloNotificationBar
+@using Apollo.Components.Solutions.Services
+@inject ISnackbar Snackbar
+@inject Base64Service Base64Service
+@inject SolutionsState State
+
+<MudDialog Class="pa-4 glassmorphic" Style="min-width: 40vw;min-height: 33vh;">
+    <DialogContent>
+        <MudStack>
+            <MudText>Enter Solution Link or Base64 String</MudText>
+            <MudTextField @bind-Value="_input" 
+                         Label="Solution Data"
+                         Placeholder="Paste solution link or base64 string here"
+                         Disabled="@_loading"
+                         Validation="@(new Func<string, IEnumerable<string>>(ValidateInput))" />
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+                <MudText>Loading solution...</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_loading">Cancel</MudButton>
+        <PrimaryActionButton OnClick="Submit" Text="Open" Disabled="@_loading" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    private string _input = "";
+    private bool _loading;
+    
+    private IEnumerable<string> ValidateInput(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            yield return "Input is required";
+        
+        // If it's a URL, extract the base64 part
+        var base64 = input;
+        if (input.Contains("?solution="))
+        {
+            base64 = input.Split("?solution=").Last();
+        }
+        
+        var solution = Base64Service.DecodeSolution(base64);
+        if (solution == null)
+            yield return "Invalid solution data";
+    }
+    
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_input))
+            return;
+            
+        try 
+        {
+            _loading = true;
+            StateHasChanged();
+
+            var base64 = _input;
+            if (_input.Contains("?solution="))
+            {
+                base64 = _input.Split("?solution=").Last();
+            }
+
+            var solution = Base64Service.DecodeSolution(base64);
+            if (solution == null)
+            {
+                Snackbar.AddApolloNotification("Invalid solution data", Severity.Error);
+                return;
+            }
+
+            await State.LoadSolutionAsync(solution);
+            Snackbar.AddApolloNotification($"Opened solution: {solution.Name}", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.AddApolloNotification($"Failed to open solution: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 

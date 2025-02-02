@@ -1,0 +1,29 @@
+@using Environment = System.Environment
+@using Apollo.Components.Shared.Loaders
+<MudStack Class="flex-grow-1" Spacing="1">
+    @foreach (string message in Message.Split(Environment.NewLine))
+    {
+        <MudText>@message</MudText>
+    }
+    <MudSpacer/>
+    <ProgressCountdown Duration="Snackbar.Configuration.VisibleStateDuration" Color="@GetColor(Severity)"/>
+</MudStack>
+@code {
+    [Inject] protected ISnackbar Snackbar { get; set; } = default!;
+    
+    [Parameter] public string Message { get; set; } = "";
+
+    [Parameter] public Severity Severity { get; set; } = Severity.Info;
+
+    private Color GetColor(Severity severity)
+    {
+        return severity switch
+        {
+            Severity.Success => Color.Success,
+            Severity.Error => Color.Error,
+            Severity.Warning => Color.Warning,
+            Severity.Info => Color.Info,
+            _ => Color.Primary
+        };
+    }
+}

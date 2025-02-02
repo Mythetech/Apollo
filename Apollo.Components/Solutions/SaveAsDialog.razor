@@ -1,0 +1,43 @@
+@using Apollo.Components.Solutions
+@using Apollo.Components.Shared
+@inject SolutionsState State
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_newName" Label="New Solution Name" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton OnClick="Submit" Text="Save" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter] public string CurrentName { get; set; }
+    
+    private string _newName;
+    private bool _error;
+    
+    protected override void OnInitialized()
+    {
+        _newName = CurrentName;
+    }
+    
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+            return;
+            
+        if (State.Solutions.Any(s => s.Name.Equals(_newName, StringComparison.OrdinalIgnoreCase)))
+        {
+            _error = true;
+            return;
+        }
+        
+        MudDialog.Close(DialogResult.Ok(_newName));
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 

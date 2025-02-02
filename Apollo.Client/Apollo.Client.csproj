@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+        <AssemblyVersion>0.0.1.0</AssemblyVersion>
+        <Company>Mythetech</Company>
+        <Product>Apollo Code Editor</Product>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="KristofferStrube.Blazor.WebWorkers" Version="0.1.0-alpha.7" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.1" PrivateAssets="all" />
+        <PackageReference Include="System.Reflection.MetadataLoadContext" Version="9.0.0" />
+        <PackageReference Include="System.Security.Permissions" Version="6.0.0" />
+        <PackageReference Include="xunit" Version="2.9.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </ServiceWorker>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Apollo.Analysis.Worker\Apollo.Analysis.Worker.csproj" />
+      <ProjectReference Include="..\Apollo.Analysis\Apollo.Analysis.csproj" />
+      <ProjectReference Include="..\Apollo.Compilation.Worker\Apollo.Compilation.Worker.csproj" />
+      <ProjectReference Include="..\Apollo.Compilation\Apollo.Compilation.csproj" />
+      <ProjectReference Include="..\Apollo.Components\Apollo.Components.csproj" />
+      <ProjectReference Include="..\Apollo.Hosting.Worker\Apollo.Hosting.Worker.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="Pages\Home.razor" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.CSharp.resources.dll" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.resources.dll" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.VisualBasic.resources.dll" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.VisualBasic.Workspaces.resources.dll" />
+      <_ContentIncludedByDefault Remove="wwwroot\assemblies\tr\Microsoft.CodeAnalysis.Workspaces.resources.dll" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="wwwroot/*" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="wwwroot\icon-192.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\icon-512.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\index.html">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\manifest.webmanifest">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\service-worker.published.js">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\css\app.css">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\assemblies\dotnet.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\assemblies\System.Console.dll">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Update="wwwroot\apollo-logo.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+    
+    <PropertyGroup>
+        <WasmEnableWebcil>true</WasmEnableWebcil>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <CompressionEnabled>false</CompressionEnabled>
+    </PropertyGroup>
+    
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+</Project>

@@ -1,0 +1,36 @@
+@using Apollo.Components.Terminal.Models
+
+<div class="@GetEntryClass()">
+    @if (Entry.IsCommand)
+    {
+        <span class="prompt">$ </span>
+    }
+    @Entry.Content
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public TerminalEntry Entry { get; set; } = null!;
+
+    private string GetEntryClass()
+    {
+        var classes = new List<string> { "terminal-entry" };
+        
+        var typeClass = Entry.Type switch
+        {
+            TerminalEntryType.Error => "terminal-error",
+            TerminalEntryType.Success => "terminal-success",
+            TerminalEntryType.Info => "terminal-info",
+            TerminalEntryType.Warning => "terminal-warning",
+            _ => string.Empty
+        };
+        
+        if (!string.IsNullOrEmpty(typeClass))
+            classes.Add(typeClass);
+            
+        if (Entry.CustomClass != null)
+            classes.Add(Entry.CustomClass);
+            
+        return string.Join(" ", classes);
+    }
+} 

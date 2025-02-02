@@ -1,0 +1,73 @@
+@inject TestConsoleOutputService ConsoleOutputService
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.Console
+@using Apollo.Components.DynamicTabs
+@implements IDisposable
+<div class="d-flex pa-1 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
+    <MudStack Row="true" Class="flex-grow-1">
+      
+        <MudSpacer/>
+        <MudTooltip Text="Clear Output">
+            <MudIconButton Icon="@Icons.Material.TwoTone.Delete" OnClick="ClearLogs"/>
+        </MudTooltip>
+    </MudStack>
+
+<MudList Dense="true" T="Apollo.Components.Console.ConsoleOutputViewModel" Class="mud-height-full overflow-y-auto pa-4">
+        @foreach (var log in logs)
+        {
+            <MudText Color="@GetSeverityColor(log.Severity)" Class="@(log.Severity is ConsoleSeverity.Debug ? "mud-text-secondary" : "")">
+                [@log.Timestamp.ToString("HH:mm:ss")] @log.Message
+            </MudText>
+        }
+    </MudList>
+</div>
+@code {
+    private List<ConsoleOutputViewModel> logs = new();
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to the service
+        ConsoleOutputService.OnConsoleOutputReceived += HandleConsoleOutputReceived;
+        ConsoleOutputService.OnConsoleCleared += HandleConsoleCleared;
+
+        // Initialize the service
+        logs = ConsoleOutputService.Logs.ToList();
+    }
+
+    private void HandleConsoleOutputReceived(ConsoleOutputViewModel log)
+    {
+        logs.Add(log);
+        StateHasChanged();
+    }
+
+    private void HandleConsoleCleared()
+    {
+        logs.Clear();
+        StateHasChanged();
+    }
+
+    private MudBlazor.Color GetSeverityColor(ConsoleSeverity severity) =>
+        severity switch
+        {
+            ConsoleSeverity.Debug => MudBlazor.Color.Inherit,
+            ConsoleSeverity.Info => MudBlazor.Color.Info,
+            ConsoleSeverity.Warning => MudBlazor.Color.Warning,
+            ConsoleSeverity.Error => MudBlazor.Color.Error,
+            _ => MudBlazor.Color.Default
+        };
+
+    private async Task ClearLogs()
+    {
+        ConsoleOutputService.ClearLogs();
+    }
+
+    public void Dispose()
+    {
+        ConsoleOutputService.OnConsoleOutputReceived -= HandleConsoleOutputReceived;
+        ConsoleOutputService.OnConsoleCleared -= HandleConsoleCleared;
+    }
+
+    public override string Name { get; set; } = "Test Output";
+    public override Type ComponentType { get; set; } = typeof(TestConsoleOutputTab);
+    public override string DefaultArea  => DropZones.Bottom;
+}

@@ -1,0 +1,12 @@
+@inherits Apollo.Components.Infrastructure.MessageBus.ComponentConsumer<TestCommand>
+
+<p>@Text</p>
+
+@code {
+    private string? Text { get; set; }
+    
+    protected override Task Consume(TestCommand message, CancellationToken cancellationToken)
+    {
+        throw new Exception("Test exception");
+    }
+} 

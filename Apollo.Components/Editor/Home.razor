@@ -1,0 +1,294 @@
+@page "/"
+@using Apollo.Components.Code
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Hosting
+@using Apollo.Components.Settings
+@using Color = MudBlazor.Color
+@using Orientation = Microsoft.FluentUI.AspNetCore.Components.Orientation
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions
+@using IDialogService = MudBlazor.IDialogService
+@using Apollo.Components.Theme
+@using Apollo.Components.Infrastructure.Keyboard
+@using KeyCode = Microsoft.FluentUI.AspNetCore.Components.KeyCode
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Terminal
+@using Apollo.Components.DynamicTabs.Commands
+@implements IDisposable
+
+<MudAppBar Elevation="1" Style="@Settings.CurrentTheme.AppBarStyle">
+    <ApolloMenu />
+    <FileMenu/>
+    <EditMenu/>
+    <ViewMenu
+        Tabs="TabViewState.TabList"
+        LeftViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+        RightViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+        BottomViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+        HideViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+        DockedBottomViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+        FloatingViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
+    />
+    <MudSpacer/>
+    @if (!CompilerState.Initialized)
+    {
+        <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="1">
+            <MudText>Initializing background services...</MudText>
+            <MudProgressLinear Rounded="true" Style="width:12dvw" Color="Color.Success" Indeterminate="true"/>
+        </MudStack>
+    }
+    <MudSpacer/>
+    <ApolloIconButton Icon="@ApolloIcons.Run" Color="Color.Success" OnClick="RunSolutionAsync" Tooltip="Run (Ctrl + Enter)" Disabled="@(!CompilerState.CompilerReady)"/>
+    <ApolloIconButton Icon="@ApolloIcons.Build" Tooltip="Build (Ctrl + B)" OnClick="BuildSolutionAsync" Disabled="@(!CompilerState.CompilerReady)"/>
+    <ApolloIconButton Id="apollo-stop-btn" Icon="@ApolloIcons.Stop" Color="Color.Error" Tooltip="Stop (Ctrl + C)" OnClick="StopAsync" Disabled="@(HostingService.State != HostingStates.Hosting)"/>
+    <ApolloIconButton Icon="@ApolloIcons.Settings" Tooltip="Settings" OnClick="OpenSettingsDialog"/>
+</MudAppBar>
+
+<MudContainer Gutters="false" MaxWidth="MaxWidth.ExtraExtraLarge" Style="height:calc(100dvh - var(--mud-appbar-height))">
+    <TabDropContainer @ref="_tabContainer" Items="@TabViewState.TabList" ItemsSelector="(view, s) => view.AreaIdentifier.Equals(s)">
+        <MudContainer Class="position-fixed" Style="@GetFloatingContainerStyle()">
+            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Floating"/>
+        </MudContainer>
+        <FluentMultiSplitter OnResize="@OnResizeHandler" Height="@($"calc(100% - {DockSize})")" Width="100%" Orientation="Orientation.Vertical">
+            <FluentMultiSplitterPane Size="100%" Min="30%">
+                <FluentMultiSplitter OnResize="@OnResizeHandler" Height="100%" Width="100%">
+                    <FluentMultiSplitterPane Size="20%" Min="50px" Max="70%">
+                        <div class="pa-1 mud-height-full">
+                            <ApolloCard>
+                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Left"/>
+                            </ApolloCard>
+                        </div>
+                    </FluentMultiSplitterPane>
+                    <FluentMultiSplitterPane Size="50%">
+                        <FluentMultiSplitter OnResize="@OnResizeHandler" OnExpand="@OnCollapseExpand" OnCollapse="@OnCollapseExpand" Orientation="Orientation.Vertical">
+                            <FluentMultiSplitterPane Collapsible="true">
+                                <div class="pa-1 mud-height-full">
+                                    <ApolloCard Class="pa-1">
+                                        <FluentOverflow Style="width: 100%;min-height:32px" Class="pa-1">
+                                            <ChildContent>
+                                                @foreach (var file in SolutionsState?.Project?.GetFiles() ?? [])
+                                                {
+                                                    <FluentOverflowItem>
+                                                        <FileTypeItem File="@file" OnClick="FileLoaded" Active="@file.Uri.Equals(SolutionsState?.ActiveFile?.Uri)"/>
+                                                    </FluentOverflowItem>
+                                                }
+                                            </ChildContent>
+                                        </FluentOverflow>
+
+                                        <ApolloCodeEditor @ref="@_editor"/>
+                                    </ApolloCard>
+                                </div>
+                            </FluentMultiSplitterPane>
+                            <FluentMultiSplitterPane Collapsible="true">
+                                <div class="pa-1 mud-height-full">
+                                    <ApolloCard>
+                                        <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Bottom"/>
+                                    </ApolloCard>
+                                </div>
+                            </FluentMultiSplitterPane>
+                        </FluentMultiSplitter>
+                    </FluentMultiSplitterPane>
+                    <FluentMultiSplitterPane Size="30%">
+                        <div class="pa-1 mud-height-full">
+                            <ApolloCard>
+                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Right"/>
+                            </ApolloCard>
+                        </div>
+                    </FluentMultiSplitterPane>
+                </FluentMultiSplitter>
+            </FluentMultiSplitterPane>
+        </FluentMultiSplitter>
+        <MudDrawer @bind-Open="@TabViewState.DockOpen"
+                   Anchor="Anchor.Bottom"
+                   Class="mud-width-full"
+                   Elevation="1"
+                   Variant="@DrawerVariant.Mini"
+                   Height="@DockSize">
+            <MudStack Row AlignItems="AlignItems.Center" Class="mud-height-full" Spacing="0">
+                <ToggleDockButton />
+                <MudStack Class="mud-width-full mud-height-full">
+                    <div class="pa-1 mud-height-full">
+                        <ApolloCard>
+                            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Docked"/>
+                        </ApolloCard>
+                    </div>
+                </MudStack>
+                <ToggleDockButton />
+            </MudStack>
+        </MudDrawer>
+    </TabDropContainer>
+</MudContainer>
+
+@code {
+    [Inject] protected IDialogService DialogService { get; set; } = default!;
+    
+    [Inject] public TabViewState TabViewState { get; set; } = default!;
+
+    [Inject] public AppState State { get; set; } = default!;
+
+    [Inject] public SettingsState Settings { get; set; } = default!;
+
+    [Inject] public SolutionsState SolutionsState { get; set; } = default!;
+
+    [Inject] public CompilerState CompilerState { get; set; } = default!;
+
+    [Inject] public IHostingService HostingService { get; set; } = default!;
+
+    [Inject] public IKeyCodeService KeyCodeService { get; set; } = default!;
+
+    [Inject] public KeyboardService KeyboardService { get; set; } = default!;
+
+    [Inject] public NavigationManager _navigationManager { get; set; } = default!;
+
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+
+    private string DockSize => TabViewState.DockOpen ? "300px" : "36px";
+
+    private TabDropContainer _tabContainer = default!;
+
+    private ApolloCodeEditor? _editor = default;
+
+    
+    void OnResizeHandler(FluentMultiSplitterResizeEventArgs e)
+    {
+    }
+
+    void OnCollapseExpand(FluentMultiSplitterEventArgs e)
+    {
+        bool willCollapse = !e.Pane.Collapsed;
+    }
+
+    protected async Task FileLoaded(SolutionFile file)
+    {
+        SolutionsState.SwitchFile(file);
+        await _editor.SetCodeAsync(file.Data);
+    }
+
+    protected async Task RunSolutionAsync()
+    {
+        await SolutionsState.BuildAndRunAsync();
+    }
+
+    protected async Task BuildSolutionAsync()
+    {
+        await SolutionsState.BuildAsync();
+    }
+
+    protected async Task StopAsync()
+    {
+        await HostingService.StopAsync();
+        StateHasChanged();
+    }
+
+    private async Task OpenSettingsDialog()
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            NoHeader = true,
+            BackgroundClass = "bg-transparent",
+            MaxWidth = MaxWidth.Medium
+        };
+        
+        await DialogService.ShowAsync<SettingsDialog>("Settings", options);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var uri = new Uri(_navigationManager.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var solutionBase64 = query["solution"];
+
+            if (!string.IsNullOrEmpty(solutionBase64))
+            {
+                await Bus.PublishAsync(new PromptOpenBase64Solution(solutionBase64));
+            }
+            else
+            {
+                await SolutionsState.LoadSolutionsFromStorageAsync();
+            }
+
+            await Task.Delay(150);
+            var file = SolutionsState.ActiveFile;
+            await _editor?.SetCodeAsync(file.Data);
+
+            var id = KeyCodeService.RegisterListener(HandleKeyDown);
+            KeyboardService.RegisterShortcuts();
+        }
+    }
+
+    private async Task HandleKeyDown(FluentKeyCodeEventArgs args)
+    {
+        if (args is { CtrlKey: true, Key: KeyCode.KeyC })
+        {
+            await StopAsync();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        TabViewState.TabViewStateChanged += RefreshTabs;
+        SolutionsState.SolutionFilesChanged += StateHasChanged;
+        SolutionsState.ProjectChanged += HandleProjectChange;
+        SolutionsState.ActiveFileChanged += (file) => StateHasChanged();
+        CompilerState.OnCompilerStatusChanged += StateHasChangedAsync;
+        Settings.SettingsChanged += StateHasChanged;
+        HostingService.OnHostingStateChanged += StateHasChangedAsync;
+        base.OnInitialized();
+    }
+
+    public void Dispose()
+    {
+        TabViewState.TabViewStateChanged -= RefreshTabs;
+        SolutionsState.SolutionFilesChanged -= StateHasChanged;
+        SolutionsState.ProjectChanged -= HandleProjectChange;
+        SolutionsState.ActiveFileChanged -= (file) => StateHasChanged();
+        CompilerState.OnCompilerStatusChanged -= StateHasChangedAsync;
+        Settings.SettingsChanged -= StateHasChanged;
+        HostingService.OnHostingStateChanged -= StateHasChangedAsync;
+    }
+
+    protected async void HandleProjectChange()
+    {
+        await Task.Yield();
+        await SolutionsState.BuildAsync();
+    }
+
+    protected void OverflowRaised(IEnumerable<FluentOverflowItem> item)
+    {
+        Console.WriteLine(string.Join(", ", item.Select(x => x.Text)));
+    }
+
+    protected Task StateHasChangedAsync()
+    {
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    protected void RefreshTabs()
+    {
+        _tabContainer.Refresh();
+        StateHasChanged();
+    }
+
+    protected void HandleViewMenuSelection(string location, Guid tabId)
+    {
+        var tab = TabViewState.Tabs.FirstOrDefault(t => t.TabId == tabId);
+        if (tab != null)
+        {
+            TabViewState.UpdateTabLocation(tab, location);
+            _tabContainer.Refresh();
+        }
+
+        StateHasChanged();
+    }
+
+    protected string GetFloatingContainerStyle()
+    {
+        return "position:fixed;top:0;left:0;right:0;bottom:0;z-index:1100;pointer-events:none;";
+    }
+}

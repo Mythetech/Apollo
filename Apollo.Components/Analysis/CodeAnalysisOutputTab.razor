@@ -1,0 +1,107 @@
+@inject Apollo.Components.Analysis.CodeAnalysisConsoleService ConsoleOutputService
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Solutions
+@using global::Apollo.Components.Console
+@using Environment = System.Environment
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@implements IDisposable
+<div class="d-flex pa-1 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
+    <MudStack Row="true" Class="flex-grow-1" Spacing="1">
+        <MudChipSet @bind-SelectedValues="@ConsoleOutputService.Selected" SelectionMode="SelectionMode.MultiSelection" CheckMark="false">
+            <MudChip Variant="Variant.Filled" Color="Color.Dark" Value="@("Debug")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Trace")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Info")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Warning" Value="@("Warning")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Error" Value="@("Error")" />
+        </MudChipSet>
+
+        <MudSpacer/>
+        <MudTooltip Text="Copy Output">
+            <MudIconButton Icon="@Icons.Material.TwoTone.ContentCopy" OnClick="ConsoleOutputService.CopyLogsAsync"/>
+        </MudTooltip>
+        <MudTooltip Text="Clear Output">
+            <MudIconButton Icon="@Icons.Material.TwoTone.Delete" OnClick="ClearLogs"/>
+        </MudTooltip>
+    </MudStack>
+
+    <MudList Dense="true" T="ConsoleOutputViewModel" Class="mud-height-full overflow-y-auto pa-4">
+        @foreach (var log in Filter(ConsoleOutputService.Logs))
+        {
+            <MudText id="@log.HtmlId" Color="@ConsoleOutputService.GetSeverityColor(log.Severity)" Class="@(log.Severity is ConsoleSeverity.Debug ? "mud-text-secondary" : "")" Style="@(log.Severity is ConsoleSeverity.Trace ? "color:var(--mud-palette-info-lighten)" : "")">
+                [@log.Timestamp.ToString("HH:mm:ss")] @log.Message
+            </MudText>
+        }
+    </MudList>
+</div>
+@code {
+    [Inject] protected CodeAnalysisState State { get; set; } = default!;
+
+    [Inject] protected IJsApiService JsApiService { get; set; } = default!;
+
+    [Inject] protected IScrollManager ScrollManager { get; set; } = default!;
+
+    
+    private List<ConsoleOutputViewModel> Filter(IEnumerable<ConsoleOutputViewModel> logs)
+    {
+        // Parse the selected severities from the _selected collection
+        var selectedSeverities = ConsoleOutputService.Selected
+            .Select(s => Enum.TryParse<ConsoleSeverity>(s, out var severity) ? severity : (ConsoleSeverity?)null)
+            .Where(severity => severity.HasValue)
+            .Select(severity => severity.Value)
+            .ToHashSet();
+
+        // Filter the logs based on the selected severities
+        return logs
+            .Where(log => selectedSeverities.Contains(log.Severity))
+            .ToList();
+    }
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to the service
+        ConsoleOutputService.OnConsoleOutputReceived += HandleConsoleOutputReceived;
+        ConsoleOutputService.OnConsoleCleared += HandleConsoleCleared;
+        State.OnCodeAnalysisStateChanged += StateHasChangedAsync;
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+            ConsoleOutputService.ScrollManager = ScrollManager;
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected async Task StateHasChangedAsync() => await Task.FromResult(StateHasChanged);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await State.StartAsync();
+    }
+
+    private void HandleConsoleOutputReceived(ConsoleOutputViewModel log)
+    {
+        StateHasChanged();
+    }
+
+    private void HandleConsoleCleared()
+    {
+        StateHasChanged();
+    }
+
+    private async Task ClearLogs()
+    {
+        ConsoleOutputService.ClearConsole();
+    }
+
+    public void Dispose()
+    {
+        ConsoleOutputService.OnConsoleOutputReceived -= HandleConsoleOutputReceived;
+        ConsoleOutputService.OnConsoleCleared -= HandleConsoleCleared;
+        State.OnCodeAnalysisStateChanged -= StateHasChangedAsync;
+    }
+
+    public override string Name { get; set; } = "Code Analysis Output";
+    public override Type ComponentType { get; set; } = typeof(CodeAnalysisOutputTab);
+    public override string DefaultArea  => DropZones.Right;
+}

@@ -1,0 +1,54 @@
+@using Apollo.Components.Settings
+@using Apollo.Contracts.Hosting
+@implements IDisposable
+
+<MudChip Color="Color.Inherit" Size="Size.Small" T="string" Style="@GetColorStyle()">@GetDisplayText()</MudChip>
+@code {
+    [Inject] protected SettingsState Settings { get; set; } = default!;
+    
+    [Parameter]
+    public HttpMethodType HttpMethod { get; set; }
+
+    protected string GetDisplayText()
+    {
+        return HttpMethod switch
+        {
+            HttpMethodType.Get => "Get",
+            HttpMethodType.Post => "Post",
+            HttpMethodType.Put => "Put",
+            HttpMethodType.Delete => "Delete",
+            HttpMethodType.Patch => "Patch",
+            HttpMethodType.Head => "Head",
+            HttpMethodType.Options => "Options",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+    protected string GetColorStyle()
+    {
+        string color = HttpMethod switch
+        {
+            HttpMethodType.Get => Settings.IsDarkMode ? Colors.Green.Accent3 : Colors.Green.Default,
+            HttpMethodType.Post => Colors.Blue.Default,
+            HttpMethodType.Put => Colors.Yellow.Default,
+            HttpMethodType.Delete => Colors.Red.Default,
+            HttpMethodType.Patch => Colors.Orange.Default,
+            HttpMethodType.Head => Colors.Gray.Default,
+            HttpMethodType.Options => Colors.BlueGray.Default,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+        return $"min-width:32px;color:{color};background-color:{color}33";
+    }
+
+    protected override void OnInitialized()
+    {
+        Settings.SettingsChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Settings.SettingsChanged -= StateHasChanged;
+    }
+
+}

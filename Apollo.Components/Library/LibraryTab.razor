@@ -1,0 +1,68 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions
+@using Apollo.Components.Theme
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+<div class="pa-2 mud-height-full">
+    <MudStack Row="true" Class="mud-width-full" AlignItems="AlignItems.Center" Justify="Justify.SpaceEvenly">
+        <MudButton Ripple="false"  Style="padding-left: 4px!important;" StartIcon="@ApolloIcons.Solution" Variant="Variant.Text" Color="@(_selectedTab.Equals("Templates") ? Color.Tertiary : Color.Default)"
+                   Class="@(_selectedTab.Equals("Templates") ? "tertiary-underline" : "")"
+                   OnClick="@(() => {_selectedTab = "Templates";})">
+            Templates
+        </MudButton>
+        <MudButton Ripple="false" StartIcon="@ApolloIcons.File" Variant="Variant.Text" Color="@(_selectedTab.Equals("Snippets") ? Color.Tertiary : Color.Default)"
+                   Class="@(_selectedTab.Equals("Snippets") ? "tertiary-underline" : "")"
+                   OnClick="@(() => {_selectedTab = "Snippets";})">
+            Snippets
+        </MudButton>
+    </MudStack>
+    @if(_selectedTab.Equals("Snippets"))
+            @foreach (var file in State.Snippets)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="pa-2">
+                    <MudTooltip>
+                        <TooltipContent>
+                            <ApolloCard Style="justify-content: space-between">
+                                <pre style="text-align:left;" class="pa-2">
+                        @CodeFormatter.Format(file.Data)
+                    </pre>
+                            </ApolloCard>
+                        </TooltipContent>
+                        <ChildContent>
+                            <MudText>@file.Name</MudText>
+                        </ChildContent>
+                    </MudTooltip>
+                    <MudSpacer/>
+                    <ApolloIconButton Icon="@ApolloIcons.Copy" Tooltip="Copy to Clipboard" OnClick="@(() => CopyAsync(file))"/>
+                </MudStack>
+            }
+      else
+      {
+            <MudStack Row="true" Wrap="Wrap.Wrap" Class="py-2" >
+                @foreach (var solution in State.Projects)
+                {
+                    <SolutionOverviewCard Solution="@solution"/>
+                }
+            </MudStack>
+      }
+</div>
+@code {
+    public override string Name { get; set; } = "Library";
+    public override Type ComponentType { get; set; } = typeof(LibraryTab);
+    public override string DefaultArea  => DropZones.Left;
+
+    [Inject] public LibraryState State { get; set; } = default!;
+    
+    [Inject] public IJsApiService JsApiService { get; set; } = default!;
+
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+
+    private string _selectedTab = "Templates";
+
+    protected async Task CopyAsync(SolutionFile file)
+    {
+        await JsApiService.CopyToClipboardAsync(file.Data);
+    }
+}

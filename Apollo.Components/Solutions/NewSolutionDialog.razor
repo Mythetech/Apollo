@@ -1,0 +1,88 @@
+@using Apollo.Contracts.Solutions
+
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Create New Solution
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-4" Style="min-width: 500px" @ref="_form">
+            <MudTextField @ref="_nameField" 
+                         @bind-Value="_name" 
+                         Label="Solution Name" 
+                         Error="@_error" 
+                         ErrorText="@_errorMessage" 
+                         OnlyValidateIfDirty="true"
+                         Validation="@(new Func<string, bool>(ValidateName))"/>
+            
+            <MudSelect T="ProjectType" 
+                      @bind-Value="_projectType" 
+                      Label="Project Type">
+                <MudSelectItem Value="@ProjectType.Console">Console Application</MudSelectItem>
+                <MudSelectItem Value="@ProjectType.WebApi">Web API</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                  Variant="Variant.Filled" 
+                  OnClick="Submit">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Inject] private SolutionsState State { get; set; }
+
+    [Parameter] public ProjectType DefaultProjectType { get; set; } = ProjectType.Console;
+
+    private MudTextField<string> _nameField;
+    private MudForm _form;
+    private string _name = "";
+    private ProjectType _projectType = ProjectType.Console;
+    private bool _error;
+    private string _errorMessage = "";
+
+    protected override void OnParametersSet()
+    {
+        _projectType = DefaultProjectType;
+        StateHasChanged();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(50);
+            await _nameField.FocusAsync();
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_form.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        var solution = await State.CreateNewSolutionAsync(_name, _projectType);
+        MudDialog.Close(DialogResult.Ok(solution));
+    }
+
+    private bool ValidateName(string name)
+    {
+        _error = string.IsNullOrWhiteSpace(name) || 
+                State.Solutions.Any(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                
+        _errorMessage = _error ? 
+            (string.IsNullOrWhiteSpace(name) ? "Name is required" : "Solution name already exists") 
+            : "";
+            
+        return !_error;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+} 

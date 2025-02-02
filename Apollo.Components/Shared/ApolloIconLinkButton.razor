@@ -1,0 +1,19 @@
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<MudTooltip Text="@Tooltip">
+    <MudIconButton Color="@Color" Icon="@Icon" Href="@Href" Target="@Target" Class="@Class" Style="@Style" Disabled="@Disabled" />
+</MudTooltip>
+
+@code {
+    [Parameter] public string Tooltip { get; set; } = "";
+
+    [Parameter] public string Icon { get; set; } = "";
+
+    [Parameter] public Color Color { get; set; } = Color.Inherit;
+
+    [Parameter] public string Href { get; set; } = "";
+
+    [Parameter] public string Target { get; set; } = "_blank";
+
+    [Parameter] public bool Disabled { get; set; } = false;
+}

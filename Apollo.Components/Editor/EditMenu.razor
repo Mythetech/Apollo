@@ -1,0 +1,19 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Solutions.Consumers
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+<MudMenu Label="Edit" Dense ActivationEvent="MouseEvent.MouseOver">
+    <MudMenuItem Icon="@ApolloIcons.Copy" OnClick="@(async() => await Bus.PublishAsync(new CopyActiveFileToClipboard()))">
+        Copy to Clipboard
+    </MudMenuItem>
+    <MudMenuItem Icon="@ApolloIcons.FormatDocument" OnClick="@(async () => await Bus.PublishAsync(new FormatActiveDocument()))">
+        Format
+    </MudMenuItem>
+</MudMenu>
+
+@code {
+
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+    
+}

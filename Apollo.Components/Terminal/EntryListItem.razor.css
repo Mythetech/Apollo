@@ -1,0 +1,26 @@
+.terminal-entry {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 2px 0;
+}
+
+.terminal-error {
+    color: #ff6b6b;
+}
+
+.terminal-success {
+    color: #51cf66;
+}
+
+.terminal-info {
+    color: #339af0;
+}
+
+.terminal-warning {
+    color: #ffd43b;
+}
+
+.prompt {
+    color: #69db7c;
+    margin-right: 8px;
+} 

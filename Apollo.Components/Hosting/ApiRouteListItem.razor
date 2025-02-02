@@ -1,0 +1,46 @@
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+
+<MudStack Row="true" AlignItems="AlignItems.Center">
+    <HttpMethodChip HttpMethod="@Model.Route.Method" />
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0">
+        @foreach (var segment in Model.Segments)
+        {
+            switch (segment.Type)
+            {
+                case RouteSegmentType.Literal:
+                    <MudText>@segment.Value</MudText>
+                    break;
+                case RouteSegmentType.Parameter:
+                    <RouteParameterSegment ShowValue="ShowValues" Parameter="@segment.Value" Value="@(segment.RouteValue)" ValueChanged="@(async (s) => await UpdateSegment(segment, s))" />
+                    break;
+                case RouteSegmentType.Separator:
+                    <MudText>/</MudText>
+                    break;
+            }
+        }
+    </MudStack>
+    <MudSpacer />
+    <ApolloIconButton
+        Color="Color.Success"
+        Tooltip="Send Request"
+        Icon="@ApolloIcons.Run"
+        OnClick="@(async () => await OnExecuteRouteClicked.InvokeAsync(Model))" />
+</MudStack>
+
+@code {
+    [Parameter] public RouteViewModel Model { get; set; } = default!;
+    [Parameter] public EventCallback<RouteSegment> OnRouteSegmentChanged { get; set; } = default!;
+    [Parameter] public EventCallback<RouteViewModel> OnExecuteRouteClicked { get; set; } = default;
+    [Parameter] public bool ShowValues { get; set; } = false;
+
+    protected async Task UpdateSegment(RouteSegment segment, string updatedValue)
+    {
+        var existing = Model.Segments.FirstOrDefault(x => x.Value.Equals(segment.Value) && x.Type == segment.Type);
+
+        if (existing == null) return;
+        
+        existing.RouteValue = updatedValue;
+        await OnRouteSegmentChanged.InvokeAsync(existing);
+    }
+}

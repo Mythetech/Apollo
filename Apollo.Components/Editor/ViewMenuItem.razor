@@ -1,0 +1,18 @@
+@using Apollo.Components.DynamicTabs
+<MudMenuItem Icon="@Icon" IconColor="@(IsActive ? Color.Secondary : Color.Default)" Class="@(IsActive ? "mud-secondary-text" : "")" 
+             OnClick="@OnClick">@Text</MudMenuItem>
+
+@code {
+    [Parameter]
+    public required DynamicTabView Tab { get; set; }
+
+    [Parameter] public string Icon { get; set; } = default!;
+
+    [Parameter] public string Text { get; set; } = default!;
+    
+    [Parameter] public EventCallback OnClick { get; set; }
+    
+    private bool IsActive => IsHidden || Tab.AreaIdentifier.Equals($"{Text}-dropzone", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsHidden => Tab.AreaIdentifier.Equals(DropZones.None) && Text.StartsWith('H');
+}

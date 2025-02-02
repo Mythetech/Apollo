@@ -1,0 +1,52 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Settings
+@using Apollo.Components.Settings.Commands
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+@implements IDisposable
+@if (!Settings.CurrentTheme.HideAppIcon)
+{
+<ApolloIconButton Class="@(Settings.CurrentTheme.AppIconClass)" Icon="app-icon" Tooltip="About" OnClick="@OpenAboutDialogAsync"/>
+}
+<MudMenu Dense="true" ListClass="max-w-160" ActivationEvent="MouseEvent.MouseOver">
+    <ActivatorContent>
+        <MudText Typo="Typo.h5" Class="gotu-regular ml-4">Apollo</MudText>
+    </ActivatorContent>
+    <ChildContent>
+        <MudMenuItem Icon="@Icons.Material.TwoTone.Info" OnClick="@OpenAboutDialogAsync">About Apollo</MudMenuItem>
+        <MudDivider />
+        <MudMenuItem Icon="@ApolloIcons.Settings" OnClick="@OpenSettingsDialogAsync">Settings</MudMenuItem>
+        <MudDivider />
+            <MudMenu Label="Color Mode" StartIcon="@Icons.Material.TwoTone.InvertColors">
+                <ColorModeMenuItem Mode="ThemeMode.Light" Text="Light" />
+                <ColorModeMenuItem Mode="ThemeMode.Dark" Text="Dark" />
+                <ColorModeMenuItem Mode="ThemeMode.System" Text="System" />
+            </MudMenu>
+            <MudMenu Label="App Theme" StartIcon="@Icons.Material.TwoTone.Palette">
+                <ThemeMenuItem ThemeName="Apollo" Text="Apollo" />
+                <ThemeMenuItem ThemeName="Stealth" Text="Stealth" />
+                <ThemeMenuItem ThemeName="Siren" Text="Siren" />
+            </MudMenu>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    [Inject] protected SettingsState Settings { get; set; } = default!;
+    
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+
+    private async Task OpenAboutDialogAsync() => await Bus.PublishAsync(new OpenAboutDialog());
+    
+    private async Task OpenSettingsDialogAsync() => await Bus.PublishAsync(new OpenSettingsDialog());
+    
+    protected override void OnInitialized()
+    {
+        Settings.SettingsChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Settings.SettingsChanged -= StateHasChanged;
+    }
+}

@@ -1,0 +1,156 @@
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+
+<MudTooltip>
+    <TooltipContent>
+        @if (!ShowValue)
+        {
+            @if (!string.IsNullOrWhiteSpace(Value))
+            {
+                <MudText Class="pa-1">@Value</MudText>
+            }
+            else
+            {
+                <MudText Class="pa-1">@("<Empty>")</MudText>
+            }
+        }
+        else
+        {
+            <MudText Class="pa-1">@($"{{{Parameter}}}")</MudText>
+        }
+    </TooltipContent>
+    <ChildContent>
+        <MudText onclick="@ToggleParameterMenu">
+            @if (ShowValue)
+            {
+                <code class="cursor-pointer">
+                    @if(!string.IsNullOrWhiteSpace(Value))
+                    {
+                        @Value
+                    }
+                    else
+                    {
+                        @("_")
+                    }
+                </code>
+            }
+            else
+            {
+                <code class="cursor-pointer">
+                    {@Parameter}
+                </code>
+            }
+        </MudText>
+    </ChildContent>
+</MudTooltip>
+<MudPopover TransformOrigin="Origin.BottomLeft">
+    <MudStack Row Class="mud-width-full" AlignItems="AlignItems.Center">
+        <MudTextField @bind-Value="@_editValue"></MudTextField>
+        <MudSpacer />
+        <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Close" Color="Color.Error" Tooltip="Cancel" OnClick="Cancel"/>
+        <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Accept" Tooltip="Save" OnClick="Save"/>
+    </MudStack>
+</MudPopover>
+
+@*
+<MudMenu Open="_open" ActivationEvent="MouseEvent.MouseOver">
+    <ActivatorContent>
+        <MudText>
+            @if (ShowValue)
+            {
+                @Value
+            }
+            else
+            {
+                <code>
+                    {@Parameter}
+                </code>
+            }
+        </MudText>
+    </ActivatorContent>
+    <ChildContent>
+        <MudStack Row Class="mud-width-full pa-4" AlignItems="AlignItems.Center">
+            @if (_editing)
+            {
+                <MudTextField @ref="_editField" Underline="@_editing" @bind-Value="@_editValue"></MudTextField>
+            }
+            else
+            {
+                <MudText>@(string.IsNullOrWhiteSpace(Value) ? "{Empty}" : Value)</MudText>
+            }
+            @if (_editing)
+            {
+                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Close" Color="Color.Error" Tooltip="Cancel" OnClick="Cancel"/>
+                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Accept" Tooltip="Save" OnClick="Save"/>
+            }
+            else
+            {
+                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Edit" Tooltip="Edit" OnClick="Edit" />
+            }
+        </MudStack>
+    </ChildContent>
+</MudMenu>
+*@
+@code {
+    [Parameter] public string Parameter { get; set; } = "";
+
+    [Parameter] public string Value { get; set; } = "";
+
+    private string _editValue = "";
+    
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter] public bool ShowValue { get; set; }
+
+    private bool _open = false;
+
+    private bool _editing = false;
+
+    private MudMenu? _menu = default;
+
+    private MudTextField<string>? _editField = default;
+
+    private void ToggleParameterMenu()
+    {
+        _open = !_open;
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        _editValue = "";
+        _editing = false;
+        _open = false;
+        StateHasChanged();
+    }
+
+    private async Task Save()
+    {
+        await ValueChanged.InvokeAsync(_editValue);
+
+        _editing = false;
+        _open = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit()
+    {        
+        _editing = true;
+
+        StateHasChanged();
+
+        await Task.Yield();
+        
+        await Task.Delay(1000);
+        
+        //await InvokeAsync(async () => await _menu.OpenMenuAsync(new MouseEventArgs(), false));
+
+        StateHasChanged();
+        
+        if(_editField != null)
+            await _editField.FocusAsync();
+        
+        StateHasChanged();
+    }
+} 

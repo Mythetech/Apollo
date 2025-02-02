@@ -1,0 +1,78 @@
+@using Apollo.Components.DynamicTabs.Commands
+@using Apollo.Components.Editor
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using MouseEvent = MudBlazor.MouseEvent
+<MudMenu @ref="_menu" ActivationEvent="MouseEvent.RightClick" Dense="true" ListClass="mw-180 pa-1">
+    <ActivatorContent>
+        @if (Tab.BadgeCount != null)
+        {
+        <MudLink
+            Color="@(Tab.IsActive ? Color.Tertiary : Color.Default)"
+            Underline="Underline.None"
+            OnClick="(() => HandleItemActivated(Tab))">
+            <MudBadge Origin="Origin.TopRight" Color="@(Tab.IsActive ? Color.Tertiary : Color.Default)" Content="@Tab.BadgeCount" BadgeClass="@(Tab.IsActive ? "boxshadow-primary" : "")">
+                @Tab.Name
+            </MudBadge>
+        </MudLink>
+        }
+        else
+        {
+        <MudLink
+            Color="@(Tab.IsActive ? Color.Tertiary : Color.Default)"
+            Class="@(!Tab.IsActive ? "mud-text-secondary" : "")"
+            Underline="Underline.None"
+            OnClick="(() => HandleItemActivated(Tab))">
+            @Tab.Name
+        </MudLink>
+        }
+    </ActivatorContent>
+    <ChildContent>
+        <MudStack Row Class="pa-1" AlignItems="AlignItems.Center">
+            <MudText>@Tab.Name</MudText>
+            <MudSpacer />
+            <ApolloIconButton Icon="@ApolloIcons.Close" Tooltip="Close Menu" OnClick="@(HandleMenuClosed)" Size="@Size.Small" />
+        </MudStack>
+        <MudDivider/>
+        <TabViewSelectionMenuItems
+            Tab="@Tab"
+            LeftViewMenuSelected="@((ViewItemSelectedArgs args) => HandleDropEvent(new MudItemDropInfo<DynamicTabView>(Tab, args.Dropzone, 0)))"
+            RightViewMenuSelected="@((ViewItemSelectedArgs args) => HandleDropEvent(new MudItemDropInfo<DynamicTabView>(Tab, args.Dropzone, 0)))"
+            BottomViewMenuSelected="@((ViewItemSelectedArgs args) => HandleDropEvent(new MudItemDropInfo<DynamicTabView>(Tab, args.Dropzone, 0)))"
+            HideViewMenuSelected="@((args) => HandleItemClosed(Tab))"
+            DockedBottomViewMenuSelected="@((ViewItemSelectedArgs args) => HandleDropEvent(new MudItemDropInfo<DynamicTabView>(Tab, args.Dropzone, 0)))"
+            FloatingViewMenuSelected="@((ViewItemSelectedArgs args) => HandleDropEvent(new MudItemDropInfo<DynamicTabView>(Tab, args.Dropzone, 0)))" />
+    </ChildContent>
+</MudMenu>
+@code {
+    [Parameter]
+    public DynamicTabView Tab { get; set; }
+
+    [Inject] protected IMessageBus Bus { get; set; } = default!;
+
+    private MudMenu? _menu = default;
+    
+    protected async Task HandleMenuClosed()
+    {
+        if(_menu != null)
+            await _menu.CloseMenuAsync();
+    }
+
+    protected async Task HandleDropEvent(MudItemDropInfo<DynamicTabView> args)
+    {
+        if (args.Item?.TabId == null) return;
+        
+        await Bus.PublishAsync(new UpdateTabLocation(args.Item.TabId, args.DropzoneIdentifier));
+    }
+
+    protected async Task HandleItemClosed(DynamicTabView tab)
+    {
+        await Bus.PublishAsync(new HideTab(tab.Name));
+    }
+    
+    protected async Task HandleItemActivated(DynamicTabView tab)
+    {
+        await Bus.PublishAsync(new FocusTab(tab.Name));
+    }
+}

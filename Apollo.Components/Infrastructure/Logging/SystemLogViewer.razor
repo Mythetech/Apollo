@@ -1,0 +1,46 @@
+@inject SystemLoggerProvider LoggerProvider
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.DynamicTabs
+@using Microsoft.Extensions.Logging
+@implements IDisposable
+
+<div class="system-log-viewer">
+    @foreach (var entry in LoggerProvider.LogEntries)
+    {
+        <div class="log-entry @entry.LogLevel.ToString().ToLower()">
+            <span class="timestamp">@entry.Timestamp.ToString("HH:mm:ss")</span>
+            <span class="level">@entry.LogLevel</span>
+            <span class="message">@entry.Message</span>
+            @if (entry.Exception != null)
+            {
+                <div class="exception">@entry.Exception.ToString()</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        LoggerProvider.OnLogEntryAdded += HandleLogEntryAdded;
+        BadgeCount = 0;
+    }
+
+    public void Dispose()
+    {
+        LoggerProvider.OnLogEntryAdded -= HandleLogEntryAdded;
+    }
+
+    private void HandleLogEntryAdded()
+    {
+        if (LoggerProvider.LogEntries.LastOrDefault()?.LogLevel == LogLevel.Error)
+        {
+            BadgeCount += 1;
+        }
+        StateHasChanged();
+    }
+
+    public override string Name { get; set; } = "System Logs";
+    public override Type ComponentType { get; set; } = typeof(SystemLogViewer);
+    public override string DefaultArea => DropZones.None;
+} 

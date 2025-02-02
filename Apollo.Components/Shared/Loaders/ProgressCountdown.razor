@@ -1,0 +1,44 @@
+<MudProgressLinear Color="@Color" Value="@Value" Rounded="@Rounded" Striped="@Striped" />
+
+@code {
+    private bool _disposed;
+    
+    [Parameter] public int Duration { get; set; } = 5000;
+
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+
+    [Parameter] public bool Rounded { get; set; } = true;
+
+    [Parameter] public bool Striped { get; set; } = false;
+    
+    private int Value { get; set; } = 100;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await StartCountdownAsync(Duration);
+    }
+
+    private async Task StartCountdownAsync(int durationInSeconds)
+    {
+        var interval = 100; 
+        var totalIntervals = durationInSeconds / interval;
+        
+        for (int i = 0; i < totalIntervals; i++)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            Value = 100 - (int)((i / (float)totalIntervals) * 100);
+            StateHasChanged();
+            await Task.Delay(interval);
+        }
+
+        Value = 0;
+        StateHasChanged();
+    }
+
+    public void Dispose() => _disposed = true;
+}

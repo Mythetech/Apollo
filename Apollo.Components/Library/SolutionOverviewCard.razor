@@ -1,0 +1,44 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Solutions
+@using Apollo.Components.Theme
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions.Commands
+<MudPaper Elevation="0" Outlined="true" Class="@($"{(_hasHover ? "boxshadow-primary" : "")} pa-2")" MaxWidth="180px" @onmouseenter="OnEnter" @onmouseleave="OnLeave">
+    <MudStack Spacing="1" Justify="Justify.SpaceBetween" Class="mud-height-full">
+        <MudStack Row Justify="Justify.SpaceBetween">
+            <MudText>@Solution.Name</MudText>
+        </MudStack>
+        <MudText Class="mud-width-full" Typo="Typo.body2">@Solution?.Description</MudText>
+        <MudStack Row AlignItems="AlignItems.Center" Class="mud-width-full">
+            <MudChip Size="Size.Small" Color="Color.Tertiary" T="string">@Solution.ProjectType.GetDisplayName()</MudChip>
+            <MudTooltip Text="@($"{Solution.Files.Count} Files in Solution")">
+                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                    <MudIcon Size="Size.Small" Icon="@ApolloIcons.File"/>
+                    <MudText>@Solution.Files.Count</MudText>
+                </MudStack>
+            </MudTooltip>
+            <ApolloIconButton Icon="@ApolloIcons.Open" Tooltip="Load Template" OnClick="@(async () => await Bus.PublishAsync(new LoadSolution(Solution)))" />
+        </MudStack>
+    </MudStack>
+</MudPaper>
+@code {
+    [Parameter]
+    public SolutionModel Solution { get; set; }
+
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+
+    private bool _hasHover = false;
+
+    private void OnEnter()
+    {
+        _hasHover = true;
+        StateHasChanged();
+    }
+
+    private void OnLeave()
+    {
+        _hasHover = false;
+        StateHasChanged();
+    }
+}

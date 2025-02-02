@@ -1,0 +1,9 @@
+@using Apollo.Components.DynamicTabs
+@inherits DynamicTabView
+
+<h3>LinkedAssemblies</h3>
+
+@code {
+    public override string Name { get; set; } = "Linked Assemblies";
+    public override Type ComponentType { get; set; } = typeof(LinkedAssemblies);
+}

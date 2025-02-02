@@ -1,0 +1,99 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Client", "Apollo.Client\Apollo.Client.csproj", "{5D2458C5-D908-4F20-9DE8-7C86B0E4A132}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Compilation", "Apollo.Compilation\Apollo.Compilation.csproj", "{856D4082-20AB-46A4-A230-DCBE025FB585}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Components", "Apollo.Components\Apollo.Components.csproj", "{31CAFF87-EB3A-4EBF-B322-398C83514F36}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Test", "Apollo.Test\Apollo.Test.csproj", "{9715EB31-36A6-474C-9AAF-8AF39D6265C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipeline", "Pipeline\Pipeline.csproj", "{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8F0E67FF-08FB-4A25-9EFE-4B2115180A5A}"
+	ProjectSection(SolutionItems) = preProject
+		azure-pipelines.yml = azure-pipelines.yml
+		global.json = global.json
+		nuget.config = nuget.config
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Compilation.Worker", "Apollo.Compilation.Worker\Apollo.Compilation.Worker.csproj", "{C1E832A5-D734-47FE-84DA-EF4FBEA49314}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Analysis", "Apollo.Analysis\Apollo.Analysis.csproj", "{DB871EB9-A0DC-4B8A-868A-ED55A59E1DAF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Analysis.Worker", "Apollo.Analysis.Worker\Apollo.Analysis.Worker.csproj", "{E4B5C6AC-76F4-4502-B908-B0D42B731608}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Infrastructure", "Apollo.Infrastructure\Apollo.Infrastructure.csproj", "{D2DAFFD4-149E-4D01-BA73-925393AD3D19}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{D58C67A1-1ED2-4601-A802-27BC254E34C7}"
+	ProjectSection(SolutionItems) = preProject
+		docs\Architecture.md = docs\Architecture.md
+		docs\Modules\Compilation.md = docs\Modules\Compilation.md
+		docs\Modules\Analysis.md = docs\Modules\Analysis.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Hosting", "Apollo.Hosting\Apollo.Hosting.csproj", "{B28DED09-B0E5-4C66-A200-64C278421A9C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Hosting.Worker", "Apollo.Hosting.Worker\Apollo.Hosting.Worker.csproj", "{F5C4346A-3D7A-4C55-95C4-64AEA1A1F04D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Contracts", "Apollo.Contracts\Apollo.Contracts.csproj", "{8AD1F3AA-5A60-40DB-AE61-A1CF8A32F5FC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5D2458C5-D908-4F20-9DE8-7C86B0E4A132}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D2458C5-D908-4F20-9DE8-7C86B0E4A132}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D2458C5-D908-4F20-9DE8-7C86B0E4A132}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D2458C5-D908-4F20-9DE8-7C86B0E4A132}.Release|Any CPU.Build.0 = Release|Any CPU
+		{856D4082-20AB-46A4-A230-DCBE025FB585}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{856D4082-20AB-46A4-A230-DCBE025FB585}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{856D4082-20AB-46A4-A230-DCBE025FB585}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{856D4082-20AB-46A4-A230-DCBE025FB585}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31CAFF87-EB3A-4EBF-B322-398C83514F36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31CAFF87-EB3A-4EBF-B322-398C83514F36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31CAFF87-EB3A-4EBF-B322-398C83514F36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31CAFF87-EB3A-4EBF-B322-398C83514F36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB871EB9-A0DC-4B8A-868A-ED55A59E1DAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB871EB9-A0DC-4B8A-868A-ED55A59E1DAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB871EB9-A0DC-4B8A-868A-ED55A59E1DAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB871EB9-A0DC-4B8A-868A-ED55A59E1DAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4B5C6AC-76F4-4502-B908-B0D42B731608}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4B5C6AC-76F4-4502-B908-B0D42B731608}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4B5C6AC-76F4-4502-B908-B0D42B731608}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4B5C6AC-76F4-4502-B908-B0D42B731608}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2DAFFD4-149E-4D01-BA73-925393AD3D19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2DAFFD4-149E-4D01-BA73-925393AD3D19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2DAFFD4-149E-4D01-BA73-925393AD3D19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2DAFFD4-149E-4D01-BA73-925393AD3D19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B28DED09-B0E5-4C66-A200-64C278421A9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B28DED09-B0E5-4C66-A200-64C278421A9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B28DED09-B0E5-4C66-A200-64C278421A9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B28DED09-B0E5-4C66-A200-64C278421A9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5C4346A-3D7A-4C55-95C4-64AEA1A1F04D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5C4346A-3D7A-4C55-95C4-64AEA1A1F04D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5C4346A-3D7A-4C55-95C4-64AEA1A1F04D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5C4346A-3D7A-4C55-95C4-64AEA1A1F04D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AD1F3AA-5A60-40DB-AE61-A1CF8A32F5FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AD1F3AA-5A60-40DB-AE61-A1CF8A32F5FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AD1F3AA-5A60-40DB-AE61-A1CF8A32F5FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AD1F3AA-5A60-40DB-AE61-A1CF8A32F5FC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D58C67A1-1ED2-4601-A802-27BC254E34C7} = {8F0E67FF-08FB-4A25-9EFE-4B2115180A5A}
+	EndGlobalSection
+EndGlobal

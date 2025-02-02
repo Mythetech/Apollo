@@ -1,0 +1,21 @@
+@using Apollo.Components.Settings
+<MudMenuItem Icon="@GetIcon()" IconColor="@(IsActive ? Color.Secondary : Color.Default)"
+             Class="@(IsActive ? "mud-secondary-text" : "")"
+             OnClick="@(() => Settings.SetTheme(ThemeName))">@Text</MudMenuItem>
+
+@code {
+    [Inject] protected SettingsState Settings { get; set; } = default!;
+    
+    [Parameter] public required string ThemeName { get; set; }
+    [Parameter] public required string Text { get; set; }
+    
+    private bool IsActive => Settings.CurrentTheme.Name == ThemeName;
+    
+    private string GetIcon() => ThemeName switch 
+    {
+        "Apollo" => Icons.Material.TwoTone.WbSunny,
+        "Stealth" => Icons.Material.TwoTone.Visibility,
+        "Siren" => Icons.Material.TwoTone.Water,
+        _ => Icons.Material.TwoTone.Palette
+    };
+} 

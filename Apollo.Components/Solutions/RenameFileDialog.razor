@@ -1,0 +1,83 @@
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Rename @File.Name
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-1" @ref="_form">
+            <MudText>@File.Name</MudText>
+             <MudTextField @ref="_renameField" @bind-Value="_rename" Label="New Name" Error="@_error" ErrorText="@_errorMessage" Validation="Validate()"></MudTextField>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Inject]
+    SolutionsState State { get; set; }
+    
+    [Parameter]
+    public SolutionFile File { get; set; }
+
+    private MudTextField<string> _renameField;
+
+    private string _rename = "";
+
+    private bool _error = false;
+
+    private string _errorMessage = "";
+
+    private MudForm? _form;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _rename = File.Name;
+            
+            StateHasChanged();
+
+            await Task.Delay(100);
+
+            await _renameField.FocusAsync();
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_form.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
+        
+        State.RenameItemAsync(File, _rename + File.Extension);
+        
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private bool Validate()
+    {
+        bool duplicate = State.Project.Items.Any(x => x.Name.Equals(_rename + File.Extension));
+        _error = duplicate;
+        if (_error)
+        {
+            _errorMessage = "Duplicate Name";
+        }
+        else
+        {
+            _errorMessage = "";
+        }
+
+        return _error;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

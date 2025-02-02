@@ -1,0 +1,205 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Infrastructure.MessageBus
+@using MouseEvent = MudBlazor.MouseEvent
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Theme
+@using Microsoft.CodeAnalysis
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@implements IDisposable
+<div class="pa-4 mud-height-full">
+    <MudStack>
+        <MudStack Row="true">
+            <MudSelect T="SolutionModel?" Label="Solution" AnchorOrigin="Origin.BottomCenter" Value="@State?.Project" ValueChanged="HandleProjectChange" Class="flex-grow-1">
+                @foreach (var solution in State?.Solutions)
+                {
+                    bool selected = State.HasActiveSolution && solution.Name.Equals(State.Project.Name, StringComparison.OrdinalIgnoreCase);
+                    <MudSelectItem Class="@(selected ? "mud-secondary-text" : "")" Value="@solution">@solution.Name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudMenu ActivationEvent="@MouseEvent.RightClick" Dense="true" Class="d-flex" ListClass="mw-160">
+                <ActivatorContent>
+                    <MudIconButton Icon="@ApolloIcons.Add" OnClick="@AddFile">Add</MudIconButton>
+                </ActivatorContent>
+                <ChildContent>
+                    <FileMenuItem Name="Add Solution" 
+                                  Icon="@ApolloIcons.Solution" 
+                                  OnClick="@PromptAddSolution" />
+                    <MudDivider />
+                    <FileMenuItem Name="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@PromptAddFile"/>
+                    <FileMenuItem Name="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@AddFolder"/>
+                </ChildContent>
+            </MudMenu>
+        </MudStack>
+        @if (State.HasActiveSolution && State?.Project?.Items?.Count() > 0)
+        {
+            <MudTreeView T="ISolutionItem" Hover="true" Dense="true" ExpandOnClick="true">
+                <MudTreeViewItem T="ISolutionItem" Text="@_rootFolder?.Name" Expanded="true" OnClick="() => { }" OnDoubleClick="() => { }">
+                    <BodyContent>
+                        <MudStack AlignItems="AlignItems.Center" Row="true" Class="mud-width-full">
+                            <MudText>@_rootFolder?.Name</MudText>
+                            <MudSpacer/>
+                            <ApolloIconButton Tooltip="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@(async () => await PromptAddFile())"/>
+                            <ApolloIconButton Tooltip="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@(() => AddFolder())"/>
+                            <ApolloIconButton Tooltip="Rename" Icon="@ApolloIcons.Edit" OnClick="@(async () => await PromptRenameFolder(_rootFolder))"/>
+                        </MudStack>
+                    </BodyContent>
+                    <ChildContent>
+                        <SolutionTree Items="@_rootFolder?.Items" ParentName="@_rootFolder?.Name" OnFileSelected="OnFileSelected" OnRenameFile="PromptFileRename" OnMoveFile="PromptMoveFile"/>
+                    </ChildContent>
+                </MudTreeViewItem>
+            </MudTreeView>
+        }
+        else
+        {
+            <MudText>Select, Create, or Open a solution to get started!</MudText>
+        }
+    </MudStack>
+</div>
+@code {
+    [Inject] public SolutionsState State { get; set; } = default!;
+    
+    [Inject] public IDialogService DialogService { get; set; } = default!;
+
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+
+    private Folder _rootFolder = new();
+
+    private Folder? GetLogicalFolderRoot()
+    {
+        return !State.HasActiveSolution ? default : State.Project.GetLogicalSolutionStructure();
+    }
+    
+    public override string Name { get; set; } = "Solution";
+    public override Type ComponentType { get; set; } = typeof(SolutionExplorerTab);
+    public override string DefaultArea  => DropZones.Left;
+
+    public void AddFile()
+    {
+        if (!State.Project.Files.Any(x => x.Name.Equals("Untitled.cs")))
+        {
+            State.AddFile("Untitled.cs");
+            return;
+        }
+        
+        for (int i = 1; i <= 100; i++)
+        {
+            string newFileName = $"Untitled-{i}.cs";
+            
+            if (!State.Project.Files.Any(x => x.Name.Equals(newFileName)))
+            {
+                State.AddFile(newFileName);
+                return;
+            }
+        }
+    }
+
+    public void OnFileSelected(SolutionFile file)
+    {
+        State.SwitchFile(file);
+    }
+    
+    public async Task PromptAddFile()
+    {
+        await Bus.PublishAsync(new PromptCreateNewFile());
+    }
+    
+    public async Task PromptFileRename(SolutionFile file)
+    {
+        var parameters = new DialogParameters()
+        {
+            {"File", file}
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<RenameFileDialog>($"Rename {file.Name}", parameters, options);
+        var dialogResult = await dialog.Result;
+        
+        if(dialogResult == null || dialogResult.Canceled || dialogResult.Data == null)
+            return;
+
+        bool result = (bool)dialogResult.Data;
+    }
+
+    public async Task PromptRenameFolder(Folder folder)
+    {
+        var parameters = new DialogParameters()
+        {
+            {"Item", folder}
+        };
+
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<RenameItemDialog>($"Rename {folder.Name}", parameters, options);
+        var dialogResult = await dialog.Result;
+        
+        if(dialogResult == null || dialogResult.Canceled || dialogResult.Data == null)
+            return;
+
+        bool result = (bool)dialogResult.Data;
+    }
+    
+
+    public Task PromptMoveFile(SolutionFile file)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void HandleProjectChange(SolutionModel? args)
+    {
+        State.SwitchSolution(args?.Name);
+    }
+
+    private void RefreshSolutionTree()
+    {
+        _rootFolder = GetLogicalFolderRoot();
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        State.ProjectChanged += StateHasChanged;
+        State.SolutionFilesChanged += RefreshSolutionTree;
+
+        RefreshSolutionTree();
+        
+        base.OnInitialized();
+    }
+
+    public void Dispose()
+    {
+        State.ProjectChanged -= StateHasChanged;
+        State.SolutionFilesChanged -= RefreshSolutionTree;
+    }
+
+
+    protected void AddFolder()
+    {
+        State.AddFolder("test", State.Project.GetRootFolder());
+        StateHasChanged();
+    }
+    
+    private async Task PromptAddSolution()
+    {
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<NewSolutionDialog>("Create New Solution", options);
+        var result = await dialog.Result;
+        
+        if (result.Canceled)
+            return;
+    }
+}

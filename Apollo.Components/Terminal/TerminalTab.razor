@@ -1,0 +1,26 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Terminal.CommandServices
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+
+<ApolloTerminal />
+
+@code {
+    public override string Name { get; set; } = "Terminal";
+    public override Type ComponentType { get; set; } = typeof(TerminalTab);
+    public override string DefaultArea  => DropZones.Docked;
+
+   
+    [Inject]
+    protected TerminalState State { get; set; }
+    
+    [Inject]
+    protected IEnumerable<ITerminalCommand> Commands { get; set; }
+
+    protected override void OnInitialized()
+    {
+        foreach (var cmd in Commands ?? [])
+        {
+            State.Register(cmd);
+        }
+    }
+}

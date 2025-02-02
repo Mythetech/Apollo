@@ -1,0 +1,11 @@
+@inherits DynamicTabView
+<MudContainer Class="mud-width-full mud-height-full" MaxWidth="MaxWidth.Small">
+    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
+        <MudText>Empty</MudText>
+        <MudIcon Icon="@Icons.Material.TwoTone.MotionPhotosOff" />
+    </MudStack>
+</MudContainer>
+@code {
+    public override string Name { get; set; } = "Empty";
+    public override Type ComponentType { get; set; } = typeof(EmptyTab);
+}

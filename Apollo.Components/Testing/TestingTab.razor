@@ -1,0 +1,108 @@
+@using Apollo.Components.Code
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Solutions
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@implements IDisposable
+<div class="pa-4 mud-height-full">
+    <MudStack Row="true" Class="pa-1" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h6">Testing</MudText>
+        <MudText Color="GetSucceededTestRunColor()">@State.TestCases.Count(x => x.Result is TestResult.Passed)</MudText>
+        <MudText Color="GetSeperatorTestRunColor()">/</MudText>
+        <MudText Color="GetTotalTestRunColor()">@State.TestCases.Count</MudText>
+        <MudSpacer />
+        <MudButton StartIcon="@Icons.Material.TwoTone.Science" OnClick="RunAllTestsAsync">Run Tests</MudButton>
+        <MudTooltip Text="Refresh Test Cases">
+            <MudIconButton Icon="@Icons.Material.TwoTone.Refresh" OnClick="RefreshTestCases" />
+        </MudTooltip>
+    </MudStack>
+
+    <MudStack Spacing="0">
+        @foreach (var test in State.TestCases)
+        {
+            <TestCaseItem Test="@test" RunTestClicked="async () => await RunTestAsync(test)" />
+        }
+    </MudStack>
+</div>
+@code {
+    [Inject] SolutionsState Solutions { get; set; } = default!;
+    [Inject] CompilerState Compiler { get; set; } = default!;
+    [Inject] TestingState State { get; set; } = default!;
+
+    protected Color GetSucceededTestRunColor()
+    {
+        if (State.TestCases.Count == 0)
+        {
+            return Color.Inherit;
+        }
+
+        if (State.TestCases.Any(x => x.Result is TestResult.Failed))
+            return Color.Error;
+        
+         
+        if (State.TestCases.All(x => x.Result is TestResult.Passed))
+            return Color.Success;
+
+        return Color.Inherit;
+    }
+    
+    protected Color GetSeperatorTestRunColor()
+    {
+       return Color.Inherit;
+    }
+    
+    protected Color GetTotalTestRunColor()
+    {
+        if (State.TestCases.Count == 0)
+        {
+            return Color.Inherit;
+        }
+        
+        if (State.TestCases.All(x => x.Result is TestResult.Failed))
+            return Color.Error;
+        
+        if (State.TestCases.Any(x => x.Result is TestResult.Passed))
+            return Color.Success;
+
+        return Color.Inherit;
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(500);
+          _ = await State.DiscoverTestsAsync();
+          StateHasChanged();
+        }
+    }
+
+    protected async Task RunTestAsync(TestCase test)
+    {
+        State.RunTest(test);
+    }
+
+    private async Task RunAllTestsAsync()
+    {
+        await State.RunAllTestsAsync();
+    }
+
+    public async Task RefreshTestCases()
+    {
+        await State.RediscoverTestsAsync();
+    }
+
+    public override string Name { get; set; } = "Testing";
+    public override Type ComponentType { get; set; } = typeof(TestingTab);
+    public override string DefaultArea  => DropZones.Right;
+
+    protected override void OnInitialized()
+    {
+        State.TestCasesStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        State.TestCasesStateChanged -= StateHasChanged;
+    }
+
+}

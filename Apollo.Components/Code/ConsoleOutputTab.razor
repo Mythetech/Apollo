@@ -1,0 +1,76 @@
+@inject ConsoleOutputService ConsoleOutputService
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.Console
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Theme
+@implements IDisposable
+<div class="d-flex pa-1 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
+    <MudStack Row="true" Class="flex-grow-1">
+        <MudChipSet @bind-SelectedValues="ConsoleOutputService.Selected" SelectionMode="SelectionMode.MultiSelection" CheckMark="false">
+            <MudChip Variant="Variant.Filled" Color="Color.Dark" Value="@("Debug")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Info")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Warning" Value="@("Warning")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Error" Value="@("Error")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Success" Value="@("Success")" />
+        </MudChipSet>
+
+        <MudSpacer/>
+        <MudTooltip Text="Clear Output">
+            <MudIconButton Icon="@ApolloIcons.Delete" OnClick="ClearLogs"/>
+        </MudTooltip>
+    </MudStack>
+
+    <MudList id="apollo-console-output-list" Dense="true" T="ConsoleOutputViewModel" Class="mud-height-full overflow-y-auto pa-4">
+        @{
+            var items = ConsoleOutputService.Filter(ConsoleOutputService.Logs);
+        }
+        <MudVirtualize T="ConsoleOutputViewModel" Items="@items" Context="log">
+
+            <MudText id="@log.GetHtmlId()" Color="@ConsoleOutputService.GetSeverityColor(log.Severity)" Class="@ConsoleOutputService.LogTextClass(log.Severity)">
+                [@log.Timestamp.ToString("HH:mm:ss")] @log.Message
+            </MudText>
+        </MudVirtualize>
+    </MudList>
+</div>
+@code {
+    private List<ConsoleOutputViewModel> logs = new();
+
+    private MudList<ConsoleOutputViewModel> _list;
+    
+    [Inject] protected IScrollManager ScrollManager { get; set; } = default!;
+
+    
+
+    protected void ConsoleStateChanged(ConsoleOutputViewModel log) => StateHasChanged();
+
+    protected override void OnInitialized()
+    {
+        ConsoleOutputService.OnConsoleOutputReceived += ConsoleStateChanged;
+        ConsoleOutputService.OnConsoleCleared += StateHasChanged;
+
+        logs = ConsoleOutputService.Logs.ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if(firstRender)
+            ConsoleOutputService.ScrollManager = ScrollManager;
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task ClearLogs()
+    {
+        ConsoleOutputService.ClearLogs();
+    }
+
+    public void Dispose()
+    {
+        ConsoleOutputService.OnConsoleOutputReceived -= ConsoleStateChanged;
+        ConsoleOutputService.OnConsoleCleared -= StateHasChanged;
+    }
+
+    public override string Name { get; set; } = "Console Output";
+    public override Type ComponentType { get; set; } = typeof(ConsoleOutputTab);
+    public override string DefaultArea  => DropZones.Bottom;
+}

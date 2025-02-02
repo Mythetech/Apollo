@@ -1,0 +1,53 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Solutions.Consumers
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+<MudMenu Label="File" Dense ActivationEvent="MouseEvent.MouseOver">
+    <MudMenu StartIcon="@ApolloIcons.Add" Label="New">
+        <MudMenuItem Icon="@ApolloIcons.Solution" OnClick="@(async () => await Bus.PublishAsync(new PromptCreateNewSolution()))">
+            Solution
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.File" OnClick="@(async () => await Bus.PublishAsync(new PromptCreateNewFile()))">
+            File
+        </MudMenuItem>
+    </MudMenu>
+    <MudMenu StartIcon="@ApolloIcons.Open" Label="Open">
+        <MudMenuItem Icon="@ApolloIcons.OpenFile" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenFile()))">
+            File
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.OpenFolder" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenFolder()))">
+            Folder
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.GitHub" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenGitHubRepo()))">
+            GitHub Repo
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.Base64" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenBase64Solution()))">
+            Base64 Solution
+        </MudMenuItem>
+    </MudMenu>
+    <MudDivider />
+    <MudMenuItem Icon="@ApolloIcons.Save" OnClick="@(async () => await Bus.PublishAsync(new SaveActiveSolution()))">
+        Save
+    </MudMenuItem>
+    <MudMenuItem Icon="@ApolloIcons.SaveAs" OnClick="@(async () => await Bus.PublishAsync(new PromptSaveSolutionAs()))">
+        Save As...
+    </MudMenuItem>
+    <MudMenu StartIcon="@ApolloIcons.Export" Label="Export" Dense="true">
+        <MudMenuItem Icon="@ApolloIcons.VisualStudio" OnClick="@(async () => await Bus.PublishAsync(new ExportVisualStudioSolution()))">Visual Studio</MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.Rider" OnClick="@(async () => await Bus.PublishAsync(new ExportVisualStudioSolution(true)))">Rider</MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.Zip" OnClick="@(async () => await Bus.PublishAsync(new ExportZipFile()))">Zip</MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.Json" OnClick="@(async () => await Bus.PublishAsync(new ExportJsonFile()))">Json</MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.Base64" OnClick="@(async () => await Bus.PublishAsync(new ExportBase64String()))">Encoded (Base64)</MudMenuItem>
+    </MudMenu>
+    <MudMenuItem Icon="@ApolloIcons.Share" OnClick="@(async () => await Bus.PublishAsync(new ShareSolution()))">
+        Share Solution Link
+    </MudMenuItem>
+    <MudDivider />
+    <MudMenuItem Icon="@ApolloIcons.Close" OnClick="@(async () => await Bus.PublishAsync(new CloseSolution()))">Close Solution</MudMenuItem>
+    <MudMenuItem IconColor="Color.Error" Icon="@ApolloIcons.Delete" OnClick="@(async () => await Bus.PublishAsync(new PromptDeleteSolution()))">Delete Solution</MudMenuItem>
+</MudMenu>
+
+@code {
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+}

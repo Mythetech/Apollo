@@ -1,0 +1,143 @@
+@using Apollo.Components.Analysis
+@using Apollo.Components.Code
+@using Apollo.Components.Console
+@using Apollo.Components.Hosting
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared.ApolloSwitch
+
+<MudDialog Class="pa-4 glassmorphic" Style="width: 65vw; height: 75vh;">
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Class="app-header-font" Typo="Typo.h5">Settings</MudText>
+            </MudItem>
+            
+            <MudItem xs="12">
+                <MudText Class="mb-4 mud-text-secondary">Color Mode</MudText>
+                <MudToggleGroup T="ThemeMode"
+                                Value="@Settings.ThemeMode"
+                                ValueChanged="@(value => Settings.ThemeMode = value)"
+                                Color="Color.Secondary"
+                                Class="d-flex mud-width-full">
+                    <MudToggleItem Class="flex-grow-1" Value="@(ThemeMode.Light)">
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Row Class="flex-grow-1 mud-width-full">
+                            <MudIcon Icon="@Icons.Material.TwoTone.LightMode" Class="mr-2"/>
+                            <MudText Style="@(Settings.ThemeMode == ThemeMode.Light ? "opacity: 1" : "opacity: 0.7")">
+                                Light
+                            </MudText>
+                        </MudStack>
+                    </MudToggleItem>
+                    <MudToggleItem Class="flex-grow-1" Value="@(ThemeMode.Dark)">
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Row Class="flex-grow-1 mud-width-full">
+                            <MudIcon Icon="@Icons.Material.TwoTone.NightlightRound" Class="mr-2"/>
+                            <MudText Style="@(Settings.ThemeMode == ThemeMode.Dark ? "opacity: 1" : "opacity: 0.7")">
+                                Dark
+                            </MudText>
+                        </MudStack>
+                    </MudToggleItem>
+                    <MudToggleItem Class="flex-grow-1" Value="@(ThemeMode.System)">
+                        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Row Class="flex-grow-1 mud-width-full">
+                            <MudIcon Icon="@Icons.Material.TwoTone.Computer" Class="mr-2"/>
+                            <MudText Style="@(Settings.ThemeMode == ThemeMode.System ? "opacity: 1" : "opacity: 0.7")">
+                                System
+                            </MudText>
+                        </MudStack>
+                    </MudToggleItem>
+                </MudToggleGroup>
+            </MudItem>
+            
+            <MudItem xs="12">
+                <MudDivider Class="my-4"/>
+                <MudText Class="mb-4 mud-text-secondary">Theme Settings</MudText>
+                <MudToggleGroup T="string" 
+                                Value="@Settings.CurrentTheme.Name"
+                                ValueChanged="@(value => Settings.SetTheme(value))"
+                                Class="mud-width-full" 
+                                SelectedClass="box-shadow-primary"
+                                Style="border:none!important;">
+                    <MudToggleItem Value="@("Apollo")" Class="rounded">
+                        <ThemeCard 
+                            Title="Apollo"
+                            Description="Solar-inspired with golden accents"
+                            ChipText="Default"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Apollo")"
+                            CardTheme="@ApolloTheme.Instance.Theme.BaseTheme"/>
+                    </MudToggleItem>
+                    <MudToggleItem Value="@("Stealth")" Class="rounded">
+                        <ThemeCard 
+                            Title="Stealth"
+                            Description="Minimalist flat design"
+                            ChipText="Stealth"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Stealth")"
+                            CardTheme="@StealthTheme.Instance.Theme.BaseTheme"/>
+                    </MudToggleItem>
+                    <MudToggleItem Value="@("Siren")" Class="rounded">
+                        <ThemeCard
+                            Title="Siren"
+                            Description="Siren's signature blue theme"
+                            ChipText="Siren"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Siren")"
+                            CardTheme="@SirenTheme.Instance.Theme.BaseTheme"/>
+                    </MudToggleItem>
+                </MudToggleGroup>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-4"/>
+                <MudText Class="mb-4 mud-text-secondary">Console Settings</MudText>
+                <ApolloSwitch LabelPlacement="Placement.Left" Color="Color.Secondary" Label="Autoscroll when console input received" @bind-Value="ConsoleOutputService.AutoScroll" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-4"/>
+                <MudText Class="mb-4 mud-text-secondary">Code Analysis Settings</MudText>
+                <ApolloSwitch 
+                    LabelPlacement="Placement.Left" 
+                    Color="Color.Secondary" 
+                    Label="Enable code analysis features (completions, diagnostics)" 
+                    @bind-Value="@_codeAnalysisEnabled" />
+                <ApolloSwitch
+                    LabelPlacement="Placement.Left"
+                    Color="Color.Secondary"
+                    Label="Autoscroll when code analysis input received"
+                    @bind-Value="CodeAnalysisConsoleService.AutoScroll" />
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-4"/>
+                <MudText Class="mb-4 mud-text-secondary">Web Application Settings</MudText>
+                <MudStack>
+                    <ApolloSwitch 
+                        LabelPlacement="Placement.Left" 
+                        Color="Color.Secondary" 
+                        Label="Autoscroll when web host output received" 
+                        @bind-Value="WebHostConsoleService.AutoScroll" />
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudStack Row="true" Spacing="4" Class="mud-width-full" AlignItems="AlignItems.Center">
+            <MudSpacer/>
+            <MudButton Class="rounded" OnClick="Cancel">Close</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Inject] private SettingsState Settings { get; set; }
+    [Inject] private ConsoleOutputService ConsoleOutputService { get; set; }
+    [Inject] private CodeAnalysisState CodeAnalysisState { get; set; }
+    [Inject] private WebHostConsoleService WebHostConsoleService { get; set; }
+    [Inject] private CodeAnalysisConsoleService CodeAnalysisConsoleService { get; set; }
+    
+    private bool _codeAnalysisEnabled
+    {
+        get => !CodeAnalysisState.Disabled;
+        set => CodeAnalysisState.Disabled = !value;
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 

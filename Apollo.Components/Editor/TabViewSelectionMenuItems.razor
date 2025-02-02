@@ -1,0 +1,25 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Theme
+<ViewMenuItem Icon="@ApolloIcons.ViewLeft" Tab="@Tab" OnClick="@(async () => await LeftViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.Left, Tab.TabId)))" Text="Left" />
+<ViewMenuItem Icon="@ApolloIcons.ViewRight" Tab="@Tab" OnClick="@(async () => await RightViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.Right, Tab.TabId)))" Text="Right" />
+<ViewMenuItem Icon="@ApolloIcons.ViewBottom" Tab="@Tab" OnClick="@(async () => await BottomViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.Bottom, Tab.TabId)))" Text="Bottom" />
+<ViewMenuItem Icon="@ApolloIcons.ViewDocked" Tab="@Tab" 
+    OnClick="@(async () => await DockedBottomViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.Docked, Tab.TabId)))" 
+    Text="Dock" />
+<ViewMenuItem Icon="@ApolloIcons.ViewFloating" Tab="@Tab" 
+    OnClick="@(async () => await FloatingViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.Floating, Tab.TabId)))" 
+    Text="Float" />
+<ViewMenuItem Icon="@(IsHidden(Tab) ? ApolloIcons.ViewHidden : ApolloIcons.ViewHide)" Tab="@Tab" OnClick="@(async () => await HideViewMenuSelected.InvokeAsync(new ViewItemSelectedArgs(DropZones.None, Tab.TabId)))" Text="@(IsHidden(Tab) ? "Hidden" : "Hide")" />
+
+@code {
+    [Parameter] public DynamicTabView Tab { get; set; }
+    
+    [Parameter] public EventCallback<ViewItemSelectedArgs> LeftViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> RightViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> BottomViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> HideViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> DockedBottomViewMenuSelected { get; set; }
+    [Parameter] public EventCallback<ViewItemSelectedArgs> FloatingViewMenuSelected { get; set; }
+
+    private bool IsHidden (DynamicTabView tab) => tab.AreaIdentifier.Equals(DropZones.None);
+}

@@ -1,0 +1,22 @@
+@using Apollo.Components.Settings
+@using Apollo.Components.Theme
+<MudMenuItem Icon="@GetIcon()" IconColor="@(IsActive ? Color.Secondary : Color.Default)" 
+             Class="@(IsActive ? "mud-secondary-text" : "")"
+             OnClick="@(() => Settings.ThemeMode = Mode)">@Text</MudMenuItem>
+
+@code {
+    [Inject] protected SettingsState Settings { get; set; } = default!;
+    
+    [Parameter] public ThemeMode Mode { get; set; }
+    [Parameter] public required string Text { get; set; }
+    
+    private bool IsActive => Settings.ThemeMode == Mode;
+    
+    private string GetIcon() => Mode switch
+    {
+        ThemeMode.Light => Icons.Material.TwoTone.LightMode,
+        ThemeMode.Dark => Icons.Material.TwoTone.NightlightRound,
+        ThemeMode.System => Icons.Material.TwoTone.Computer,
+        _ => Icons.Material.TwoTone.QuestionMark
+    };
+} 

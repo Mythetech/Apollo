@@ -1,0 +1,78 @@
+﻿@using Apollo.Components
+@using Apollo.Components.Code
+@using Apollo.Components.Settings
+@using Apollo.Components.Theme
+@using Microsoft.FluentUI.AspNetCore.Components
+@inherits LayoutComponentBase
+@implements IDisposable
+
+<PageTitle>Apollo</PageTitle>
+
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudSpacer />
+        <SettingsButton />
+    </MudAppBar>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<MudThemeProvider Theme="@GetCurrentTheme()" IsDarkMode="@State.IsDarkMode" />
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+<FluentKeyCodeProvider />
+@code {
+[Inject] public IJSRuntime JsRuntime { get; set; }
+
+[Inject] public AppState State { get; set; } = default!;
+
+[Inject] public SettingsState Settings { get; set; } = default!;
+
+bool _drawerOpen = true;
+
+void DrawerToggle()
+{
+    _drawerOpen = !_drawerOpen;
+}
+
+protected override void OnInitialized()
+{
+    State.AppStateChanged += HandleAppStateChanged;
+}
+
+public void Dispose()
+{
+    State.AppStateChanged -= HandleAppStateChanged;
+}
+
+protected void HandleAppStateChanged()
+{
+    BlazorMonaco.Editor.Global.SetTheme(JsRuntime, State.IsDarkMode ? "vs-dark" : "vs");
+    StateHasChanged();
+}
+
+protected override void OnAfterRender(bool firstRender)
+{
+    if (firstRender)
+    {
+        BlazorMonaco.Editor.Global.SetTheme(JsRuntime, "vs-dark");
+    }
+}
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
+    {
+        await Settings.TryLoadSettingsFromStorageAsync();
+        //HandleAppStateChanged();
+    }
+}
+
+private MudTheme GetCurrentTheme()
+{
+    return Settings.CurrentTheme.BaseTheme;
+}
+
+}

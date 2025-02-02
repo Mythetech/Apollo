@@ -1,0 +1,90 @@
+@using Apollo.Components.Shared
+@using Apollo.Components.Shared.ApolloNotificationBar
+@using Apollo.Components.Solutions.Services
+@inject ISnackbar Snackbar
+@inject IGitHubService GitHubService
+@inject SolutionsState State
+
+<MudDialog Class="pa-4 glassmorphic" Style="min-width: 40vw;min-height: 33vh;">
+    <DialogContent>
+        <MudStack>
+            <MudText>Enter GitHub Repository URL</MudText>
+            <MudTextField @bind-Value="_repoUrl" 
+                         Label="Repository URL"
+                         Placeholder="https://github.com/owner/repo"
+                         Disabled="@_loading"
+                         Validation="@(new Func<string, IEnumerable<string>>(ValidateUrl))" />
+            @if (_loading)
+            {
+                <MudProgressLinear Indeterminate="true" />
+                <MudText>Loading repository contents...</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_loading">Cancel</MudButton>
+        <PrimaryActionButton OnClick="Submit" Text="Open" Disabled="@_loading" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    
+    private string _repoUrl = "";
+    private bool _loading;
+    
+    private IEnumerable<string> ValidateUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            yield return "URL is required";
+        else if (!url.StartsWith("https://github.com/"))
+            yield return "Must be a GitHub repository URL";
+    }
+    
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_repoUrl))
+            return;
+            
+        try 
+        {
+            _loading = true;
+            StateHasChanged();
+
+            var (owner, repo) = await GitHubService.ParseGitHubUrl(_repoUrl);
+            var files = await GitHubService.GetRepositoryContents(owner, repo);
+            
+            var solution = await State.CreateNewSolutionAsync(repo);
+            
+            foreach (var (path, content) in files)
+            {
+                var fileName = Path.GetFileName(path);
+                var directory = Path.GetDirectoryName(path);
+                
+                if (!string.IsNullOrEmpty(directory))
+                {
+                    var folder = solution.GetOrCreateFolder(directory);
+                    solution.AddFile(fileName, folder, content);
+                }
+                else
+                {
+                    solution.AddFile(fileName, content);
+                }
+            }
+            
+            Snackbar.AddApolloNotification($"Opened repository {repo}", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.AddApolloNotification($"Failed to open repository: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+} 
