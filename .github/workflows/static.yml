@@ -45,7 +45,7 @@ jobs:
           dotnet-version: '9.0'
 
       - name: Publish app
-        run: dotnet publish BlazorWebAssemblyXrefGenerator -c Release
+        run: dotnet publish Apollo.Client -c Release
 
       - name: Rewrite base href
         uses: SteveSandersonMS/ghaction-rewrite-base-href@v1
