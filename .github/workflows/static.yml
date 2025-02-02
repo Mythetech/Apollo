@@ -48,7 +48,7 @@ jobs:
         run: dotnet workload install wasm-tools
 
       - name: Run Tests
-        run: dotnet test Apollo.Tests --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
+        run: dotnet test Apollo.Test --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
 
       - name: Upload dotnet test results
         uses: actions/upload-artifact@v4
