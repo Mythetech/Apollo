@@ -2,8 +2,9 @@
 
 Apollo is a web-based C# code editor powered by Roslyn that enables writing, testing, and running C# code directly in the browser using WebAssembly. It provides real-time compilation, diagnostics, and IntelliSense features, but runs entirely in the browser.
 
-![Build Status](https://github.com/mythetech/apollo/workflows/CI/badge.svg)
+[![Deploy Apollo](https://github.com/Mythetech/Apollo/actions/workflows/static.yml/badge.svg)](https://github.com/Mythetech/Apollo/actions/workflows/static.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 
 ## Features
 
