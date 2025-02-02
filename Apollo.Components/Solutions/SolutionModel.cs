@@ -38,7 +38,7 @@ public class SolutionModel
 
         if (DuplicateFileInFolder(folderPath, name))
         {
-            return false; // File already exists
+            return false; 
         }
 
         var file = new SolutionFile
@@ -77,10 +77,8 @@ public class SolutionModel
     {
         var hierarchy = new List<ISolutionItem>();
 
-        // Ensure each folder's items are not overwritten
         foreach (var folder in Items.OfType<Folder>())
         {
-            // Add only items not already present in folder.Items
             var additionalItems = Items
                 .Where(item => item.Uri.StartsWith($"{folder.Uri}/") && !folder.Items.Contains(item))
                 .ToList();
@@ -89,7 +87,6 @@ public class SolutionModel
             hierarchy.Add(folder);
         }
 
-        // Add root-level files that are not part of any folder
         var rootFiles = Items.OfType<SolutionFile>()
             .Where(file => !file.Uri.Contains("/"))
             .ToList();
@@ -101,47 +98,33 @@ public class SolutionModel
     
     public Folder GetLogicalSolutionStructure()
 {
-    // Enforce a single root folder
     var rootFolder = GetRootFolder();
 
-    // Clear and rebuild the hierarchy for the root folder
     rootFolder.Items.Clear();
 
     foreach (var item in Items)
     {
-        // Skip the root folder itself
         if (item.Uri == rootFolder.Uri)
         {
-            //System.Console.WriteLine($"Skipping root folder: {item.Uri}");
             continue;
         }
-
-        //System.Console.WriteLine($"Processing item: {item.Name}, URI: {item.Uri}");
-
-        // Normalize URI by removing the prefix
+        
         var relativeUri = item.Uri.Replace($"{Prefix}/", "").TrimStart('/');
 
-        //System.Console.WriteLine($"Normalized URI: {relativeUri}");
-
-        // Split the URI into parts
         var pathSegments = relativeUri.Split('/');
         var currentFolder = rootFolder;
 
         for (int i = 0; i < pathSegments.Length; i++)
         {
             var segment = pathSegments[i];
-            //System.Console.WriteLine($"Segment: {segment}, Current Folder: {currentFolder.Name}");
 
             if (i == 0 && segment == rootFolder.Name)
             {
-                // Skip the root folder segment
-                //System.Console.WriteLine($"Skipping root folder segment: {segment}");
                 continue;
             }
 
             if (i == pathSegments.Length - 1 && item is SolutionFile file)
             {
-                //System.Console.WriteLine($"Adding file: {file.Name} to folder: {currentFolder.Name}");
                 if (!currentFolder.Items.Contains(file))
                 {
                     currentFolder.Items.Add(file);
@@ -149,14 +132,12 @@ public class SolutionModel
             }
             else
             {
-                // Find or create folder
                 var existingFolder = currentFolder.Items
                     .OfType<Folder>()
                     .FirstOrDefault(f => f.Name == segment);
 
                 if (existingFolder == null)
                 {
-                    //System.Console.WriteLine($"Creating new folder: {segment}");
                     var newFolder = new Folder
                     {
                         Name = segment,
@@ -232,13 +213,10 @@ public class SolutionModel
 
         foreach (var segment in segments)
         {
-            // Start with the root or the current folder
             string parentUri = currentFolder?.Uri ?? Path;
 
-            // Build the current URI correctly
             string currentUri = CreateUri(segment, parentUri);
 
-            // Check for existing folder
             var existingFolder = Items.OfType<Folder>().FirstOrDefault(f => f.Uri == currentUri);
             if (existingFolder != null)
             {
@@ -246,7 +224,6 @@ public class SolutionModel
             }
             else
             {
-                // Create new folder
                 var newFolder = new Folder
                 {
                     Name = segment,
@@ -256,11 +233,11 @@ public class SolutionModel
 
                 if (currentFolder == null)
                 {
-                    Items.Add(newFolder); // Add to root
+                    Items.Add(newFolder); 
                 }
                 else
                 {
-                    currentFolder.Items.Add(newFolder); // Add to current folder
+                    currentFolder.Items.Add(newFolder); 
                 }
 
                 currentFolder = newFolder;
@@ -282,7 +259,6 @@ public class SolutionModel
 
     public string CreateUri(string name, string path)
     {
-        // Normalize path to remove extra prefixes or slashes
         if (path.StartsWith(Prefix))
         {
             path = path.Substring(Prefix.Length).TrimStart('/');

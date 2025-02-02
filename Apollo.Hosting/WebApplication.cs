@@ -60,7 +60,6 @@ public class WebApplication
     {
         var routePattern = new RoutePattern(pattern, HttpMethodType.Post);
         
-        // Check if this route has parameters
         bool hasRouteParameters = pattern.Contains("{") && pattern.Contains("}");
         
         if (!hasRouteParameters && handler is Func<string, string> bodyHandler)
@@ -81,7 +80,6 @@ public class WebApplication
         }
         else 
         {
-            // For route parameters or parameterless handlers
             _routes[routePattern] = handler;
         }
         
@@ -103,7 +101,6 @@ public class WebApplication
         
         if (hasRouteParameters && handler.Method.GetParameters().Length > 1)
         {
-            // Handler expects both route parameter and body
             _routes[routePattern] = new Func<string, string>((id) => 
             {
                 var requestBody = CompilationContext.GetRequestBody();
@@ -112,7 +109,6 @@ public class WebApplication
         }
         else if (!hasRouteParameters && handler is Func<string, string> bodyHandler)
         {
-            // Handler expects only body
             _routes[routePattern] = new Func<string>(() => 
             {
                 var requestBody = CompilationContext.GetRequestBody();
@@ -121,7 +117,6 @@ public class WebApplication
         }
         else 
         {
-            // Handler expects only route parameters or nothing
             _routes[routePattern] = handler;
         }
         
@@ -144,7 +139,6 @@ public class WebApplication
         
         if (hasRouteParameters && handler.Method.GetParameters().Length > 1)
         {
-            // Handler expects both route parameter and body
             _routes[routePattern] = new Func<string, string>((id) => 
             {
                 var requestBody = CompilationContext.GetRequestBody();
@@ -153,7 +147,6 @@ public class WebApplication
         }
         else if (!hasRouteParameters && handler is Func<string, string> bodyHandler)
         {
-            // Handler expects only body
             _routes[routePattern] = new Func<string>(() => 
             {
                 var requestBody = CompilationContext.GetRequestBody();
@@ -162,7 +155,6 @@ public class WebApplication
         }
         else 
         {
-            // Handler expects only route parameters or nothing
             _routes[routePattern] = handler;
         }
         
@@ -184,7 +176,7 @@ public class WebApplication
             while (!token.IsCancellationRequested)
             {
                 await Task.Delay(5000, token);
-                _console.LogTrace("Web application heartbeat..."); // Keep at trace level
+                _console.LogTrace("Web application heartbeat..."); 
             }
         }
         catch (OperationCanceledException)
@@ -201,7 +193,6 @@ public class WebApplication
     {
         _console.LogTrace("Run called");
         
-        // Send discovered routes
         var routes = GetRoutes();
         var msg = new WorkerMessage 
         {
@@ -241,7 +232,6 @@ public class WebApplication
                 }
                 catch (System.Reflection.TargetInvocationException tie) 
                 {
-                    // Unwrap the inner exception from DynamicInvoke
                     if (tie.InnerException is InvalidOperationException ioe && 
                         ioe.Message.Contains("No request body provided"))
                     {
@@ -270,7 +260,6 @@ public class WebApplication
         return notFound;
     }
 
-    // Helper method to extract route parameters
     private Dictionary<string, string> ExtractRouteParameters(string pattern, string path)
     {
         var parameters = new Dictionary<string, string>();

@@ -63,7 +63,7 @@
 
     [Inject] public IMessageBus Bus { get; set; } = default!;
 
-    private Folder _rootFolder = new();
+    private Folder? _rootFolder = new();
 
     private Folder? GetLogicalFolderRoot()
     {
@@ -198,8 +198,5 @@
         
         var dialog = await DialogService.ShowAsync<NewSolutionDialog>("Create New Solution", options);
         var result = await dialog.Result;
-        
-        if (result.Canceled)
-            return;
     }
 }

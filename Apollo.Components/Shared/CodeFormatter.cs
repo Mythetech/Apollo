@@ -12,7 +12,6 @@ public static class CodeFormatter
     public static string Format(string code)
     {
         var serialized = JsonSerializer.Serialize(code);
-        //JsonDocument document = JsonDocument.Parse(serialized);
 
         return JsonSerializer.Deserialize<string>(serialized, _options);
     }

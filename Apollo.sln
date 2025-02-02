@@ -8,8 +8,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Components", "Apollo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apollo.Test", "Apollo.Test\Apollo.Test.csproj", "{9715EB31-36A6-474C-9AAF-8AF39D6265C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipeline", "Pipeline\Pipeline.csproj", "{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8F0E67FF-08FB-4A25-9EFE-4B2115180A5A}"
 	ProjectSection(SolutionItems) = preProject
 		azure-pipelines.yml = azure-pipelines.yml
@@ -60,10 +58,6 @@ Global
 		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9715EB31-36A6-474C-9AAF-8AF39D6265C3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1600C14F-C9DB-484A-AA5E-AC7F1D9B2025}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C1E832A5-D734-47FE-84DA-EF4FBEA49314}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -164,7 +164,6 @@ public class TabViewState
             }
             else
             {
-                // Return to default position
                 existingTab.AreaIdentifier = tab.DefaultArea;
                 existingTab.IsActive = true;
             }

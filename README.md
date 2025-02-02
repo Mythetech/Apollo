@@ -66,7 +66,7 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
     dotnet run --project Apollo.Web
     ```
 
-5. Navigate to `https://localhost:5001`
+5. Navigate to `https://localhost:7092`
 
 ## Contributing
 

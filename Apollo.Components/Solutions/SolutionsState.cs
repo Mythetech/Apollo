@@ -96,7 +96,6 @@ public class SolutionsState
     public async Task RenameItemAsync(ISolutionItem item, string name)
     {
         var oldUri = item.Uri;
-        // Get the parent path and construct new URI properly, handling case sensitivity
         var lastSlashIndex = oldUri.LastIndexOf('/');
         var parentPath = lastSlashIndex > 0 ? oldUri[..lastSlashIndex] : "virtual";
         var newUri = $"{parentPath}/{name}";
@@ -107,15 +106,12 @@ public class SolutionsState
         if(f == null) 
             return;
         
-        var oldName = f.Name;  // Store old name before any changes
+        var oldName = f.Name; 
         
-        // If this is a folder, update all child item URIs
         if (f is Folder folder)
         {
-            // Store existing items before any changes
             var existingItems = new List<ISolutionItem>(folder.Items);
             
-            // If this is the root folder, update solution name and references
             var normalizedFolderUri = folder.Uri.TrimEnd('/').ToLowerInvariant();
             var normalizedProjectPath = Project.Path.TrimEnd('/').ToLowerInvariant();
             if (normalizedFolderUri == normalizedProjectPath || 
@@ -128,13 +124,11 @@ public class SolutionsState
                 folder.Uri = $"virtual/{name}";
                 folder.ModifiedAt = DateTimeOffset.Now;
                 
-                // Update all child URIs to use new solution name
                 foreach (var projectItem in Project.Items.Where(i => i != folder))
                 {
                     projectItem.Uri = projectItem.Uri.Replace($"virtual/{oldName}/", $"virtual/{name}/", StringComparison.OrdinalIgnoreCase);
                 }
 
-                // Update solution in Solutions list
                 var solutionIndex = Solutions.FindIndex(s => s.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
                 if (solutionIndex >= 0)
                 {
@@ -143,7 +137,7 @@ public class SolutionsState
 
                 ProjectChanged?.Invoke();
                 SolutionFilesChanged?.Invoke();
-                return;  // Exit early as we've handled everything for root rename
+                return;  
             }
             else
             {
@@ -151,8 +145,7 @@ public class SolutionsState
                 f.ModifiedAt = DateTimeOffset.Now;
                 f.Uri = newUri;
 
-                // Update child URIs
-                foreach (var projectItem in Project.Items.Where(i => i != f))
+                foreach (var projectItem in Project.Items.Where(i => !Equals(i, f)))
                 {
                     if (projectItem.Uri.StartsWith(oldUri + "/"))
                     {
@@ -177,15 +170,12 @@ public class SolutionsState
 
     public bool IsRootFolder(Folder folder)
     {
-        // First, normalize both paths to a consistent format
         var folderPath = folder.Uri.TrimEnd('/').ToLowerInvariant();
         var projectPath = Project.Path.TrimEnd('/').ToLowerInvariant();
         
-        // Direct path comparison
         if (folderPath == projectPath)
             return true;
         
-        // Check if this is the root folder by comparing the last segment
         var folderName = folder.Uri.Split('/').Last().ToLowerInvariant();
         var projectName = Project.Name.ToLowerInvariant();
         
@@ -391,13 +381,11 @@ app.Run();",
 
     public void DeleteFile(SolutionFile file)
     {
-        // Handle active file switching first
         if (ActiveFile?.Uri == file.Uri)
         {
             SwitchFile(Project.Files.FirstOrDefault(f => f != file));
         }
 
-        // Remove from project
         Project.DeleteFile(file);
         
         SolutionFilesChanged?.Invoke();
@@ -410,14 +398,12 @@ app.Run();",
             return;
         }
 
-        // Switch active file first if it's in the folder being deleted
         if (ActiveFile != null && ActiveFile.Uri.StartsWith(folder.Uri))
         {
             var newActiveFile = Project.Files.FirstOrDefault(f => !f.Uri.StartsWith(folder.Uri));
             SwitchFile(newActiveFile);
         }
 
-        // Then delete the folder and its contents
         Project.DeleteFolder(folder);
         
         SolutionFilesChanged?.Invoke();
@@ -425,23 +411,17 @@ app.Run();",
 
     public void MoveFile(SolutionFile file, Folder destinationFolder)
     {
-        // Find current parent folder
         var currentParentFolder = Project.GetFolders()
             .FirstOrDefault(f => f.Items.Contains(file));
         
-        // Remove from current folder if it exists
         currentParentFolder?.Items.Remove(file);
 
-        // Create new URI for the file
         var newUri = Project.CreateUri(file.Name, destinationFolder.Uri);
         
-        // Update file's URI
         file.Uri = newUri;
         
-        // Add to destination folder
         destinationFolder.Items.Add(file);
         
-        // Update folder structure
         Project.GetHierarchicalItems();
         
         SolutionFilesChanged?.Invoke();

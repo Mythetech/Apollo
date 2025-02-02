@@ -1,15 +1,18 @@
 using Apollo.Components.Infrastructure;
 using Blazored.LocalStorage;
+using Microsoft.Extensions.Logging;
 
 namespace Apollo.Components.Solutions.Services;
 
 public class SolutionsStorageService : ISolutionSaveService
 {
     private readonly ILocalStorageService _localStorageService;
+    private readonly ILogger<SolutionsStorageService> _logger;
     private const string SolutionsPrefix = "__apollo_project"; 
-    public SolutionsStorageService(ILocalStorageService localStorageService)
+    public SolutionsStorageService(ILocalStorageService localStorageService, ILogger<SolutionsStorageService> logger)
     {
         _localStorageService = localStorageService;
+        _logger = logger;
     }
 
     public async Task RemoveSolutionAsync(string solutionName)
@@ -20,7 +23,7 @@ public class SolutionsStorageService : ISolutionSaveService
         }
         catch (Exception e)
         {
-            System.Console.WriteLine(e.Message);
+            _logger.LogError(e.Message);
         }
     }
 
