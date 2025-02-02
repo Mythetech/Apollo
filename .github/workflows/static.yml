@@ -44,6 +44,9 @@ jobs:
         with:
           dotnet-version: '9.0'
 
+      - name: Install .Net WASM workload
+        run: dotnet workload install wasm-tools
+
       - name: Publish app
         run: dotnet publish Apollo.Client -c Release
 
