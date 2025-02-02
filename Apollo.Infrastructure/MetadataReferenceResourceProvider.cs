@@ -32,7 +32,12 @@ public class MetadataReferenceResourceProvider : IMetadataReferenceResolver
     
     private async Task<string> ResolveResourceStreamUri(string resource)
     {
+        string prefix = "/_framework";
         var resolved = await _resourceResolver.ResolveResource(resource);
-        return $"/_framework/{resolved}";
+        if (_baseUri.Contains("github", StringComparison.OrdinalIgnoreCase))
+        {
+            prefix = "/Apollo" + prefix;
+        }
+        return $"{prefix}/{resolved}";
     }
 }
