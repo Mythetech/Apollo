@@ -5,6 +5,7 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 [![Deploy Apollo](https://github.com/Mythetech/Apollo/actions/workflows/static.yml/badge.svg)](https://github.com/Mythetech/Apollo/actions/workflows/static.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+<img width="1728" alt="image" src="https://github.com/user-attachments/assets/3b4682ed-3289-4ef4-83e6-e6c36c2a4ca6" />
 
 ## Features
 
