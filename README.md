@@ -9,9 +9,10 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 
 ### Code Editing
 - Real-time C# syntax highlighting and error detection
-- Full IntelliSense support (completion, signature help, quick info)
+- IntelliSense support 
 - Multi-file project support
 - WebAssembly-based compilation and execution
+- Offline support
 
 ### Project Types
 - Console Applications
@@ -27,7 +28,7 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 
 ## Quick Start
 
-1. Visit [Apollo Editor](https://apollo-editor.azurewebsites.net)
+1. Visit [Apollo Editor](https://mythetech.github.io/Apollo/)
 2. Choose a project template or start with a blank console application
 3. Write your C# code
 4. Click Run (or press Ctrl+Enter) to execute
