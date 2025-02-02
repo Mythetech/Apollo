@@ -39,6 +39,10 @@ public class ResourceResolver : IResourceResolver
     private async Task<Dictionary<string, string>> FetchResourcesAsync()
     {
         var baseUri = GetBaseUri();
+        if (baseUri.Contains("github", StringComparison.OrdinalIgnoreCase))
+        {
+            baseUri += "/Apollo";
+        }
         var bootJsonUrl = $"{baseUri}/_framework/blazor.boot.json";
         var bootJsonContent = await _httpClient.GetStringAsync(bootJsonUrl);
 
