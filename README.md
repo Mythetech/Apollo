@@ -1,6 +1,6 @@
 # Apollo Code Editor
 
-Apollo is a web-based C# code editor powered by Roslyn that enables writing, testing, and running C# code directly in the browser using WebAssembly. It provides real-time compilation, diagnostics, and IntelliSense features, but runs entirely in the browser.
+Apollo is a web-based C# code editor powered by Roslyn that enables writing, testing, and running C# code directly in the browser using WebAssembly. It provides real-time compilation, diagnostics, web api emulation, ind IntelliSense features, but runs entirely in the browser.
 
 [![Deploy Apollo](https://github.com/Mythetech/Apollo/actions/workflows/static.yml/badge.svg)](https://github.com/Mythetech/Apollo/actions/workflows/static.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -19,7 +19,7 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 ### Project Types
 - Console Applications
 - Web APIs (ASP.NET Core Minimal APIs)
-- Test Projects
+- Test Files
 
 ### Development Experience
 - Real-time error detection and diagnostics
@@ -40,12 +40,19 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 - Monaco Editor for code editing
 - Roslyn for code analysis and compilation
 - WebWorkers for processing
+- MudBlazor & FluentUI
 
 ## Development Setup
 
 ### Prerequisites
 - .NET 9.0 SDK
+- DotNet Wasm Workload
 - A modern web browser with WebAssembly support
+
+You can install the WebAssembly workload with:
+```bash
+dotnet workload install wasm-tools
+```
 
 ### Getting Started
 1. Clone the repository
@@ -73,11 +80,12 @@ Apollo is a web-based C# code editor powered by Roslyn that enables writing, tes
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
-- Code style and conventions
-- Development workflow
-- Testing requirements
-- Pull request process
+We welcome contributions! 
+ - Bug fixes
+ - Documentation updates
+ - Enhancing functionality
+ - Samples/Templates
+ - Full features! (Start discussion for guidance)
 
 ### Development Workflow
 1. Fork the repository
@@ -85,10 +93,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 3. Make your changes
 4. Add tests for new functionality
 5. Submit a pull request
-
-Response time:
-- Issues: Usually within 48 hours
-- Pull requests: Review within 1 week
 
 ## Project Status
 

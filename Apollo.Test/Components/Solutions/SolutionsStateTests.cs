@@ -3,6 +3,7 @@ using Apollo.Components.Infrastructure;
 using Apollo.Components.Solutions;
 using Apollo.Components.Solutions.Consumers;
 using Apollo.Components.Solutions.Events;
+using Apollo.Components.Solutions.Services;
 using Apollo.Contracts.Solutions;
 using NSubstitute;
 using Shouldly;

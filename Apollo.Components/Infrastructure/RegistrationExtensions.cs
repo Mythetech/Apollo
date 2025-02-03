@@ -86,7 +86,6 @@ public static class RegistrationExtensions
 
     public static IServiceCollection AddTerminalCommands(this IServiceCollection services)
     {
-        // Find all non-abstract types implementing ITerminalCommand
         var commandTypes = Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(t => !t.IsAbstract && !t.IsInterface && 

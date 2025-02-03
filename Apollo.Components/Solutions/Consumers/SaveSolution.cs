@@ -1,6 +1,7 @@
 using Apollo.Components.Infrastructure;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Commands;
+using Apollo.Components.Solutions.Services;
 
 namespace Apollo.Components.Solutions.Consumers;
 
