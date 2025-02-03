@@ -1,6 +1,4 @@
-using Apollo.Components.Solutions;
-
-namespace Apollo.Components.Infrastructure;
+namespace Apollo.Components.Solutions.Services;
 
 public interface ISolutionSaveService
 {

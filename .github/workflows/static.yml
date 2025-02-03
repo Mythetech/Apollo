@@ -4,12 +4,17 @@ env:
   PUBLISH_DIR: Apollo.Client/bin/Release/net9.0/publish/wwwroot
 
 on:
-  # Runs on pushes targeting the default branch for the app's folder path
+  # Runs on pushes targeting the default branch and PRs
   push:
     paths:
       - Apollo/**
     branches:
-      - main  
+      - main
+  pull_request:
+    paths:
+      - Apollo/**
+    branches:
+      - main
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -27,14 +32,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
+  test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,6 +55,26 @@ jobs:
           name: dotnet-results-${{ matrix.dotnet-version }}
           path: TestResults-${{ matrix.dotnet-version }}
         if: ${{ always() }}
+
+  # Deploy job
+  deploy:
+    needs: test # Only deploy if tests pass
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' # Only deploy on push to main or manual trigger
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+
+      - name: Install .Net WASM workload
+        run: dotnet workload install wasm-tools
 
       - name: Publish app
         run: dotnet publish Apollo.Client -c Release

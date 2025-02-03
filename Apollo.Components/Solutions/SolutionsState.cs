@@ -5,6 +5,7 @@ using Apollo.Components.Infrastructure;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Events;
+using Apollo.Components.Solutions.Services;
 using Apollo.Contracts.Solutions;
 
 namespace Apollo.Components.Solutions;
