@@ -21,7 +21,7 @@
         }
     </TooltipContent>
     <ChildContent>
-        <MudText onclick="@ToggleParameterMenu">
+        <MudText onclick="@(ToggleParameterMenu)">
             @if (ShowValue)
             {
                 <code class="cursor-pointer">
@@ -44,7 +44,7 @@
         </MudText>
     </ChildContent>
 </MudTooltip>
-<MudPopover TransformOrigin="Origin.BottomLeft">
+<MudPopover @bind-Open="@_open" TransformOrigin="Origin.BottomLeft">
     <MudStack Row Class="mud-width-full" AlignItems="AlignItems.Center">
         <MudTextField @bind-Value="@_editValue"></MudTextField>
         <MudSpacer />
