@@ -1,4 +1,5 @@
 @using System.Reflection
+@using Apollo.Components.Infrastructure.Environment
 @using Apollo.Components.Shared
 
 <MudDialog Class="pa-4 glassmorphic" Style="width: 33vw; height: 45dvh;" ContentStyle="overflow:hidden;">
@@ -18,9 +19,9 @@
     </DialogContent>
     <DialogActions>
         <MudStack Row="true" Spacing="4" Class="mud-width-full" AlignItems="AlignItems.Center">
-        @*<MudLink Color="Color.Inherit" Typo="Typo.body1" class="gotu-regular mud-text-secondary" Href="https://www.mythetech.com" Target="_blank">Mythetech</MudLink>*@
+        <MudLink Color="Color.Inherit" Typo="Typo.body1" class="gotu-regular mud-text-secondary" Href="https://www.mythetech.com" Target="_blank">Mythetech</MudLink>
         <MudText Typo="Typo.body1" class="mud-text-secondary">Version @Version</MudText>
-        @*<ApolloIconLinkButton Tooltip="Support" Icon="@Icons.Custom.Brands.Discord" Href="https://discord.gg/gQcBw2eHkM"/>*@
+        <ApolloIconLinkButton Tooltip="Support" Icon="@Icons.Custom.Brands.Discord" Href="https://discord.gg/gQcBw2eHkM"/>
         <MudSpacer/>
         <MudButton Class="rounded" OnClick="Cancel">Close</MudButton>
         <MudButton Class="rounded" Variant="Variant.Text" OnClick="Cancel">Get Started!</MudButton>
@@ -30,8 +31,11 @@
 @code {
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; }
+
+    [Inject] protected IRuntimeEnvironment Environment { get; set; } = default!;
+    
     private void Cancel() => MudDialog.Cancel();
 
-    private string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
+    private string Version => Environment.Version.ToString();
 
 }
