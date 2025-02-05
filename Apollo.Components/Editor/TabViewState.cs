@@ -197,13 +197,11 @@ public class TabViewState
                 AreaIdentifier = DropZones.Right,
                 IsActive = true
             },
-            /*
             new DebuggingOutputTab()
             {
                 AreaIdentifier = DropZones.Bottom,
                 IsActive = false
             },
-            */
             new TestingTab()
             {
                 AreaIdentifier = DropZones.Right,

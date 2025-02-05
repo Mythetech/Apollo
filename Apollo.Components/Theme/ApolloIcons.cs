@@ -8,6 +8,8 @@ public static class ApolloIcons
 
     public const string Build = Icons.Material.TwoTone.Build;
 
+    public const string Debug = Icons.Material.TwoTone.BugReport;
+
     public const string Stop = Icons.Material.TwoTone.Stop;
     
     public const string Solution = Icons.Material.TwoTone.FolderSpecial;

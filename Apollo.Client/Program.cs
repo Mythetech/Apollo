@@ -16,6 +16,7 @@ using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Infrastructure.Resources;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Apollo.Components.Debugging.Commands;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Hosting.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
@@ -125,6 +127,9 @@ public class KeyboardService : IDisposable
                 break;
             case KeyBindingAction.Shutdown:
                 await _bus.PublishAsync(new Shutdown());
+                break;
+            case KeyBindingAction.DebugSolution:
+                await _bus.PublishAsync(new DebugSolution());
                 break;
         }
     }

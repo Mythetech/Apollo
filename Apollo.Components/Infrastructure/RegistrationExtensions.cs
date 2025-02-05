@@ -62,8 +62,8 @@ public static class RegistrationExtensions
         services.AddSingleton<CodeAnalysisState>();
         services.AddSingleton<CodeAnalysisConsoleService>();
         services.AddSingleton<WebHostConsoleService>();
-        //services.AddSingleton<DebuggerState>();
-        //services.AddSingleton<DebuggerConsole>();
+        services.AddSingleton<DebuggerState>();
+        services.AddSingleton<DebuggerConsole>();
         services.AddScoped<KeyboardService>();
         services.AddSingleton<IFileSystemAccessServiceInProcess, FileSystemAccessServiceInProcess>();
         services.AddSingleton<IFileSystemAccessService>(sp => (IFileSystemAccessService)sp.GetRequiredService<IFileSystemAccessServiceInProcess>());

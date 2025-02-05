@@ -1,7 +1,9 @@
 using Apollo.Components.Code;
 using Apollo.Components.Console;
+using Apollo.Components.Editor;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Contracts.Debugging;
+using Apollo.Contracts.Solutions;
 using Apollo.Contracts.Workers;
 
 namespace Apollo.Components.Debugging;
@@ -12,6 +14,7 @@ public class DebuggerState
     private readonly IDebuggerWorkerFactory _workerFactory;
     private readonly DebuggerConsole _console;
     private readonly IMessageBus _messageBus;
+    private readonly EditorState _editorState;
 
     public bool Disabled { get; private set; }
     public bool IsDebugging { get; private set; }
@@ -26,12 +29,13 @@ public class DebuggerState
 
     private bool _workerReady = false;
 
-    public DebuggerState(IDebuggerWorkerFactory workerFactory, DebuggerConsole console, IMessageBus messageBus)
+    public DebuggerState(IDebuggerWorkerFactory workerFactory, DebuggerConsole console, IMessageBus messageBus, EditorState editorState)
     {
         System.Console.WriteLine("Initializing Debugger State");
         _workerFactory = workerFactory;
         _console = console;
         _messageBus = messageBus;
+        _editorState = editorState;
     }
     
     public async Task StartAsync()
@@ -118,13 +122,20 @@ public class DebuggerState
                 : DebugCommandType.SetBreakpoint,
             Breakpoint = breakpoint
         };
-        
-       // await _worker.SendMessageAsync(command);
-    }
-/*
-    public async Task StartDebugging() => 
-        await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.Start });
 
+        if (command.Type == DebugCommandType.RemoveBreakpoint)
+        {
+            await _worker.RemoveBreakpoint(command.Breakpoint);
+        }
+        else
+        {
+            await _worker.SetBreakpoint(command.Breakpoint);
+        }
+    }
+
+    public async Task StartDebuggingAsync(Solution solution, Breakpoint? breakpoint) => 
+        await _worker.DebugAsync(solution, breakpoint);
+/*
     public async Task StepOver() =>
         await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.StepOver });
 
@@ -134,9 +145,4 @@ public class DebuggerState
     public async Task Stop() =>
         await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.Stop });
 */
-    public void Dispose()
-    {
-        if(_worker != null)
-            _worker.OnDebugEvent -= HandleDebugEvent;
-    }
 }

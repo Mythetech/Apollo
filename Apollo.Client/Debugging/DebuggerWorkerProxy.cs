@@ -2,7 +2,9 @@ using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.Debugging;
 using Apollo.Contracts.Debugging;
+using Apollo.Contracts.Solutions;
 using Apollo.Contracts.Workers;
+using Apollo.Debugging;
 using Apollo.Infrastructure.Workers;
 using KristofferStrube.Blazor.DOM;
 using KristofferStrube.Blazor.WebWorkers;
@@ -82,15 +84,36 @@ public class DebuggerWorkerProxy : IDebuggerWorker
     public event Action<DebuggerEvent>? OnDebugEvent;
 
     protected void NotifyDebugEvent(DebuggerEvent evt) => OnDebugEvent?.Invoke(evt);
-    
+
+    public async Task DebugAsync(Solution solution, Breakpoint breakpoint)
+    {
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage()
+        {
+            Action = WorkerActions.Debug,
+            Payload = JsonSerializer.Serialize(new
+            {
+                Solution = solution,
+                Breakpoint = breakpoint
+            })
+        }));
+    }
+
     public async Task SetBreakpoint(Breakpoint breakpoint)
     {
-        throw new NotImplementedException();
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage()
+        {
+            Action = WorkerActions.SetBreakpoint,
+            Payload = JsonSerializer.Serialize(breakpoint)
+        }));
     }
 
     public async Task RemoveBreakpoint(Breakpoint breakpoint)
     {
-        throw new NotImplementedException();
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage()
+        {
+            Action = WorkerActions.RemoveBreakpoint,
+            Payload = JsonSerializer.Serialize(breakpoint)
+        }));
     }
 
     public async Task Continue()

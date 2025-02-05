@@ -1,6 +1,7 @@
 @page "/"
 @using Apollo.Components.Code
 @using Apollo.Components.Debugging
+@using Apollo.Components.Debugging.Commands
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Apollo.Components.DynamicTabs
 @using Apollo.Components.Hosting
@@ -22,71 +23,62 @@
 
 <MudAppBar Elevation="1" Style="@Settings.CurrentTheme.AppBarStyle">
     <ApolloMenu />
-    <FileMenu/>
-    <EditMenu/>
+    <FileMenu />
+    <EditMenu />
     <ToolsMenu />
-    <ViewMenu
-        Tabs="TabViewState.TabList"
+    <ViewMenu Tabs="TabViewState.TabList"
         LeftViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
         RightViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
         BottomViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
         HideViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
         DockedBottomViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
-        FloatingViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
-    />
-    <MudSpacer/>
+        FloatingViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))" />
+    <MudSpacer />
     @if (!CompilerState.Initialized)
     {
         <MudStack Justify="Justify.Center" AlignItems="AlignItems.Center" Spacing="1">
             <MudText>Initializing background services...</MudText>
-            <MudProgressLinear Rounded="true" Style="width:12dvw" Color="Color.Success" Indeterminate="true"/>
+            <MudProgressLinear Rounded="true" Style="width:12dvw" Color="Color.Success" Indeterminate="true" />
         </MudStack>
     }
-    <MudSpacer/>
-    <KeyboardIconButton 
-        Icon="@ApolloIcons.Run" 
-        Color="Color.Success" 
-        OnClick="RunSolutionAsync" 
-        Tooltip="Run" 
-        Shortcut="new() { Ctrl = true, Key = KeyCode.Enter }"
-        Disabled="@(!CompilerState.CompilerReady)"/>
+    <MudSpacer />
+    <KeyboardIconButton Icon="@ApolloIcons.Run" Color="Color.Success" OnClick="RunSolutionAsync" Tooltip="Run"
+        Shortcut="new() { Ctrl = true, Key = KeyCode.Enter }" Disabled="@(!CompilerState.CompilerReady)" />
 
-    <KeyboardIconButton 
-        Icon="@ApolloIcons.Build" 
-        Tooltip="Build"
-        Shortcut="new() { Ctrl = true, Key = KeyCode.KeyB }"
-        OnClick="BuildSolutionAsync" 
-        Disabled="@(!CompilerState.CompilerReady)"/>
+    <KeyboardIconButton Icon="@ApolloIcons.Build" Tooltip="Build" Shortcut="new() { Ctrl = true, Key = KeyCode.KeyB }"
+        OnClick="BuildSolutionAsync" Disabled="@(!CompilerState.CompilerReady)" />
 
-    <KeyboardIconButton 
-        Id="apollo-stop-btn" 
-        Icon="@ApolloIcons.Stop" 
-        Color="Color.Error" 
-        Tooltip="Stop"
-        Shortcut="new() { Ctrl = true, Key = KeyCode.KeyC }"
-        OnClick="StopAsync" 
-        Disabled="@(HostingService.State != HostingStates.Hosting)"/>
+    <ApolloIconButton Icon="@ApolloIcons.Debug" Tooltip="Build (Ctrl + D)" OnClick="DebugSolutionAsync"
+        Disabled="@(DebuggerState.Disabled)" />
 
-    <ApolloIconButton Icon="@ApolloIcons.Settings" Tooltip="Settings" OnClick="OpenSettingsDialog"/>
+    <KeyboardIconButton Id="apollo-stop-btn" Icon="@ApolloIcons.Stop" Color="Color.Error" Tooltip="Stop"
+        Shortcut="new() { Ctrl = true, Key = KeyCode.KeyC }" OnClick="StopAsync"
+        Disabled="@(HostingService.State != HostingStates.Hosting)" />
+
+    <ApolloIconButton Icon="@ApolloIcons.Settings" Tooltip="Settings" OnClick="OpenSettingsDialog" />
 </MudAppBar>
 
-<MudContainer Gutters="false" MaxWidth="MaxWidth.ExtraExtraLarge" Style="height:calc(100dvh - var(--mud-appbar-height))">
-    <TabDropContainer @ref="_tabContainer" Items="@TabViewState.TabList" ItemsSelector="(view, s) => view.AreaIdentifier.Equals(s)">
+<MudContainer Gutters="false" MaxWidth="MaxWidth.ExtraExtraLarge"
+    Style="height:calc(100dvh - var(--mud-appbar-height))">
+    <TabDropContainer @ref="_tabContainer" Items="@TabViewState.TabList"
+        ItemsSelector="(view, s) => view.AreaIdentifier.Equals(s)">
         <MudContainer Class="position-fixed" Style="@GetFloatingContainerStyle()">
-            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Floating"/>
+            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Floating" />
         </MudContainer>
-        <FluentMultiSplitter OnResize="@OnResizeHandler" Height="@($"calc(100% - {DockSize})")" Width="100%" Orientation="Orientation.Vertical">
+        <FluentMultiSplitter OnResize="@OnResizeHandler" Height="@($"calc(100% - {DockSize})")" Width="100%"
+            Orientation="Orientation.Vertical">
             <FluentMultiSplitterPane Size="100%" Min="30%">
                 <FluentMultiSplitter OnResize="@OnResizeHandler" Height="100%" Width="100%">
                     <FluentMultiSplitterPane Size="20%" Min="50px" Max="70%">
                         <div class="pa-1 mud-height-full">
                             <ApolloCard>
-                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Left"/>
+                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Left" />
                             </ApolloCard>
                         </div>
                     </FluentMultiSplitterPane>
                     <FluentMultiSplitterPane Size="50%">
-                        <FluentMultiSplitter OnResize="@OnResizeHandler" OnExpand="@OnCollapseExpand" OnCollapse="@OnCollapseExpand" Orientation="Orientation.Vertical">
+                        <FluentMultiSplitter OnResize="@OnResizeHandler" OnExpand="@OnCollapseExpand"
+                            OnCollapse="@OnCollapseExpand" Orientation="Orientation.Vertical">
                             <FluentMultiSplitterPane Collapsible="true">
                                 <div class="pa-1 mud-height-full">
                                     <ApolloCard Class="pa-1">
@@ -95,20 +87,21 @@
                                                 @foreach (var file in SolutionsState?.Project?.GetFiles() ?? [])
                                                 {
                                                     <FluentOverflowItem>
-                                                        <FileTypeItem File="@file" OnClick="FileLoaded" Active="@file.Uri.Equals(SolutionsState?.ActiveFile?.Uri)"/>
+                                                        <FileTypeItem File="@file" OnClick="FileLoaded"
+                                                            Active="@file.Uri.Equals(SolutionsState?.ActiveFile?.Uri)" />
                                                     </FluentOverflowItem>
                                                 }
                                             </ChildContent>
                                         </FluentOverflow>
 
-                                        <ApolloCodeEditor @ref="@_editor"/>
+                                        <ApolloCodeEditor @ref="@_editor" />
                                     </ApolloCard>
                                 </div>
                             </FluentMultiSplitterPane>
                             <FluentMultiSplitterPane Collapsible="true">
                                 <div class="pa-1 mud-height-full">
                                     <ApolloCard>
-                                        <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Bottom"/>
+                                        <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Bottom" />
                                     </ApolloCard>
                                 </div>
                             </FluentMultiSplitterPane>
@@ -117,25 +110,21 @@
                     <FluentMultiSplitterPane Size="30%">
                         <div class="pa-1 mud-height-full">
                             <ApolloCard>
-                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Right"/>
+                                <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Right" />
                             </ApolloCard>
                         </div>
                     </FluentMultiSplitterPane>
                 </FluentMultiSplitter>
             </FluentMultiSplitterPane>
         </FluentMultiSplitter>
-        <MudDrawer @bind-Open="@TabViewState.DockOpen"
-                   Anchor="Anchor.Bottom"
-                   Class="mud-width-full"
-                   Elevation="1"
-                   Variant="@DrawerVariant.Mini"
-                   Height="@DockSize">
+        <MudDrawer @bind-Open="@TabViewState.DockOpen" Anchor="Anchor.Bottom" Class="mud-width-full" Elevation="1"
+            Variant="@DrawerVariant.Mini" Height="@DockSize">
             <MudStack Row AlignItems="AlignItems.Center" Class="mud-height-full" Spacing="0">
                 <ToggleDockButton />
                 <MudStack Class="mud-width-full mud-height-full">
                     <div class="pa-1 mud-height-full">
                         <ApolloCard>
-                            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Docked"/>
+                            <TabDropZone Items="@TabViewState.TabList" Identifier="@DropZones.Docked" />
                         </ApolloCard>
                     </div>
                 </MudStack>
@@ -147,7 +136,7 @@
 
 @code {
     [Inject] protected IDialogService DialogService { get; set; } = default!;
-    
+
     [Inject] public TabViewState TabViewState { get; set; } = default!;
 
     [Inject] public AppState State { get; set; } = default!;
@@ -168,7 +157,7 @@
 
     [Inject] public IMessageBus Bus { get; set; } = default!;
 
-    //[Inject] public DebuggerState DebuggerState { get; set; } = default!;
+    [Inject] public DebuggerState DebuggerState { get; set; } = default!;
 
     private string DockSize => TabViewState.DockOpen ? "300px" : "36px";
 
@@ -176,7 +165,7 @@
 
     private ApolloCodeEditor? _editor = default;
 
-    
+
     void OnResizeHandler(FluentMultiSplitterResizeEventArgs e)
     {
     }
@@ -200,6 +189,11 @@
     protected async Task BuildSolutionAsync()
     {
         await SolutionsState.BuildAsync();
+    }
+
+    protected async Task DebugSolutionAsync()
+    {
+        await Bus.PublishAsync(new DebugSolution());
     }
 
     protected async Task StopAsync()
@@ -256,6 +250,7 @@
         CompilerState.OnCompilerStatusChanged += StateHasChangedAsync;
         Settings.SettingsChanged += StateHasChanged;
         HostingService.OnHostingStateChanged += StateHasChangedAsync;
+        DebuggerState.DebuggerStateChanged += StateHasChanged;
         base.OnInitialized();
     }
 
@@ -268,6 +263,7 @@
         CompilerState.OnCompilerStatusChanged -= StateHasChangedAsync;
         Settings.SettingsChanged -= StateHasChanged;
         HostingService.OnHostingStateChanged -= StateHasChangedAsync;
+        DebuggerState.DebuggerStateChanged -= StateHasChanged;
     }
 
     protected async void HandleProjectChange()
@@ -275,7 +271,7 @@
         await Task.Yield();
         await SolutionsState.BuildAsync();
     }
-    
+
     protected Task StateHasChangedAsync()
     {
         StateHasChanged();
@@ -299,7 +295,7 @@
 
         StateHasChanged();
     }
-    
+
     protected string GetFloatingContainerStyle()
     {
         return "position:fixed;top:0;left:0;right:0;bottom:0;z-index:1100;pointer-events:none;";

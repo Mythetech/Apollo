@@ -32,7 +32,7 @@
     </MudList>
 </div>
 @code {
-    /*[Inject] protected DebuggerState State { get; set; } = default!;*/
+    [Inject] protected DebuggerState State { get; set; } = default!;
     
     [Inject] protected IScrollManager ScrollManager { get; set; } = default!;
 
@@ -42,7 +42,7 @@
     {
         ConsoleOutputService.OnConsoleOutputReceived += HandleConsoleOutputReceived;
         ConsoleOutputService.OnConsoleCleared += HandleConsoleCleared;
-       // State.DebuggerStateChanged += StateHasChanged;
+        State.DebuggerStateChanged += StateHasChanged;
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -57,7 +57,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        //await State.StartAsync();
+        await State.StartAsync();
     }
 
     private void HandleConsoleOutputReceived(ConsoleOutputViewModel log)
@@ -79,7 +79,7 @@
     {
         ConsoleOutputService.OnConsoleOutputReceived -= HandleConsoleOutputReceived;
         ConsoleOutputService.OnConsoleCleared -= HandleConsoleCleared;
-      //  State.DebuggerStateChanged -= StateHasChanged;
+        State.DebuggerStateChanged -= StateHasChanged;
     }
 
     public override string Name { get; set; } = "Debugging Output";
