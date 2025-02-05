@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Apollo.Contracts.Debugging;
 using Apollo.Contracts.Workers;
 using Apollo.Debugging;
 using Apollo.Infrastructure;
@@ -17,6 +18,18 @@ var resolver = new MetadataReferenceResourceProvider(HostAddress.BaseUri);
 
 const bool keepRunning = true;
 
+DebugRuntime.LogCallback += (s, e) =>
+{
+    Imports.PostMessage(
+        WorkerLogWriter.Log(s, e)
+    );
+};
+
+DebugRuntime.StatusUpdateCallback += () =>
+{
+    //Imports.PostMessage(WorkerLogWriter.Log("Status Update Check", LogSeverity.Trace));
+};
+
 Imports.RegisterOnMessage(async e =>
 {
     var payload = e.GetPropertyAsString("data");
@@ -30,6 +43,14 @@ Imports.RegisterOnMessage(async e =>
             
             case WorkerActions.Debug:
                 await HandleDebugMessage(message);
+                break;
+            case WorkerActions.Continue:
+                HandleContinue();
+                break;
+            default:
+                Imports.PostMessage(
+                    WorkerLogWriter.WarningMessage("Unhandled action: " + message.Action)
+                    );
                 break;
         }
     }
@@ -57,13 +78,36 @@ async Task HandleDebugMessage(WorkerMessage message)
         await resolver.GetMetadataReferenceAsync("System.Private.CoreLib.wasm"),
         await resolver.GetMetadataReferenceAsync("System.Runtime.wasm"),
         await resolver.GetMetadataReferenceAsync("System.Console.wasm"),
+        await resolver.GetMetadataReferenceAsync("System.Collections.wasm"),  
+        await resolver.GetMetadataReferenceAsync("System.Linq.wasm"),       
+        await resolver.GetMetadataReferenceAsync("System.Threading.wasm"),
+        await resolver.GetMetadataReferenceAsync("Apollo.Debugging.wasm"),
         await resolver.GetMetadataReferenceAsync("xunit.assert.wasm"),
         await resolver.GetMetadataReferenceAsync("xunit.core.wasm")
     };
+    
+    Imports.PostMessage(
+        WorkerLogWriter.Log("Resolved metadata references", LogSeverity.Trace)
+    );
 
     var service = new DebuggingService();
     
-    await service.DebugAsync(debugMsg.Solution, references, logAction: LogCallback);
+    Imports.PostMessage(
+        WorkerLogWriter.Log("Debugging service ready", LogSeverity.Trace)
+    );
+
+    try
+    {
+        Imports.PostMessage(
+            WorkerLogWriter.Log("Starting debug process", LogSeverity.Trace)
+        );
+        
+        await service.DebugAsync(debugMsg.Solution, references, logAction: LogCallback, debugAction: DebugEventCallback);
+    }
+    catch (Exception ex)
+    {
+        SendError(ex.Message);
+    }
 
     var msg = new WorkerMessage()
     {
@@ -72,6 +116,19 @@ async Task HandleDebugMessage(WorkerMessage message)
     };
 
     Imports.PostMessage(JsonSerializer.Serialize(msg));
+}
+
+void HandleContinue()
+{
+    Imports.PostMessage(
+        WorkerLogWriter.Log("Handling continue, debugger current state: " + DebugRuntime.State, LogSeverity.Trace)
+    );
+    
+    DebugRuntime.Continue();
+    
+    Imports.PostMessage(
+        WorkerLogWriter.Log("Handled continue, debugger current state: " + DebugRuntime.State, LogSeverity.Trace)
+    );
 }
 
 void SendError(string errorMessage)
@@ -86,5 +143,18 @@ void SendError(string errorMessage)
 
 void LogCallback(string message)
 {
-    WorkerLogWriter.InformationMessage(message);
+    Imports.PostMessage(
+        WorkerLogWriter.InformationMessage(message)
+    );
+}
+
+void DebugEventCallback(DebuggerEvent evt)
+{
+    var msg = new WorkerMessage()
+    {
+        Action = evt.Type.ToString(),
+        Payload = JsonSerializer.Serialize(evt)
+    };
+    
+    Imports.PostMessage(msg.ToSerialized());
 }

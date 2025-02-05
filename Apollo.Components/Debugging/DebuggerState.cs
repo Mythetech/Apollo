@@ -31,7 +31,6 @@ public class DebuggerState
 
     public DebuggerState(IDebuggerWorkerFactory workerFactory, DebuggerConsole console, IMessageBus messageBus, EditorState editorState)
     {
-        System.Console.WriteLine("Initializing Debugger State");
         _workerFactory = workerFactory;
         _console = console;
         _messageBus = messageBus;
@@ -90,7 +89,7 @@ public class DebuggerState
             case DebugEventType.Paused:
                 IsPaused = true;
                 CurrentLocation = evt.Location;
-                CurrentVariables = evt.Variables;
+                CurrentVariables = evt?.Variables;
                 break;
             case DebugEventType.Resumed:
                 IsPaused = false;
@@ -135,12 +134,14 @@ public class DebuggerState
 
     public async Task StartDebuggingAsync(Solution solution, Breakpoint? breakpoint) => 
         await _worker.DebugAsync(solution, breakpoint);
+    
+    public async Task Continue() =>
+        await _worker.Continue();
 /*
     public async Task StepOver() =>
         await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.StepOver });
 
-    public async Task Continue() =>
-        await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.Continue });
+    
 
     public async Task Stop() =>
         await _worker.SendMessageAsync(new DebugCommand { Type = DebugCommandType.Stop });

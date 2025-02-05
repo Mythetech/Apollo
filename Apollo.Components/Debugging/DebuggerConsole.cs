@@ -15,6 +15,6 @@ public class DebuggerConsole(IJsApiService jsApiService, IScrollManager? scrollM
         ConsoleSeverity.Error
     ];
         
-    public override IReadOnlyCollection<string> Selected { get; set; } = ["Info", "Warning", "Error"];
+    public override IReadOnlyCollection<string> Selected { get; set; } = ["Debug", "Trace", "Info", "Warning", "Error"];
     
 }
