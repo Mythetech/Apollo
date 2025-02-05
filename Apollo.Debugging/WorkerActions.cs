@@ -1,6 +1,10 @@
 namespace Apollo.Debugging;
 
-public class WorkerActions
+public static class WorkerActions
 {
     public const string Debug = "debug";
+
+    public const string SetBreakpoint = "set-breakpoint";
+    
+    public const string RemoveBreakpoint = "remove-breakpoint";
 }

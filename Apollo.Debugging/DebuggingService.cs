@@ -36,6 +36,8 @@ public class DebuggingService
                 logAction?.Invoke(diagnostic);
             }
         }
+        
+        logAction?.Invoke($"Compilation succeeded in {stopwatch.ElapsedMilliseconds}ms");
 
         memoryStream.Seek(0, SeekOrigin.Begin);
         var assemblyBytes = memoryStream.ToArray();

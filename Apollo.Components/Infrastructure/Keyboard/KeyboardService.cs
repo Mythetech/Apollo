@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Apollo.Components.Debugging.Commands;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Commands;
@@ -16,8 +17,6 @@ public class KeyboardService : IDisposable
     {
         _keyCodeService = keyCodeService;
         _bus = bus;
-        
-        //RegisterShortcuts();
     }
 
     public void RegisterShortcuts()
@@ -52,13 +51,15 @@ public class KeyboardService : IDisposable
             return;
         }
 
-        // Handle Ctrl-only combinations
         if (args.CtrlKey)
         {
             switch (args.Key)
             {
                 case KeyCode.KeyB:
                     await _bus.PublishAsync(new BuildSolution());
+                    break;
+                case KeyCode.KeyD:
+                    await _bus.PublishAsync(new DebugSolution());
                     break;
                 case KeyCode.KeyS:
                     await _bus.PublishAsync(new SaveActiveSolution());

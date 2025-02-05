@@ -21,6 +21,7 @@ using Apollo.Infrastructure.Resources;
 using Apollo.Infrastructure.Workers;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 

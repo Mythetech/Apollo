@@ -1,4 +1,5 @@
 using Apollo.Contracts.Debugging;
+using Apollo.Contracts.Solutions;
 using Apollo.Contracts.Workers;
 
 namespace Apollo.Components.Debugging;
@@ -10,6 +11,8 @@ public interface IDebuggerWorker : IWorkerProxy
     DebugLocation? CurrentLocation { get; }
     
     event Action<DebuggerEvent> OnDebugEvent;
+
+    Task DebugAsync(Solution solution, Breakpoint breakpoint);
     
     Task SetBreakpoint(Breakpoint breakpoint);
     Task RemoveBreakpoint(Breakpoint breakpoint);

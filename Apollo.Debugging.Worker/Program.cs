@@ -51,7 +51,7 @@ return;
 
 async Task HandleDebugMessage(WorkerMessage message)
 {
-    var solution = JsonSerializer.Deserialize<Apollo.Contracts.Solutions.Solution>(message.Payload);
+    var debugMsg = JsonSerializer.Deserialize<StartDebuggingMessage>(message.Payload);
     var references = new List<MetadataReference>
     {
         await resolver.GetMetadataReferenceAsync("System.Private.CoreLib.wasm"),
@@ -63,7 +63,7 @@ async Task HandleDebugMessage(WorkerMessage message)
 
     var service = new DebuggingService();
     
-    await service.DebugAsync(solution, references, logAction: LogCallback);
+    await service.DebugAsync(debugMsg.Solution, references, logAction: LogCallback);
 
     var msg = new WorkerMessage()
     {
