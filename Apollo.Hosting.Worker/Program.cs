@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Apollo.Contracts.Solutions;
+using Apollo.Contracts.Workers;
 using Apollo.Hosting;
 using Apollo.Hosting.Worker;
 using Apollo.Infrastructure;

@@ -10,6 +10,7 @@ using Apollo.Components.Solutions.Events;
 using Apollo.Contracts.Compilation;
 using Apollo.Contracts.Solutions;
 using Microsoft.Extensions.Logging;
+using Apollo.Contracts.Workers;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
 using MudBlazor.Extensions;
 using Assembly = System.Reflection.Assembly;
@@ -85,7 +86,7 @@ public class CompilerState
 
         _workerProxy.OnError(HandleError);
 
-        _workerProxy.OnLog(HandleLog);
+        _workerProxy.OnLog(HandleLogMessage);
 
         while (!_workerReady)
         {
@@ -190,6 +191,11 @@ public class CompilerState
     {
         _console.AddLog(error, ConsoleSeverity.Error);
         return Task.CompletedTask;
+    }
+
+    private async Task HandleLogMessage(LogMessage logMessage)
+    {
+        await HandleLog(new CompilerLog(logMessage.Message, logMessage.Severity));
     }
 
     private async Task HandleLog(CompilerLog log)

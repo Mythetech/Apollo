@@ -19,7 +19,7 @@ using Solution = Microsoft.CodeAnalysis.Solution;
 
 namespace Apollo.Client.Analysis;
 
-public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
+public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker
 {
     private readonly SlimWorker _worker;
     private readonly Dictionary<string, Delegate> _callbacks = new();
@@ -97,6 +97,11 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
         });
 
         await _worker.AddOnMessageEventListenerAsync(eventListener);
+    }
+
+    public async Task SendMessageAsync(WorkerMessage message)
+    {
+        await _worker.PostMessageAsync(message);
     }
 
     public void OnLog(Func<LogMessage, Task> callback)

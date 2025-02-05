@@ -31,13 +31,13 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
-    [Inject] private SolutionsState State { get; set; }
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private SolutionsState State { get; set; } = default!;
 
     [Parameter] public ProjectType DefaultProjectType { get; set; } = ProjectType.Console;
 
-    private MudTextField<string> _nameField;
-    private MudForm _form;
+    private MudTextField<string>? _nameField;
+    private MudForm? _form;
     private string _name = "";
     private ProjectType _projectType = ProjectType.Console;
     private bool _error;
@@ -54,13 +54,14 @@
         if (firstRender)
         {
             await Task.Delay(50);
-            await _nameField.FocusAsync();
+            if(_nameField != null)
+                await _nameField.FocusAsync();
         }
     }
 
     private async Task Submit()
     {
-        await _form.Validate();
+        await _form?.Validate()!;
         
         if (!_form.IsValid)
         {

@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Apollo.Client;
 using Apollo.Client.Analysis;
 using Apollo.Client.Code;
+using Apollo.Client.Debugging;
 using Apollo.Client.Hosting;
 using Apollo.Client.Infrastructure;
 using Apollo.Components.Analysis;
 using Apollo.Components.Code;
+using Apollo.Components.Debugging;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure;
 using Apollo.Components.Infrastructure.Environment;
@@ -30,6 +32,7 @@ builder.Services.AddSingleton<IResourceResolver, ResourceResolver>();
 builder.Services.AddSingleton<ICompilerWorkerFactory, CompilerWorkerFactory>();
 builder.Services.AddSingleton<ICodeAnalysisWorkerFactory, CodeAnalysisWorkerFactory>();
 builder.Services.AddSingleton<IHostingWorkerFactory, HostingWorkerFactory>();
+builder.Services.AddSingleton<IDebuggerWorkerFactory, DebuggerWorkerFactory>();
 
 var app = builder.Build();
 

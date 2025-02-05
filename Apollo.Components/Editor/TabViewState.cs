@@ -1,5 +1,6 @@
 using Apollo.Components.Analysis;
 using Apollo.Components.Code;
+using Apollo.Components.Debugging;
 using Apollo.Components.DynamicTabs;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.Environment;
@@ -196,6 +197,13 @@ public class TabViewState
                 AreaIdentifier = DropZones.Right,
                 IsActive = true
             },
+            /*
+            new DebuggingOutputTab()
+            {
+                AreaIdentifier = DropZones.Bottom,
+                IsActive = false
+            },
+            */
             new TestingTab()
             {
                 AreaIdentifier = DropZones.Right,

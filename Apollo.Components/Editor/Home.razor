@@ -1,5 +1,6 @@
 @page "/"
 @using Apollo.Components.Code
+@using Apollo.Components.Debugging
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Apollo.Components.DynamicTabs
 @using Apollo.Components.Hosting
@@ -166,6 +167,8 @@
     [Inject] public NavigationManager _navigationManager { get; set; } = default!;
 
     [Inject] public IMessageBus Bus { get; set; } = default!;
+
+    //[Inject] public DebuggerState DebuggerState { get; set; } = default!;
 
     private string DockSize => TabViewState.DockOpen ? "300px" : "36px";
 

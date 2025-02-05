@@ -24,7 +24,7 @@
 @implements IDisposable
 @inherits Apollo.Components.Infrastructure.MessageBus.ComponentConsumer<Apollo.Components.Settings.Events.SettingsModelChanged<EditorSettings>>
 
-<StandaloneCodeEditor @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
+<StandaloneCodeEditor OnMouseUp="HandleEditorMouseEvent" @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
 
 @code {
     [Inject] SolutionsState SolutionsState { get; set; } = default!;
@@ -33,6 +33,7 @@
     [Inject] IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] ILogger<ApolloCodeEditor> Logger { get; set; } = default!;
     [Inject] SettingsState Settings { get; set; } = default!;
+    [Inject] EditorState EditorState { get; set; } = default!;
 
     private List<TextModel> _files = [];
 
@@ -54,11 +55,17 @@
             WordWrap = editorSettings.WordWrap ? "on" : "off",
             Minimap = new EditorMinimapOptions { Enabled = editorSettings.MinimapEnabled },
             RenderWhitespace = editorSettings.RenderWhitespace.ToString().ToLowerInvariant(),
+            GlyphMargin = true,
+            CodeLens = true,
+            
         };
     }
 
     private StandaloneCodeEditor? _editor;
 
+    private Dictionary<int, string[]> _breakpointDecorations = new();
+    
+    
     public async Task<string> GetCodeAsync()
     {
         if (!_editorReady)
@@ -100,6 +107,7 @@
             Minimap = new EditorMinimapOptions { Enabled = settings.MinimapEnabled },
             RenderWhitespace = settings.RenderWhitespace.ToString().ToLowerInvariant(),
         });
+        EditorState.BreakpointsChanged += HandleBreakpointsChanged;
     }
 
     protected async Task HandleIfProjectClosedAsync()
@@ -451,6 +459,8 @@
                 solution,
                 SolutionsState.ActiveFile.Uri
             );
+            
+            await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", []);
 
             if (diagnostics?.Any() == true)
             {
@@ -508,6 +518,54 @@
             Console.AddTrace(ex.StackTrace ?? "No stack trace");
         }
     }
+
+    private async void HandleBreakpointsChanged(IReadOnlyDictionary<string, IEnumerable<int>> breakpoints)
+    {
+        if (SolutionsState.ActiveFile == null) return;
+        
+        var success = breakpoints.TryGetValue(SolutionsState.ActiveFile.Uri, out var currentFileBreakpoints);
+        await UpdateBreakpointDecorations(currentFileBreakpoints);
+    }
+
+    private async Task UpdateBreakpointDecorations(IEnumerable<int> lineNumbers)
+    {
+        foreach (var decorations in _breakpointDecorations.Values)
+        {
+            await _editor.DeltaDecorations(decorations, Array.Empty<ModelDeltaDecoration>());
+        }
+        _breakpointDecorations.Clear();
+
+        foreach (var line in lineNumbers)
+        {
+            var decoration = new ModelDeltaDecoration
+            {
+                Range = new Range(line, 1, line, 1),
+                Options = new ModelDecorationOptions
+                {
+                    GlyphMarginClassName = "apollo-breakpoint",
+                    ClassName = "apollo-breakpoint-line",
+                    IsWholeLine = true,
+                    GlyphMarginHoverMessage = [ new MarkdownString { Value = "Breakpoint Set. Click to remove." } ]
+                }
+            };
+
+            var decorationIds = await _editor.DeltaDecorations(null, new[] { decoration });
+            _breakpointDecorations[line] = decorationIds;
+        }
+    }
+
+    protected async Task HandleEditorMouseEvent(EditorMouseEvent evt)
+    {
+        if (evt.Target.Type == MouseTargetType.GUTTER_GLYPH_MARGIN)
+        {
+            
+             EditorState.ToggleBreakpoint(
+                SolutionsState.ActiveFile.Uri, 
+                evt.Target.Range.StartLineNumber
+            );
+            
+        }
+    }
     
     public void Dispose()
     {
@@ -517,6 +575,7 @@
         SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
         SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);
         SolutionsState.SaveProjectRequested -= SaveActiveFileAsync;
+        EditorState.BreakpointsChanged -= HandleBreakpointsChanged;
     }
 
     protected override async Task Consume(SettingsModelChanged<EditorSettings> message, CancellationToken cancellationToken)

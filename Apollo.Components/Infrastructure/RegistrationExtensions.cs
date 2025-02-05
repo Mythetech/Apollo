@@ -2,6 +2,7 @@ using System.Reflection;
 using Apollo.Components.Analysis;
 using Apollo.Components.Code;
 using Apollo.Components.Console;
+using Apollo.Components.Debugging;
 using Apollo.Components.Editor;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.Keyboard;
@@ -52,6 +53,7 @@ public static class RegistrationExtensions
         services.AddSingleton<AppState>();
         services.AddSingleton<TabViewState>();
         services.AddSingleton<SolutionsState>();
+        services.AddSingleton<EditorState>();
         services.AddSingleton<LibraryState>();
         services.AddSingleton<TestingState>();
         services.AddSingleton<UserAssemblyStore>();
@@ -60,6 +62,8 @@ public static class RegistrationExtensions
         services.AddSingleton<CodeAnalysisState>();
         services.AddSingleton<CodeAnalysisConsoleService>();
         services.AddSingleton<WebHostConsoleService>();
+        //services.AddSingleton<DebuggerState>();
+        //services.AddSingleton<DebuggerConsole>();
         services.AddScoped<KeyboardService>();
         services.AddSingleton<IFileSystemAccessServiceInProcess, FileSystemAccessServiceInProcess>();
         services.AddSingleton<IFileSystemAccessService>(sp => (IFileSystemAccessService)sp.GetRequiredService<IFileSystemAccessServiceInProcess>());

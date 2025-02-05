@@ -4,6 +4,7 @@ using Apollo.Components.Code;
 using Apollo.Components.Console;
 using Apollo.Contracts.Compilation;
 using Apollo.Contracts.Solutions;
+using Apollo.Contracts.Workers;
 using Apollo.Infrastructure.Workers;
 using KristofferStrube.Blazor.DOM;
 using KristofferStrube.Blazor.WebWorkers;
@@ -43,9 +44,9 @@ public class CompilerWorkerProxy : ICompilerWorker
             switch (message.Action)
             {
                 case "log":
-                    if (_callbacks.TryGetValue("log", out var logCallback) && logCallback is Func<CompilerLog, Task> typedLogCallback)
+                    if (_callbacks.TryGetValue("log", out var logCallback) && logCallback is Func<LogMessage, Task> typedLogCallback)
                     {
-                        var log = JsonSerializer.Deserialize<CompilerLog>(message.Payload);
+                        var log = JsonSerializer.Deserialize<LogMessage>(message.Payload);
                         if (log != null)
                         {
                             await typedLogCallback.Invoke(log);
@@ -93,13 +94,7 @@ public class CompilerWorkerProxy : ICompilerWorker
 
     await _worker.AddOnMessageEventListenerAsync(eventListener);
 }
-
-    public ICompilerWorker OnLog(Func<CompilerLog, Task> callback)
-    {
-        _callbacks["log"] = callback;
-        return this;
-    }
-
+    
     public ICompilerWorker OnCompileCompleted(Func<CompilationReferenceResult, Task> callback)
     {
         _callbacks["compile_completed"] = callback;
@@ -112,11 +107,16 @@ public class CompilerWorkerProxy : ICompilerWorker
         return this;
     }
 
-    public ICompilerWorker OnError(Func<string, Task> callback)
+    public void OnLog(Func<LogMessage, Task> callback)
+    {
+        _callbacks["log"] = callback;
+    }
+
+    void IWorkerProxy.OnError(Func<string, Task> callback)
     {
         _callbacks["error"] = callback;
-        return this;
     }
+    
 
     public async Task RequestBuildAsync(Solution solution)
     {
@@ -138,7 +138,7 @@ public class CompilerWorkerProxy : ICompilerWorker
         await SendMessageAsync(message);
     }
 
-    private async Task SendMessageAsync(WorkerMessage message)
+    public async Task SendMessageAsync(WorkerMessage message)
     {
         var payload = JsonSerializer.Serialize(message);
         await _worker.PostMessageAsync(payload);

@@ -34,6 +34,8 @@
       <ProjectReference Include="..\Apollo.Compilation.Worker\Apollo.Compilation.Worker.csproj" />
       <ProjectReference Include="..\Apollo.Compilation\Apollo.Compilation.csproj" />
       <ProjectReference Include="..\Apollo.Components\Apollo.Components.csproj" />
+      <ProjectReference Include="..\Apollo.Debugging.Worker\Apollo.Debugging.Worker.csproj" />
+      <ProjectReference Include="..\Apollo.Debugging\Apollo.Debugging.csproj" />
       <ProjectReference Include="..\Apollo.Hosting.Worker\Apollo.Hosting.Worker.csproj" />
     </ItemGroup>
 
