@@ -124,6 +124,11 @@ public class HostingWorkerProxy : IHostingWorker
         await _worker.AddOnMessageEventListenerAsync(eventListener);
     }
 
+    public async Task SendMessageAsync(WorkerMessage message)
+    {
+       await _worker.PostMessageAsync(message);
+    }
+
     public void OnLog(Func<LogMessage, Task> callback)
     {
         _callbacks[StandardWorkerActions.Log] = callback;

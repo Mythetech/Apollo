@@ -2,6 +2,7 @@
 @using Apollo.Components.Analysis
 @using Apollo.Components.Solutions
 @using BlazorMonaco
+@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @using OmniSharp.Models.Diagnostics
 @using OmniSharp.Models.v1.Completion
@@ -18,13 +19,15 @@
 @using InsertTextRule = BlazorMonaco.Languages
 @implements IDisposable
 
-<StandaloneCodeEditor @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
+<StandaloneCodeEditor OnMouseUp="HandleEditorMouseEvent" @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
 
 @code {
     [Inject] SolutionsState SolutionsState { get; set; } = default!;
     [Inject] CodeAnalysisState CodeAnalysisState { get; set; } = default!;
     [Inject] CodeAnalysisConsoleService Console { get; set; } = default!;
     [Inject] IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] ILogger<ApolloCodeEditor> Logger { get; set; } = default!;
+    [Inject] EditorState EditorState { get; set; } = default!;
 
     private List<TextModel> _files = [];
 
@@ -34,27 +37,18 @@
         new StandaloneEditorConstructionOptions
         {
             AutomaticLayout = true,
+            GlyphMargin = true,
             Language = "csharp",
             Value = SolutionsState.ActiveFile.Data,
+            CodeLens = true,
+            
         };
 
     private StandaloneCodeEditor? _editor;
 
-    public async Task SetEditorFile(string uri)
-    {
-        /*
-        var file = _files.FirstOrDefault(x => x.Uri.Equals(uri));
-        if (file == null)
-            return;
-
-        await _editor.SetModel(file);
-
-        var s = await file.GetValue(default, true);
-        Console.WriteLine(s);
-  */
-        await _editor.SetValue(((SolutionFile)SolutionsState.Project.Items.First(x => x is SolutionFile && x.Uri.Equals(uri))).Data);
-    }
-
+    private Dictionary<int, string[]> _breakpointDecorations = new();
+    
+    
     public async Task<string> GetCodeAsync()
     {
         if (!_editorReady)
@@ -78,6 +72,7 @@
         SolutionsState.ActiveFileChangeRequested += async (file) => await HandleBeforeFileChanged(file);
         SolutionsState.SaveProjectRequested += SaveActiveFileAsync;
         SolutionsState.SolutionFilesChanged += async () => await HandleIfProjectClosedAsync();
+        EditorState.BreakpointsChanged += HandleBreakpointsChanged;
     }
 
     protected async Task HandleIfProjectClosedAsync()
@@ -120,8 +115,8 @@
             if (file != null)
             {
                 await SetCodeAsync(file.Data);
-                // Force immediate diagnostics for file switch
-                //await GetDiagnosticsAsync(new ModelContentChangedEvent());
+
+                await GetDiagnosticsAsync(new ModelContentChangedEvent());
                 
                 // Set up debounce for subsequent changes
                 _diagnosticDebounceTimer = new Timer(async _ =>
@@ -306,10 +301,8 @@
                 SolutionsState.ActiveFile.Uri
             );
             
-            // Always clear existing markers first
             await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", []);
 
-            // Only set new markers if we have diagnostics
             if (diagnostics?.Any() == true)
             {
                 await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", 
@@ -360,6 +353,54 @@
             Console.AddTrace(ex.StackTrace ?? "No stack trace");
         }
     }
+
+    private async void HandleBreakpointsChanged(IReadOnlyDictionary<string, IEnumerable<int>> breakpoints)
+    {
+        if (SolutionsState.ActiveFile == null) return;
+        
+        var success = breakpoints.TryGetValue(SolutionsState.ActiveFile.Uri, out var currentFileBreakpoints);
+        await UpdateBreakpointDecorations(currentFileBreakpoints);
+    }
+
+    private async Task UpdateBreakpointDecorations(IEnumerable<int> lineNumbers)
+    {
+        foreach (var decorations in _breakpointDecorations.Values)
+        {
+            await _editor.DeltaDecorations(decorations, Array.Empty<ModelDeltaDecoration>());
+        }
+        _breakpointDecorations.Clear();
+
+        foreach (var line in lineNumbers)
+        {
+            var decoration = new ModelDeltaDecoration
+            {
+                Range = new Range(line, 1, line, 1),
+                Options = new ModelDecorationOptions
+                {
+                    GlyphMarginClassName = "apollo-breakpoint",
+                    ClassName = "apollo-breakpoint-line",
+                    IsWholeLine = true,
+                    GlyphMarginHoverMessage = [ new MarkdownString { Value = "Breakpoint Set. Click to remove." } ]
+                }
+            };
+
+            var decorationIds = await _editor.DeltaDecorations(null, new[] { decoration });
+            _breakpointDecorations[line] = decorationIds;
+        }
+    }
+
+    protected async Task HandleEditorMouseEvent(EditorMouseEvent evt)
+    {
+        if (evt.Target.Type == MouseTargetType.GUTTER_GLYPH_MARGIN)
+        {
+            
+             EditorState.ToggleBreakpoint(
+                SolutionsState.ActiveFile.Uri, 
+                evt.Target.Range.StartLineNumber
+            );
+            
+        }
+    }
     
     public void Dispose()
     {
@@ -369,6 +410,7 @@
         SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
         SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);
         SolutionsState.SaveProjectRequested -= SaveActiveFileAsync;
+        EditorState.BreakpointsChanged -= HandleBreakpointsChanged;
     }
 
 }

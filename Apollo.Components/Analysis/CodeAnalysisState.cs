@@ -49,7 +49,7 @@ public class CodeAnalysisState
     private async Task NotifyCodeAnalysisStatusChanged()
     {
         if(OnCodeAnalysisStateChanged?.GetInvocationList()?.Length > 0)
-            await OnCodeAnalysisStateChanged?.Invoke();
+            await OnCodeAnalysisStateChanged?.Invoke()!;
     }
 
     private ICodeAnalysisWorker? _workerProxy;

@@ -2,6 +2,7 @@ using Apollo.Hosting;
 using Apollo.Hosting.Logging;
 using System.Text.Json;
 using Apollo.Contracts.Hosting;
+using Apollo.Contracts.Workers;
 using Apollo.Infrastructure.Workers;
 using Microsoft.Extensions.DependencyInjection;
 

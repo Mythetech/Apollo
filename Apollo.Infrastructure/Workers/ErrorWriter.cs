@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Apollo.Contracts.Workers;
 
 namespace Apollo.Infrastructure.Workers;
 

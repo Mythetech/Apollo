@@ -11,6 +11,7 @@ using Apollo.Analysis;
 using Apollo.Analysis.Worker;
 using Apollo.Contracts.Analysis;
 using Apollo.Contracts.Solutions;
+using Apollo.Contracts.Workers;
 using Apollo.Infrastructure;
 using Apollo.Infrastructure.Workers;
 using KristofferStrube.Blazor.WebWorkers;

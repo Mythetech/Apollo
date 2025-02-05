@@ -1,9 +1,6 @@
-@inject Apollo.Components.Analysis.CodeAnalysisConsoleService ConsoleOutputService
 @using Apollo.Components.DynamicTabs
-@using Apollo.Components.Solutions
 @using Apollo.Components.Theme
 @using global::Apollo.Components.Console
-@using Environment = System.Environment
 @inherits Apollo.Components.DynamicTabs.DynamicTabView
 @implements IDisposable
 <div class="d-flex pa-1 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
@@ -35,18 +32,17 @@
     </MudList>
 </div>
 @code {
-    [Inject] protected CodeAnalysisState State { get; set; } = default!;
-
-    [Inject] protected IJsApiService JsApiService { get; set; } = default!;
-
+    /*[Inject] protected DebuggerState State { get; set; } = default!;*/
+    
     [Inject] protected IScrollManager ScrollManager { get; set; } = default!;
+
+    [Inject] protected DebuggerConsole ConsoleOutputService { get; set; } = default!;
 
     protected override void OnInitialized()
     {
-        // Subscribe to the service
         ConsoleOutputService.OnConsoleOutputReceived += HandleConsoleOutputReceived;
         ConsoleOutputService.OnConsoleCleared += HandleConsoleCleared;
-        State.OnCodeAnalysisStateChanged += StateHasChangedAsync;
+       // State.DebuggerStateChanged += StateHasChanged;
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -61,7 +57,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await State.StartAsync();
+        //await State.StartAsync();
     }
 
     private void HandleConsoleOutputReceived(ConsoleOutputViewModel log)
@@ -83,10 +79,10 @@
     {
         ConsoleOutputService.OnConsoleOutputReceived -= HandleConsoleOutputReceived;
         ConsoleOutputService.OnConsoleCleared -= HandleConsoleCleared;
-        State.OnCodeAnalysisStateChanged -= StateHasChangedAsync;
+      //  State.DebuggerStateChanged -= StateHasChanged;
     }
 
-    public override string Name { get; set; } = "Code Analysis Output";
-    public override Type ComponentType { get; set; } = typeof(CodeAnalysisOutputTab);
-    public override string DefaultArea  => DropZones.Right;
+    public override string Name { get; set; } = "Debugging Output";
+    public override Type ComponentType { get; set; } = typeof(DebuggingOutputTab);
+    public override string DefaultArea  => DropZones.Bottom;
 }

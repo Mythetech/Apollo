@@ -20,10 +20,10 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
-    [Parameter] public SolutionFile File { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public SolutionFile File { get; set; } = default!;
     
-    private Folder _selectedFolder;
+    private Folder? _selectedFolder;
     private List<Folder> _availableFolders = new();
     
     protected override void OnInitialized()

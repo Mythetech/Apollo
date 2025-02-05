@@ -1,3 +1,4 @@
+using Apollo.Contracts.Workers;
 using Apollo.Hosting.Logging;
 using Apollo.Infrastructure.Workers;
 

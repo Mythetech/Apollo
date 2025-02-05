@@ -201,7 +201,7 @@ public class SolutionsState
 
     public void UpdateActiveFile(SolutionFile file)
     {
-        var f = Project.Files.FirstOrDefault(x => x.Uri.Equals(ActiveFile.Uri, StringComparison.Ordinal));
+        var f = Project.Files.FirstOrDefault(x => x.Uri.Equals(ActiveFile?.Uri, StringComparison.Ordinal));
         
         f.Data = file.Data;
         f.Uri = file.Uri;
@@ -402,7 +402,8 @@ app.Run();",
         if (ActiveFile != null && ActiveFile.Uri.StartsWith(folder.Uri))
         {
             var newActiveFile = Project.Files.FirstOrDefault(f => !f.Uri.StartsWith(folder.Uri));
-            SwitchFile(newActiveFile);
+            if(newActiveFile != null)
+                SwitchFile(newActiveFile);
         }
 
         Project.DeleteFolder(folder);

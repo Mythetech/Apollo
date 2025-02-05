@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Text.Json;
+using Apollo.Contracts.Workers;
 using Apollo.Infrastructure.Workers;
 
 namespace Apollo.Hosting;

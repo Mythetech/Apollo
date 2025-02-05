@@ -440,3 +440,21 @@ apollo-active-tab::after {
 .mud-drawer {
     transition: all 1s ease;
 }
+
+.apollo-breakpoint-line {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 20%, transparent 80%);
+    /*border-top: 1px solid var(--mud-palette-error);
+    border-bottom: 1px solid var(--mud-palette-error);*/
+}
+
+.apollo-breakpoint {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 60%, transparent 40%);
+    border-radius: 100rem;
+    height: 2.5rem;
+    width: 2.5rem;
+    border: 1px solid var(--mud-palette-surface);
+}
+
+.apollo-breakpoint:hover {
+    box-shadow: 0px 0px 0.5em 0.1em var(--mud-palette-error);
+}

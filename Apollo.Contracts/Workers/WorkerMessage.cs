@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Apollo.Infrastructure.Workers;
+namespace Apollo.Contracts.Workers;
 
 public class WorkerMessage
 {

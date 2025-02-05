@@ -18,7 +18,6 @@ class WorkerConsoleWriter : TextWriter
         base.WriteLine(value);
 
         var logModel = new CompilerLog(value, LogSeverity.Information);
-        // Post the log message to the main thread
         Imports.PostMessage(JsonSerializer.Serialize(new WorkerMessage
         {
             Action = "log",
