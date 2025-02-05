@@ -23,8 +23,16 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
 
         var location = node.GetLocation();
         var lineSpan = location.GetLineSpan();
-        
-        // Create the debug checkpoint call
+        var filePath = location.SourceTree?.FilePath ?? "unknown";
+        var lineNumber = lineSpan.StartLinePosition.Line + 1;
+
+        // Only inject if this is a breakpoint location
+        if (!_breakpoints.Any(b => b.File == filePath && b.Line == lineNumber))
+        {
+            return node;
+        }
+
+        // Create the debug checkpoint call with await
         var debugCall = SyntaxFactory.ExpressionStatement(
             SyntaxFactory.InvocationExpression(
                 SyntaxFactory.ParseName("DebugRuntime.CheckBreakpoint"),
@@ -34,13 +42,13 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
                         SyntaxFactory.Argument(
                             SyntaxFactory.LiteralExpression(
                                 SyntaxKind.StringLiteralExpression,
-                                SyntaxFactory.Literal(location.SourceTree?.FilePath ?? "")
+                                SyntaxFactory.Literal(filePath)
                             )
                         ),
                         SyntaxFactory.Argument(
                             SyntaxFactory.LiteralExpression(
                                 SyntaxKind.NumericLiteralExpression,
-                                SyntaxFactory.Literal(lineSpan.StartLinePosition.Line + 1)
+                                SyntaxFactory.Literal(lineNumber)
                             )
                         )
                     })
@@ -48,9 +56,7 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
             )
         );
 
-        return SyntaxFactory.Block(debugCall, node)
-            .WithLeadingTrivia(node.GetLeadingTrivia())
-            .WithTrailingTrivia(node.GetTrailingTrivia());
+        return SyntaxFactory.Block(new[] { debugCall, node });
     }
 
     private bool IsDebugCheckpoint(StatementSyntax node)
@@ -66,14 +72,26 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
         return false;
     }
 
+    // Let's add some logging to see what's happening
+    public override SyntaxNode? Visit(SyntaxNode? node)
+    {
+        if (node != null)
+        {
+            Console.WriteLine($"Visiting node: {node.Kind()}");
+        }
+        return base.Visit(node);
+    }
+
     // Basic statements
     public override SyntaxNode? VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
     {
+        Console.WriteLine("Visiting local declaration");
         return InjectDebugCheckpoint(node);
     }
 
     public override SyntaxNode? VisitExpressionStatement(ExpressionStatementSyntax node)
     {
+        Console.WriteLine("Visiting expression statement");
         return InjectDebugCheckpoint(node);
     }
 
@@ -165,4 +183,5 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
     {
         return InjectDebugCheckpoint(node);
     }
+    
 }

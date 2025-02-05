@@ -28,59 +28,72 @@ public class DebuggerWorkerProxy : IDebuggerWorker
     }
 
     internal async Task InitializeMessageListener()
-{
-    var eventListener = await EventListener<MessageEvent>.CreateAsync(_jsRuntime, async e =>
     {
-        object? data = await e.Data.GetValueAsync();
-        if (data is string json)
+        var eventListener = await EventListener<MessageEvent>.CreateAsync(_jsRuntime, async e =>
         {
-            var message = JsonSerializer.Deserialize<WorkerMessage>(json);
-            if (message == null)
+            object? data = await e.Data.GetValueAsync();
+            if (data is string json)
             {
-                _console.AddLog("Invalid event received - empty", ConsoleSeverity.Debug);
-                return;
-            }
-            
-            switch (message.Action)
-            {
-                case StandardWorkerActions.Log:
-                    if (_callbacks.TryGetValue("log", out var logCallback) && logCallback is Func<LogMessage, Task> typedLogCallback)
-                    {
-                        var log = JsonSerializer.Deserialize<LogMessage>(message.Payload);
-                        if (log != null)
+                var message = JsonSerializer.Deserialize<WorkerMessage>(json);
+                if (message == null)
+                {
+                    _console.AddLog("Invalid event received - empty", ConsoleSeverity.Debug);
+                    return;
+                }
+
+                switch (message.Action)
+                {
+                    case "Paused":
+                    case "1":
+                        var evt = JsonSerializer.Deserialize<DebuggerEvent>(message.Payload);
+                        if (evt != null)
                         {
-                            await typedLogCallback.Invoke(log);
+                            NotifyDebugEvent(evt);
                         }
-                    }
-                    break;
 
-                case StandardWorkerActions.Error:
-                    if (_callbacks.TryGetValue("error", out var errorCallback) && errorCallback is Func<string, Task> typedErrorCallback)
-                    {
-                        var error = message.Payload;
-                        if (error != null)
+                        break;
+                    case StandardWorkerActions.Log:
+                        if (_callbacks.TryGetValue("log", out var logCallback) &&
+                            logCallback is Func<LogMessage, Task> typedLogCallback)
                         {
-                            await typedErrorCallback.Invoke(error);
+                            var log = JsonSerializer.Deserialize<LogMessage>(message.Payload);
+                            if (log != null)
+                            {
+                                await typedLogCallback.Invoke(log);
+                            }
                         }
-                    }
-                    break;
 
-                default:
-                    _console.AddLog($"Unknown event: {message.Action}", ConsoleSeverity.Debug);
-                    break;
+                        break;
+
+                    case StandardWorkerActions.Error:
+                        if (_callbacks.TryGetValue("error", out var errorCallback) &&
+                            errorCallback is Func<string, Task> typedErrorCallback)
+                        {
+                            var error = message.Payload;
+                            if (error != null)
+                            {
+                                await typedErrorCallback.Invoke(error);
+                            }
+                        }
+
+                        break;
+
+                    default:
+                        _console.AddLog($"Unknown event: {message.Action}", ConsoleSeverity.Debug);
+                        break;
+                }
             }
-        }
-    });
+        });
 
-    await _worker.AddOnMessageEventListenerAsync(eventListener);
-}
-    
+        await _worker.AddOnMessageEventListenerAsync(eventListener);
+    }
+
     public bool IsDebugging { get; private set; }
-    
+
     public bool IsPaused { get; private set; }
-    
+
     public DebugLocation? CurrentLocation { get; }
-    
+
     public event Action<DebuggerEvent>? OnDebugEvent;
 
     protected void NotifyDebugEvent(DebuggerEvent evt) => OnDebugEvent?.Invoke(evt);
@@ -118,7 +131,11 @@ public class DebuggerWorkerProxy : IDebuggerWorker
 
     public async Task Continue()
     {
-        throw new NotImplementedException();
+        await _worker.PostMessageAsync(new WorkerMessage()
+        {
+            Action = WorkerActions.Continue,
+            Payload = ""
+        }.ToSerialized());
     }
 
     public async Task StepOver()

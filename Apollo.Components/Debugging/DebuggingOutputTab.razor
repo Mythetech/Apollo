@@ -1,16 +1,22 @@
 @using Apollo.Components.DynamicTabs
 @using Apollo.Components.Theme
 @using global::Apollo.Components.Console
+@using Apollo.Components.Shared
 @inherits Apollo.Components.DynamicTabs.DynamicTabView
 @implements IDisposable
 <div class="d-flex pa-1 mud-width-full mud-height-full flex-grow-1 overflow-y-hidden" style="flex-direction:column;">
     <MudStack Row="true" Class="flex-grow-1" Spacing="1">
+        <MudText>Event</MudText>
+        <MudSpacer />
+        <ApolloIconButton Tooltip="Continue" Icon="@ApolloIcons.Run" OnClick="@(async () => await State.Continue())" />
+    </MudStack>
+    <MudStack Row="true" Class="flex-grow-1" Spacing="1">
         <MudChipSet @bind-SelectedValues="@ConsoleOutputService.Selected" SelectionMode="SelectionMode.MultiSelection" CheckMark="false">
-            <MudChip Variant="Variant.Filled" Color="Color.Dark" Value="@("Debug")" />
-            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Trace")" />
-            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Info")" />
-            <MudChip Variant="Variant.Filled" Color="Color.Warning" Value="@("Warning")" />
-            <MudChip Variant="Variant.Filled" Color="Color.Error" Value="@("Error")" />
+            <MudChip Variant="Variant.Filled" Color="Color.Dark" Value="@("Debug")"/>
+            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Trace")"/>
+            <MudChip Variant="Variant.Filled" Color="Color.Info" Value="@("Info")"/>
+            <MudChip Variant="Variant.Filled" Color="Color.Warning" Value="@("Warning")"/>
+            <MudChip Variant="Variant.Filled" Color="Color.Error" Value="@("Error")"/>
         </MudChipSet>
 
         <MudSpacer/>
