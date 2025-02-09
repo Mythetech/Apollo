@@ -10,6 +10,9 @@
     <MudMenuItem Icon="@ApolloIcons.FormatDocument" OnClick="@(async () => await Bus.PublishAsync(new FormatActiveDocument()))">
         Format
     </MudMenuItem>
+    <MudMenuItem Icon="@ApolloIcons.FormatDocuments" OnClick="@(async () => await Bus.PublishAsync(new FormatAllDocuments()))">
+        Format All Documents
+    </MudMenuItem>
 </MudMenu>
 
 @code {

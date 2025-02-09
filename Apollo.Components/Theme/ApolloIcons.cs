@@ -29,6 +29,8 @@ public static class ApolloIcons
     public const string SaveAs = Icons.Material.TwoTone.SaveAs;
 
     public const string FormatDocument = Icons.Material.TwoTone.FormatIndentIncrease;
+    
+    public const string FormatDocuments = Icons.Material.TwoTone.FormatIndentIncrease;
 
     public const string ViewLeft = Icons.Material.TwoTone.BorderLeft;
     

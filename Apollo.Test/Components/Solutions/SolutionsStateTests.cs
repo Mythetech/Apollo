@@ -709,4 +709,105 @@ public class SolutionsStateTests
         // Assert
         _state.ActiveFile.Uri.ShouldBe("virtual/TestSolution/Destination/test.cs");
     }
+
+    [Fact(DisplayName = "UpdateFile should modify non-active files")]
+    public void UpdateFile_ShouldModifyNonActiveFiles()
+    {
+        // Arrange
+        var activeFile = new SolutionFile 
+        { 
+            Name = "active.cs",
+            Uri = "virtual/TestSolution/active.cs",
+            Data = "original active content"
+        };
+        var backgroundFile = new SolutionFile 
+        { 
+            Name = "background.cs",
+            Uri = "virtual/TestSolution/background.cs",
+            Data = "original background content"
+        };
+        
+        _state.Project.Items.Add(activeFile);
+        _state.Project.Items.Add(backgroundFile);
+        _state.ActiveFile = activeFile;
+        
+        var updatedBackgroundFile = new SolutionFile 
+        {
+            Name = "background.cs",
+            Uri = "virtual/TestSolution/background.cs",
+            Data = "updated background content"
+        };
+        
+        // Act
+        _state.UpdateFile(updatedBackgroundFile);
+        
+        // Assert
+        var retrievedFile = _state.Project.Files.First(f => f.Uri == backgroundFile.Uri);
+        retrievedFile.Data.ShouldBe("updated background content");
+        _state.ActiveFile.ShouldBe(activeFile); // Active file should remain unchanged
+        _state.ActiveFile.Data.ShouldBe("original active content");
+    }
+
+    [Fact(DisplayName = "UpdateFile should trigger SolutionFilesChanged event")]
+    public void UpdateFile_ShouldTriggerSolutionFilesChanged()
+    {
+        // Arrange
+        var file = new SolutionFile 
+        { 
+            Name = "test.cs",
+            Uri = "virtual/TestSolution/test.cs",
+            Data = "original content"
+        };
+        _state.Project.Items.Add(file);
+        
+        var eventWasTriggered = false;
+        _state.SolutionFilesChanged += () => eventWasTriggered = true;
+        
+        var updatedFile = new SolutionFile 
+        {
+            Name = "test.cs",
+            Uri = "virtual/TestSolution/test.cs",
+            Data = "updated content"
+        };
+        
+        // Act
+        _state.UpdateFile(updatedFile);
+        
+        // Assert
+        eventWasTriggered.ShouldBeTrue();
+    }
+
+    [Fact(DisplayName = "UpdateFile should preserve file metadata while updating content")]
+    public async Task UpdateFile_ShouldPreserveFileMetadata()
+    {
+        // Arrange
+        var originalFile = new SolutionFile 
+        { 
+            Name = "test.cs",
+            Uri = "virtual/TestSolution/test.cs",
+            Data = "original content",
+            CreatedAt = DateTimeOffset.Now.AddDays(-1)
+        };
+        var originalModified = originalFile.ModifiedAt;
+        
+        _state.Project.Items.Add(originalFile);
+        
+        var updatedFile = new SolutionFile 
+        {
+            Name = "test.cs",
+            Uri = "virtual/TestSolution/test.cs",
+            Data = "updated content",
+            CreatedAt = DateTimeOffset.Now // Different creation date
+        };
+        
+        // Act
+        await Task.Delay(2000);
+        _state.UpdateFile(updatedFile);
+        
+        // Assert
+        var retrievedFile = _state.Project.Files.First(f => f.Uri == originalFile.Uri);
+        retrievedFile.Data.ShouldBe("updated content");
+        retrievedFile.CreatedAt.ShouldBe(originalFile.CreatedAt);
+        retrievedFile.ModifiedAt.ShouldBeGreaterThan(originalModified);
+    }
 }
