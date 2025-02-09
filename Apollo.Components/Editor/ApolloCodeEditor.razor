@@ -2,6 +2,8 @@
 @using Apollo.Components.Analysis
 @using Apollo.Components.Solutions
 @using BlazorMonaco
+@using CSharpier
+@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @using OmniSharp.Models.Diagnostics
 @using OmniSharp.Models.v1.Completion
@@ -25,6 +27,7 @@
     [Inject] CodeAnalysisState CodeAnalysisState { get; set; } = default!;
     [Inject] CodeAnalysisConsoleService Console { get; set; } = default!;
     [Inject] IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] ILogger<ApolloCodeEditor> Logger { get; set; } = default!;
 
     private List<TextModel> _files = [];
 
@@ -165,9 +168,9 @@
             string value = await _editor.GetValue();
             SolutionsState.UpdateActiveFile(value);
         }
-        catch
+        catch(Exception ex)
         {
-            System.Console.WriteLine("Error update active file");
+            Logger.LogError(ex, "Error update active file");
         }
     }
 
@@ -179,7 +182,7 @@
             await SaveActiveFileAsync();
         });
 
-        await BlazorMonaco.Languages.Global.RegisterCompletionItemProvider(JsRuntime, "csharp", async (modelUri, position, context) =>
+        await Global.RegisterCompletionItemProvider(JsRuntime, "csharp", async (modelUri, position, context) =>
         {
             try
             {
@@ -240,6 +243,36 @@
                 return new CompletionList();
             }
         });
+
+        await Global.RegisterDocumentFormattingEditProvider(JsRuntime, "csharp", async (uri, options) =>
+        {
+            Logger.LogInformation("Formatting document...");
+            
+            var current = SolutionsState.ActiveFile?.Data;
+            var formatted = await CSharpier.CodeFormatter.FormatAsync(current);
+            
+            var model = await _editor.GetModel();
+            var lineCount = await model.GetLineCount();
+            var lastLineLength = (await model.GetLineContent(lineCount)).Length;
+
+            TextEdit[] edits =
+            [
+                new()
+                {
+                    Text = formatted.Code,
+                    Range = new Range()
+                    {
+                        StartColumn = 1,
+                        StartLineNumber = 1,
+                        EndColumn = lastLineLength,
+                        EndLineNumber = lineCount,
+                    }
+                }
+            ];
+
+            return edits;
+        });
+
     }
 
     private CompletionItemKind MapCompletionKind(OmniSharp.Models.v1.Completion.CompletionItemKind kind)

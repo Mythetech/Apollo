@@ -17,6 +17,7 @@
     <ItemGroup>
         <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
         <PackageReference Include="BlazorMonaco" Version="3.3.0" />
+        <PackageReference Include="CSharpier.Core" Version="0.30.6" />
         <PackageReference Include="KristofferStrube.Blazor.FileSystem" Version="0.3.1" />
         <PackageReference Include="KristofferStrube.Blazor.FileSystemAccess" Version="3.2.2" />
         <PackageReference Include="Microsoft.AspNetCore.Components" Version="9.0.1" />

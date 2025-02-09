@@ -7,7 +7,7 @@
     <MudMenuItem Icon="@ApolloIcons.Copy" OnClick="@(async() => await Bus.PublishAsync(new CopyActiveFileToClipboard()))">
         Copy to Clipboard
     </MudMenuItem>
-    <MudMenuItem Icon="@ApolloIcons.FormatDocument" OnClick="@(async () => await Bus.PublishAsync(new FormatActiveDocument()))" Disabled="true">
+    <MudMenuItem Icon="@ApolloIcons.FormatDocument" OnClick="@(async () => await Bus.PublishAsync(new FormatActiveDocument()))">
         Format
     </MudMenuItem>
 </MudMenu>

@@ -74,18 +74,33 @@ Imports.RegisterOnMessage(async e =>
                 break;
 
             case "get_completion_resolve":
-               
+                var resolveCompletion = await monacoService.GetCompletionResolveAsync(message.Payload);
+
+                var resolveCompletionResponse = new WorkerMessage()
+                {
+                    Action = "completion_resolve_response",
+                    Payload = Convert.ToBase64String(resolveCompletion),
+                };
+                
+                Imports.PostMessage(resolveCompletionResponse.ToSerialized());
                 break;
             case "get_quick_hint":
+                var quickHint = await monacoService.GetQuickInfoAsync(message.Payload);
+
+                var quickHintResponse = new WorkerMessage()
+                {
+                    Action = "quick_hint_response",
+                    Payload = Convert.ToBase64String(quickHint),
+                };
+                
+                Imports.PostMessage(quickHintResponse.ToSerialized());
                 break;
             case "get_diagnostics":
                 try 
                 {
-                    // First deserialize the worker message payload as a string
                     var solutionPayloadJson = message.Payload;
                     loggerBridge.LogTrace($"Received payload: {solutionPayloadJson}");
                     
-                    // Then deserialize that into our solution
                     var request = JsonSerializer.Deserialize<DiagnosticRequestWrapper>(solutionPayloadJson);
                     if (request?.Solution == null)
                     {
@@ -93,7 +108,6 @@ Imports.RegisterOnMessage(async e =>
                         break;
                     }
 
-                    // Create a new solution with clean items
                     var cleanSolution = new Solution 
                     {
                         Name = request.Solution.Name,
@@ -104,7 +118,6 @@ Imports.RegisterOnMessage(async e =>
                         }).ToList()
                     };
                     
-                    // Get the file that triggered the diagnostics request
                     var currentFile = cleanSolution.Items.FirstOrDefault(i => i.Path == request.Uri);
                     
                     loggerBridge.LogTrace($"Received solution with {cleanSolution.Items.Count} files");
