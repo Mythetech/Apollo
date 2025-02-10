@@ -126,7 +126,6 @@
                 // Force immediate diagnostics for file switch
                 //await GetDiagnosticsAsync(new ModelContentChangedEvent());
                 
-                // Set up debounce for subsequent changes
                 _diagnosticDebounceTimer = new Timer(async _ =>
                 {
                     await InvokeAsync(async () => 
@@ -249,7 +248,7 @@
             Logger.LogInformation("Formatting document...");
             
             var current = SolutionsState.ActiveFile?.Data;
-            var formatted = await CSharpier.CodeFormatter.FormatAsync(current);
+            var formatted = await CodeFormatter.FormatAsync(current);
             
             var model = await _editor.GetModel();
             var lineCount = await model.GetLineCount();
@@ -264,8 +263,8 @@
                     {
                         StartColumn = 1,
                         StartLineNumber = 1,
-                        EndColumn = lastLineLength,
-                        EndLineNumber = lineCount,
+                        EndColumn = lastLineLength + 1,
+                        EndLineNumber = lineCount + 1,
                     }
                 }
             ];
