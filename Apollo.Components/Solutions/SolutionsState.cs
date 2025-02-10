@@ -33,12 +33,12 @@ public class SolutionsState
         var minimalApiProject = MinimalApiProject.Create();
 
         Project = untitledProject;
-        Solutions = new List<SolutionModel>
-        {
+        Solutions =
+        [
             untitledProject,
             fizzBuzzProject,
             minimalApiProject
-        };
+        ];
 
         ActiveFile = Project.Files.FirstOrDefault();
     }
@@ -47,11 +47,11 @@ public class SolutionsState
 
     public bool HasActiveSolution => !string.IsNullOrWhiteSpace(Project?.Name);
 
-    public List<SolutionModel> Solutions { get; private set; } = new();
+    public List<SolutionModel> Solutions { get; private set; }
 
     public SolutionFile? ActiveFile { get; set; }
 
-    public event Action SolutionFilesChanged;
+    public event Action? SolutionFilesChanged;
 
     public event Func<Task> SaveProjectRequested;
 
@@ -187,8 +187,7 @@ public class SolutionsState
 
     public void UpdateActiveFile(string data)
     {
-        if (ActiveFile == null)
-            ActiveFile = Project.Files.FirstOrDefault();
+        ActiveFile ??= Project.Files.FirstOrDefault();
 
         if (ActiveFile == null)
             return;
@@ -330,13 +329,14 @@ public class SolutionsState
         {
             Name = name,
             ProjectType = projectType,
-            Items = solutionItems ?? new List<ISolutionItem>
-            {
+            Items = solutionItems ??
+            [
                 new Folder
                 {
                     Name = name,
                     Uri = $"virtual/{name}"
                 },
+
                 new SolutionFile
                 {
                     Name = "Program.cs",
@@ -345,7 +345,7 @@ public class SolutionsState
                     CreatedAt = DateTimeOffset.Now,
                     ModifiedAt = DateTimeOffset.Now
                 }
-            }
+            ]
         };
 
         await _bus.PublishAsync(new SolutionCreated(solution));
