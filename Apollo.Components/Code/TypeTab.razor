@@ -9,13 +9,12 @@
     <MudStack Row="true" AlignItems="AlignItems.Center">
         <MudText Typo="Typo.h6">Discovered Types</MudText>
         <MudSpacer />
-        <MudTextField @bind-Value="_searchText"
-                      Placeholder="Search types and methods..."
-                      Immediate="true"
-                      Variant="Variant.Text"
-                      Margin="Margin.Dense"
-                      AdornmentIcon="@Icons.Material.Filled.Search"
-                      Adornment="Adornment.Start"/>
+        <InputButton @bind-Value="_searchText"
+                     Icon="@Icons.Material.Filled.Search"
+                     Tooltip="Search..."
+                     Placeholder="Search types and methods..."
+                     AdornmentIcon="@Icons.Material.Filled.Search"
+                     Adornment="Adornment.Start"/>
     </MudStack>
     
     <MudDivider />

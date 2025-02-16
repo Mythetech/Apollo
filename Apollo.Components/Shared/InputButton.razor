@@ -1,0 +1,113 @@
+@using Apollo.Components.Theme
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+
+<MudStack Row="true" AlignItems="AlignItems.Center">
+    @if (_editing)
+    {
+        <MudTextField @ref="_textField"
+                      Value="@_value"
+                      ValueChanged="@ValueChanged"
+                     Label="@Label"
+                     Placeholder="@Placeholder"
+                     Immediate="true"
+                     Variant="@Variant"
+                     Margin="@Margin"
+                     AdornmentIcon="@AdornmentIcon"
+                     Adornment="@Adornment"
+                     OnBlur="@HandleBlur"
+                     OnKeyDown="@HandleKeyDown" />
+                     
+        <ApolloIconButton Icon="@ApolloIcons.Close" 
+                         Size="Size.Small"
+                         Color="Color.Error"
+                         Tooltip="Cancel"
+                         OnClick="@Cancel"/>
+                         
+        <ApolloIconButton Icon="@ApolloIcons.Accept"
+                         Size="Size.Small"
+                         Color="Color.Success"
+                         Tooltip="Save"
+                         OnClick="@Save"/>
+    }
+    else
+    {
+        <ApolloIconButton Icon="@Icon"
+                         Size="@Size"
+                         Color="@Color"
+                         Tooltip="@Tooltip"
+                         OnClick="@StartEditing"/>
+    }
+</MudStack>
+
+@code {
+    private bool _editing = false;
+    private string _value = "";
+    private MudTextField<string> _textField = null!;
+
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Search;
+    [Parameter] public string Tooltip { get; set; } = "Search";
+    [Parameter] public Size Size { get; set; } = Size.Medium;
+    [Parameter] public Color Color { get; set; } = Color.Default;
+    
+    // TextField parameters
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public Variant Variant { get; set; } = Variant.Text;
+    [Parameter] public Margin Margin { get; set; } = Margin.Dense;
+    [Parameter] public string AdornmentIcon { get; set; } = "";
+    [Parameter] public Adornment Adornment { get; set; } = Adornment.None;
+
+    protected override void OnParametersSet()
+    {
+        _value = Value;
+    }
+
+    private async Task StartEditing()
+    {
+        _editing = true;
+        StateHasChanged();
+        
+        await Task.Delay(50);
+        await _textField.FocusAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape")
+        {
+            await Cancel();
+        }
+        else if (args.Key == "Enter")
+        {
+            await Save();
+        }
+    }
+
+    private async Task HandleBlur()
+    {
+        // Only cancel on blur if we're still editing
+        if (_editing)
+        {
+            await Cancel();
+        }
+    }
+
+    private async Task Save()
+    {
+        if (_value != Value)
+        {
+            await ValueChanged.InvokeAsync(_value);
+        }
+        _editing = false;
+    }
+
+    private async Task Cancel()
+    {
+        _value = Value;
+        _editing = false;
+        await ValueChanged.InvokeAsync(_value);
+    }
+} 
