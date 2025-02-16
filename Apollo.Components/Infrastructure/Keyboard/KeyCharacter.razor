@@ -1,9 +1,0 @@
-@using Microsoft.FluentUI.AspNetCore.Components.Extensions
-@using KeyCode = Microsoft.FluentUI.AspNetCore.Components.KeyCode
-<MudPaper Class="rounded" Elevation="0" Outlined="true">
-    @Key.GetDisplayName()
-</MudPaper>
-@code {
-    [Parameter]
-    public KeyCode Key { get; set; }
-}

@@ -1,0 +1,73 @@
+@using Apollo.Components.Infrastructure.Platform
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using Microsoft.JSInterop
+@inherits Apollo.Components.Infrastructure.ApolloBaseComponent
+@inject IJSRuntime JS
+
+<MudTooltip @ref="_tooltip">
+    <ChildContent>
+        <MudIconButton Size="@Size" 
+                      Color="@Color" 
+                      Icon="@Icon" 
+                      OnClick="@OnClick" 
+                      Class="@Class" 
+                      Style="@Style" 
+                      Disabled="@Disabled" />
+    </ChildContent>
+    <TooltipContent>
+        <MudStack Row AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption">@Tooltip</MudText>
+            @if (Shortcut != null)
+            {
+                <kbd>
+                    @if (Shortcut.Ctrl)
+                    {
+                        <kbd>ctrl</kbd>
+                        <span class="mr-1">+</span>
+                    }
+                    @if (Shortcut.Alt)
+                    {
+                        <kbd>alt</kbd>
+                        <span class="mr-1">+</span>
+                    }
+                    @if (Shortcut.Shift)
+                    {
+                        <kbd>shift</kbd>
+                        <span class="mr-1">+</span>
+                    }
+                    @if (Shortcut.Meta)
+                    {
+                        <kbd>@_metaKey</kbd>
+                        <span class="mr-1">+</span>
+                    }
+                    @if (Shortcut.Key != default)
+                    {
+                        <kbd>@Shortcut.GetDisplayText(Shortcut.Key)</kbd>
+                    }
+                </kbd>
+            }
+        </MudStack>
+    </TooltipContent>
+</MudTooltip>
+
+@code {
+    [Parameter] public string Tooltip { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public Color Color { get; set; } = Color.Default;
+    [Parameter] public Size Size { get; set; } = Size.Medium;
+    [Parameter] public EventCallback OnClick { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public KeyboardShortcut? Shortcut { get; set; }
+
+    private string _metaKey = "Win";
+
+    private MudTooltip? _tooltip = default!;
+
+    public MudTooltip? TooltipInstance => _tooltip;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userAgent = await JS.InvokeAsync<string>("eval", "navigator.userAgent");
+        _metaKey = PlatformInfo.GetMetaKeySymbol(userAgent);
+    }
+} 

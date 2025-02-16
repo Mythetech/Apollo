@@ -1,4 +1,5 @@
 using Bunit;
+using MudBlazor;
 using MudBlazor.Services;
 
 namespace Apollo.Test.Components;
