@@ -40,9 +40,30 @@
         </MudStack>
     }
     <MudSpacer/>
-    <ApolloIconButton Icon="@ApolloIcons.Run" Color="Color.Success" OnClick="RunSolutionAsync" Tooltip="Run (Ctrl + Enter)" Disabled="@(!CompilerState.CompilerReady)"/>
-    <ApolloIconButton Icon="@ApolloIcons.Build" Tooltip="Build (Ctrl + B)" OnClick="BuildSolutionAsync" Disabled="@(!CompilerState.CompilerReady)"/>
-    <ApolloIconButton Id="apollo-stop-btn" Icon="@ApolloIcons.Stop" Color="Color.Error" Tooltip="Stop (Ctrl + C)" OnClick="StopAsync" Disabled="@(HostingService.State != HostingStates.Hosting)"/>
+    <KeyboardIconButton 
+        Icon="@ApolloIcons.Run" 
+        Color="Color.Success" 
+        OnClick="RunSolutionAsync" 
+        Tooltip="Run" 
+        Shortcut="new() { Ctrl = true, Key = KeyCode.Enter }"
+        Disabled="@(!CompilerState.CompilerReady)"/>
+
+    <KeyboardIconButton 
+        Icon="@ApolloIcons.Build" 
+        Tooltip="Build"
+        Shortcut="new() { Ctrl = true, Key = KeyCode.KeyB }"
+        OnClick="BuildSolutionAsync" 
+        Disabled="@(!CompilerState.CompilerReady)"/>
+
+    <KeyboardIconButton 
+        Id="apollo-stop-btn" 
+        Icon="@ApolloIcons.Stop" 
+        Color="Color.Error" 
+        Tooltip="Stop"
+        Shortcut="new() { Ctrl = true, Key = KeyCode.KeyC }"
+        OnClick="StopAsync" 
+        Disabled="@(HostingService.State != HostingStates.Hosting)"/>
+
     <ApolloIconButton Icon="@ApolloIcons.Settings" Tooltip="Settings" OnClick="OpenSettingsDialog"/>
 </MudAppBar>
 

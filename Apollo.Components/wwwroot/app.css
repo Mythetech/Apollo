@@ -440,3 +440,27 @@ apollo-active-tab::after {
 .mud-drawer {
     transition: all 1s ease;
 }
+
+kbd {
+    background-color: var(--mud-palette-darker);
+    font-size: 1em;
+    display: inline-block;
+    line-height: 1;
+    min-width: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: relative;
+    text-align: center;
+}
+
+kbd:not(:has(kbd)) {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    box-shadow: 0 2px 0 1px var(--mud-palette-lines-default);
+    top: -1px;
+}
+
+kbd:not(:has(kbd)):hover {
+    box-shadow: 0 1px 0 0.5px var(--mud-palette-lines-default);
+    top: 1px;
+}
