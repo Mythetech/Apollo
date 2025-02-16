@@ -6,13 +6,14 @@ Apollo uses a simplified Flux/Redux-inspired architecture called Model State Com
 
 ### Architecture Overview
 
-    ```mermaid
-    graph LR
-        A[Component] --> |Call State Method/Bus Event| B[State]
-        B --> |Updates| C[Model]
-        C --> |Notifies| B
-        B --> |StateChanged Event| A
-    ```
+```mermaid
+    graph RL;
+        A[Components] --> |Public Method| B[State];
+        A[Components] --> |Command/Event| B[State];
+        B --> |Updates| C[Model];
+        C --> B;
+        B --> |Subscribers Notified| A;
+```
 
 The architecture consists of three main parts:
 - **Model**: Represents the application data structure, can encapsulate logic
@@ -96,11 +97,11 @@ The architecture consists of three main parts:
 
 ### MVVM Architecture
 
-    ```mermaid
+```mermaid
     graph LR
         M[Model] <--> |Updates| VM[ViewModel]
         VM <--> |Bindings| V[View]
-    ```
+```
 
 ### Key Differences
 
