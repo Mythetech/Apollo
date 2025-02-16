@@ -6,7 +6,9 @@ using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Solutions;
 using Apollo.Components.Solutions.Events;
 using Apollo.Contracts.Compilation;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
+using MudBlazor.Extensions;
 
 namespace Apollo.Components.Code;
 
@@ -24,6 +26,7 @@ public class CompilerState
     private readonly ICompilerWorkerFactory _compilerWorkerFactory;
     private readonly ConsoleOutputService _console;
     private readonly IMessageBus _messageBus;
+    private readonly ILogger<CompilerState> _logger;
     public event Func<Task>? OnCompilerStatusChanged;
     private bool _workerReady = false;
 
@@ -36,21 +39,22 @@ public class CompilerState
     private async Task NotifyCompilerStatusChanged()
     {
         if(OnCompilerStatusChanged != null)
-            await OnCompilerStatusChanged?.Invoke();
+            await OnCompilerStatusChanged?.Invoke()!;
     }
 
     public CompilerStatus Status { get; private set; } = CompilerStatus.Uninitialized;
 
     private ICompilerWorker? _workerProxy;
 
-    private Stopwatch _stopwatch = Stopwatch.StartNew();
+    private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     public CompilerState(ICompilerWorkerFactory compilerWorkerFactory, ConsoleOutputService console,
-        IMessageBus messageBus)
+        IMessageBus messageBus, ILogger<CompilerState> logger)
     {
         _compilerWorkerFactory = compilerWorkerFactory;
         _console = console;
         _messageBus = messageBus;
+        _logger = logger;
 
         StartInternal();
     }
@@ -118,10 +122,8 @@ public class CompilerState
         Status = CompilerStatus.Executing;
         await NotifyCompilerStatusChanged();
         
-        // Register a handler for the build completion, which leads to execution
         _workerProxy.OnCompileCompleted(RunBuildAsync);
 
-        // Start the build process
         await RequestBuildAsync(solution);
     }
 
@@ -155,8 +157,10 @@ public class CompilerState
 
     private async Task HandleBuildComplete(CompilationReferenceResult result)
     {
+        _logger.LogInformation($"Compilation result {result.Success}, {result.Assembly?.Length ?? 0} bytes, Diagnostics: {result?.Diagnostics?.Count}");
+        
         _console.AddLog($"Build completed in {result.BuildTime.Milliseconds}ms", ConsoleSeverity.Debug);
-
+        
         if (result.Success)
         {
             try
@@ -203,10 +207,9 @@ public class CompilerState
     using var cancellationTokenSource = new CancellationTokenSource();
     var executionCompleted = false;
 
-    // Register the execution completion handler
     _workerProxy.OnExecuteCompleted(async executionResult =>
     {
-        if (executionCompleted) return; // Prevent duplicate invocations
+        if (executionCompleted) return; 
         executionCompleted = true;
 
             
@@ -219,10 +222,8 @@ public class CompilerState
 
     try
     {
-        // Start execution in the worker
         await _workerProxy.RequestExecuteAsync(result.Assembly);
 
-        // Wait for either execution completion or timeout
         try
         {
             cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(MaxExecutionTime));
@@ -230,12 +231,10 @@ public class CompilerState
         }
         catch (OperationCanceledException)
         {
-            // Expected when the token is canceled
         }
 
         if (!executionCompleted)
         {
-            // Timeout occurred
             _console.AddLog($"Execution exceeded max time of {MaxExecutionTime}s. Terminating worker...", ConsoleSeverity.Error);
             await TerminateWorkerAsync();
             _console.AddLog("Worker terminated due to timeout.", ConsoleSeverity.Debug);

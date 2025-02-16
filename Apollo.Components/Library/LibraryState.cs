@@ -20,6 +20,7 @@ public class LibraryState
         FizzBuzzProject.Create(),
         MinimalApiProject.Create(),
         UntitledProject.Create(),
+        SimpleLibraryProject.Create()
     ];
 
 }

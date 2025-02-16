@@ -50,6 +50,7 @@
 
     <ItemGroup>
       <Folder Include="Infrastructure\Workers\" />
+      <Folder Include="Web\" />
     </ItemGroup>
 
 </Project>

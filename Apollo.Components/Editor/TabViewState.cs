@@ -217,6 +217,11 @@ public class TabViewState
             new TerminalTab()
             {
                 AreaIdentifier = DropZones.Docked
+            },
+            new TypeTab()
+            {
+                AreaIdentifier = DropZones.Right,
+                IsActive = false
             }
         ];
         

@@ -14,6 +14,6 @@ public class SolutionBuilder : IConsumer<BuildSolution>
 
     public async Task Consume(BuildSolution message)
     {
-        await _state.BuildAsync();
+       // await _state.BuildAsync();
     }
 }

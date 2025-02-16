@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Apollo.Contracts.Compilation;
+using Apollo.Contracts.Solutions;
 
 namespace Apollo.Compilation;
 
@@ -10,25 +11,12 @@ using Solution = Apollo.Contracts.Solutions.Solution;
 
 public class CompilationService
 {
-    private const int MaxExecutionTimeInSeconds = 5;
-    
-    private OutputKind _outputKind = OutputKind.ConsoleApplication;
-
-    public CompilationService()
-    {
-        
-    }
-
-    public CompilationService(OutputKind outputKind)
-    {
-        _outputKind = outputKind;
-    }
-
     public CompilationReferenceResult Compile(Solution solution, IEnumerable<MetadataReference> references)
     {
         var stopwatch = Stopwatch.StartNew();
         
-        // Parse syntax trees from solution items
+        var outputKind = solution.Type == ProjectType.Console ? OutputKind.ConsoleApplication : OutputKind.DynamicallyLinkedLibrary;
+        
         var syntaxTrees = solution.Items.Select(item =>
             CSharpSyntaxTree.ParseText(item.Content, path: item.Path)).ToList();
 
@@ -36,10 +24,9 @@ public class CompilationService
             solution.Name,
             syntaxTrees,
             references,
-            new CSharpCompilationOptions(_outputKind, concurrentBuild: true, allowUnsafe: true )
+            new CSharpCompilationOptions(outputKind, concurrentBuild: true, allowUnsafe: true )
         );
 
-        // Emit compiled assembly
         using var memoryStream = new MemoryStream();
         var emitResult = compilation.Emit(memoryStream);
 
