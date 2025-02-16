@@ -1,0 +1,76 @@
+@using System.Reflection
+@using System.ComponentModel
+@using Apollo.Components.Code
+@using Apollo.Components.Shared
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudText>@MethodInfo.DeclaringType?.Name</MudText>
+            @foreach (var parameter in MethodInfo.GetParameters())
+            {
+                <MudTextField 
+                    @bind-Value="@ParameterValues[parameter.Name]"
+                    Label="@($"{parameter.Name}: {parameter.ParameterType.Name}")"
+                    Variant="Variant.Outlined"
+                />
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton Text="Invoke" OnClick="InvokeMethod" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public MethodInfo MethodInfo { get; set; } = default!;
+    [Parameter] public object Instance { get; set; } = default!;
+
+    private Dictionary<string, string> ParameterValues { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        foreach (var param in MethodInfo.GetParameters())
+        {
+            ParameterValues[param.Name] = "";
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task InvokeMethod()
+    {
+        try
+        {
+            var parameters = MethodInfo.GetParameters();
+            var parameterValues = new object[parameters.Length];
+
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var param = parameters[i];
+                var stringValue = ParameterValues[param.Name];
+                parameterValues[i] = ConvertValue(stringValue, param.ParameterType);
+            }
+
+            var result = MethodInfo.Invoke(Instance, parameterValues);
+            MudDialog.Close(DialogResult.Ok(new MethodInvokeResult(result)));
+        }
+        catch (Exception ex)
+        {
+            MudDialog.Close(DialogResult.Ok(new MethodInvokeResult(null, ex.Message)));
+        }
+    }
+
+    private object ConvertValue(string value, Type targetType)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
+        }
+
+        var converter = TypeDescriptor.GetConverter(targetType);
+        return converter.ConvertFromString(value);
+    }
+}

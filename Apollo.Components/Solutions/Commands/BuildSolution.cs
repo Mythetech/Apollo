@@ -1,3 +1,5 @@
+using Apollo.Components.Solutions;
+
 namespace Apollo.Components.Solutions.Commands;
 
-public record BuildSolution();
+public record BuildSolution(SolutionModel? Solution = default);

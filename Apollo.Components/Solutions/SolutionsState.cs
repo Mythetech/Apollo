@@ -4,6 +4,7 @@ using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
+using Apollo.Components.Solutions.Commands;
 using Apollo.Components.Solutions.Events;
 using Apollo.Components.Solutions.Services;
 using Apollo.Contracts.Solutions;
@@ -31,13 +32,15 @@ public class SolutionsState
         var untitledProject = UntitledProject.Create();
         var fizzBuzzProject = FizzBuzzProject.Create();
         var minimalApiProject = MinimalApiProject.Create();
+        var simpleLibraryProject = SimpleLibraryProject.Create();
 
         Project = untitledProject;
         Solutions =
         [
             untitledProject,
             fizzBuzzProject,
-            minimalApiProject
+            minimalApiProject,
+            simpleLibraryProject
         ];
 
         ActiveFile = Project.Files.FirstOrDefault();
@@ -252,29 +255,15 @@ public class SolutionsState
 
     public async Task BuildAsync(CancellationToken? cancellationToken = default)
     {
-        await _bus.PublishAsync(new FocusTab("Code Analysis Output"));
         await NotifyBuildRequested();
-        await _compiler.BuildAsync(Project);
+        await _bus.PublishAsync(new BuildSolution(Project));
     }
 
     public async Task BuildAndRunAsync(CancellationToken? cancellationToken = default)
     {
         await NotifyBuildRequested();
-
-        if (Project.ProjectType == ProjectType.Console)
-        {
-            await _bus.PublishAsync(new FocusTab("Console Output"));
-            await _compiler.ExecuteAsync(Project);
-        }
-        else if (Project.ProjectType == ProjectType.WebApi)
-        {
-            await _bus.PublishAsync(new FocusTab("Web Host"));
-            await _hostingService.RunAsync(Project);
-        }
-        else
-        {
-            throw new InvalidOperationException("Project must be a Console or Web API project");
-        }
+        await _bus.PublishAsync(new BuildSolution(Project));
+        await _bus.PublishAsync(new RunSolution(Project));
     }
 
     private async Task NotifyBuildRequested()

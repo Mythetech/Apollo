@@ -1,0 +1,264 @@
+@using Apollo.Components.DynamicTabs
+@using System.Reflection
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@inherits DynamicTabView
+@implements IDisposable
+
+<MudStack class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        <MudText Typo="Typo.h6">Discovered Types</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="_searchText"
+                      Placeholder="Search types and methods..."
+                      Immediate="true"
+                      Variant="Variant.Text"
+                      Margin="Margin.Dense"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Adornment="Adornment.Start"/>
+    </MudStack>
+    
+    <MudDivider />
+    
+    @if (TypeState.Types?.Any() == true)
+    {
+        <MudList T="Type" Dense="true" Gutters="false">
+            @foreach (var type in FilteredTypes)
+            {
+                <MudListItem>
+                    <MudExpansionPanels Dense="true" Gutters="false" Elevation="0">
+                        <MudExpansionPanel Dense="true" Gutters="false">
+                            <TitleContent>
+                                <MudStack Row="true">
+                                    <ApolloIconButton
+                                        Icon="@GetInstanceIcon(type)"
+                                        Color="@GetInstanceColor(type)"
+                                        Tooltip="@GetInstanceTooltip(type)"
+                                        Size="Size.Small"
+                                        OnClick="@(() => CreateInstanceAsync(type))"/>
+                                    <MudText>@GetFormattedTypeName(type)</MudText>
+                                </MudStack>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudList Dense="true">
+                                    @foreach (var method in FilterMethods(type))
+                                    {
+                                        <MudListItem OnClick="@(() => QuickInvokeMethodAsync(type, method))">
+                                            <MudStack Row="true">
+                                                <MudText Typo="Typo.caption" Color="@GetReturnTypeColor(method)">
+                                                    @GetFormattedReturnType(method)
+                                                </MudText>
+                                                <MudText Typo="Typo.body2">@GetMethodName(method)</MudText>
+                                                <MudSpacer/>
+                                                @if (TypeState.Instances.ContainsKey(type))
+                                                {
+                                                    <ApolloIconButton
+                                                        Icon="@Icons.Material.Filled.PlayArrow"
+                                                        Size="Size.Small"
+                                                        Class="mud-theme-primary"
+                                                        OnClick="@(async (e) => await QuickInvokeMethodAsync(type, method))"
+                                                        Tooltip="@(method.GetParameters().Any() ? "Configure and Run" : "Quick Run")"
+                                                    />
+                                                }
+                                            </MudStack>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </MudListItem>
+            }
+        </MudList>
+    }
+    else
+    {
+        <MudContainer MaxWidth="MaxWidth.Small">
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center">
+                <MudIcon Size="Size.Large" Icon="@ApolloIcons.Empty"></MudIcon>
+                <MudText>No types discovered</MudText>
+                <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Building or running a solution successfully will try to discover types automatically.</MudText>
+            </MudStack>
+        </MudContainer>
+    }
+
+    @if (TypeState.LastResult != null)
+    {
+        <MudDivider DividerType="DividerType.Middle" />
+        <MudPaper Class="pa-2" Elevation="0">
+            <MudText Typo="Typo.h6">Last Result</MudText>
+            @if (!string.IsNullOrEmpty(TypeState.LastError))
+            {
+                <MudAlert Severity="Severity.Error">@TypeState.LastError</MudAlert>
+            }
+            else
+            {
+                <MudText>@(TypeState.LastResult?.ToString() ?? "null")</MudText>
+            }
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    private string _searchText = "";
+    
+    [Inject] public ActiveTypeState TypeState { get; set; } = default!;
+    [Inject] public IDialogService DialogService { get; set; } = default!;
+
+    public override string Name { get; set; } = "Types";
+    public override Type ComponentType { get; set; } = typeof(TypeTab);
+    public override string AreaIdentifier => DropZones.Right;
+    public override string DefaultArea => DropZones.Right;
+
+    private IEnumerable<Type> FilteredTypes => TypeState.Types?
+        .Where(t => string.IsNullOrEmpty(_searchText) || 
+                    t.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                    t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                        .Any(m => m.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase)))
+        ?? Array.Empty<Type>();
+
+    private IEnumerable<MethodInfo> FilterMethods(Type type) =>
+        type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => string.IsNullOrEmpty(_searchText) || 
+                       m.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnInitialized()
+    {
+        TypeState.StateChanged += StateHasChanged;
+    }
+
+    private string GetFormattedTypeName(Type type) => type.Name;
+
+    private string GetMethodName(MethodInfo method)
+    {
+        var parameters = string.Join(", ", method.GetParameters()
+            .Select(p => $"{GetFriendlyTypeName(p.ParameterType)} {p.Name}"));
+        return $"{method.Name}({parameters})";
+    }
+
+    private string GetFormattedReturnType(MethodInfo method) =>
+        GetFriendlyTypeName(method.ReturnType);
+
+    private string GetFriendlyTypeName(Type type) => type.Name switch
+    {
+        "Void" => "void",
+        "Int32" => "int",
+        "Int64" => "long",
+        "Single" => "float",
+        "Double" => "double",
+        "Boolean" => "bool",
+        "String" => "string",
+        "Object" => "object",
+        _ => type.Name
+    };
+
+    private Color GetReturnTypeColor(MethodInfo method) => method.ReturnType.Name switch
+    {
+        "Void" => Color.Secondary,
+        _ => Color.Tertiary
+    };
+
+    private async Task CreateInstanceAsync(Type type)
+    {
+        try 
+        {
+            var instance = Activator.CreateInstance(type);
+            TypeState.AddTypeInstance(type, instance);
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox("Error", $"Failed to create instance: {ex.Message}");
+        }
+    }
+
+    private async Task InvokeMethodAsync(Type type, MethodInfo method)
+    {
+        if (!TypeState.Instances.TryGetValue(type, out var instance))
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { nameof(MethodInvokeDialog.MethodInfo), method },
+            { nameof(MethodInvokeDialog.Instance), instance }
+        };
+
+        var options = new DialogOptions()
+        {
+            FullWidth = true,
+            MaxWidth = MaxWidth.Small
+        };
+
+        var dialog = await DialogService.ShowAsync<MethodInvokeDialog>("Invoke Method", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is MethodInvokeResult r)
+        {
+            TypeState.LastResult = r.Result;
+            TypeState.LastError = r.Error;
+            StateHasChanged();
+        }
+    }
+
+    private async Task QuickInvokeMethodAsync(Type type, MethodInfo method)
+    {
+        try 
+        {
+            if (!TypeState.Instances.ContainsKey(type))
+            {
+                await CreateInstanceAsync(type);
+            }
+
+            if (!TypeState.Instances.TryGetValue(type, out var instance))
+            {
+                return;
+            }
+
+            if (!method.GetParameters().Any())
+            {
+                try
+                {
+                    var result = method.Invoke(instance, null);
+                    TypeState.LastResult = result;
+                    TypeState.LastError = null;
+                }
+                catch (Exception ex)
+                {
+                    TypeState.LastError = ex.InnerException?.Message ?? ex.Message;
+                    TypeState.LastResult = null;
+                }
+                StateHasChanged();
+            }
+            else
+            {
+                await InvokeMethodAsync(type, method);
+            }
+        }
+        catch (Exception ex)
+        {
+            TypeState.LastError = ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        TypeState.StateChanged -= StateHasChanged;
+    }
+    
+    private string GetInstanceIcon(Type type) => 
+        TypeState.Instances.ContainsKey(type) 
+            ? Icons.Material.TwoTone.CheckCircle 
+            : Icons.Material.TwoTone.RadioButtonUnchecked;
+
+    private Color GetInstanceColor(Type type) =>
+        TypeState.Instances.ContainsKey(type)
+            ? Color.Success
+            : Color.Default;
+
+    private string GetInstanceTooltip(Type type) =>
+        TypeState.Instances.ContainsKey(type)
+            ? "Instantiated"
+            : "Create Instance";
+} 

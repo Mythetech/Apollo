@@ -89,4 +89,6 @@ public static class ApolloIcons
     public const string Key = Icons.Material.TwoTone.VpnKey;
 
     public const string Values = Icons.Material.TwoTone.Abc;
+
+    public const string Empty = Icons.Material.TwoTone.DoNotDisturb;
 }

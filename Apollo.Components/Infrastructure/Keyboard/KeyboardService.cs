@@ -16,8 +16,6 @@ public class KeyboardService : IDisposable
     {
         _keyCodeService = keyCodeService;
         _bus = bus;
-        
-        //RegisterShortcuts();
     }
 
     public void RegisterShortcuts()
@@ -51,8 +49,7 @@ public class KeyboardService : IDisposable
             }
             return;
         }
-
-        // Handle Ctrl-only combinations
+        
         if (args.CtrlKey)
         {
             switch (args.Key)

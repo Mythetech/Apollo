@@ -8,5 +8,11 @@ public enum ProjectType
     Console,
         
     [Display(Name = "Web API")]
-    WebApi
+    WebApi,
+
+    [Display(Name = "Class Library")]
+    ClassLibrary,
+
+    [Display(Name = "Razor Class Library")]
+    RazorClassLibrary
 }

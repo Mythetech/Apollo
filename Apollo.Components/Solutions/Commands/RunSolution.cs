@@ -1,3 +1,3 @@
 namespace Apollo.Components.Solutions.Commands;
 
-public record RunSolution();
+public record RunSolution(SolutionModel? Solution = default);
