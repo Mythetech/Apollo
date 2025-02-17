@@ -81,7 +81,7 @@ public class CompilerState
         while (!_workerReady)
         {
             await Task.Yield();
-            await Task.Delay(100);
+            await Task.Delay(50);
         }
 
         Status = CompilerStatus.Idle;
@@ -112,6 +112,11 @@ public class CompilerState
         if (Status == CompilerStatus.Uninitialized)
         {
             await StartAsync();
+        }
+
+        while (Status == CompilerStatus.Building)
+        {
+            await Task.Delay(50);
         }
 
         if (Status != CompilerStatus.Idle)
@@ -191,7 +196,6 @@ public class CompilerState
 
     private async Task RunBuildAsync(CompilationReferenceResult result)
 {
-    // Handle the build completion
     await HandleBuildComplete(result);
 
     if (result.Assembly == null)
