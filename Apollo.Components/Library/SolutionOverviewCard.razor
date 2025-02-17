@@ -4,7 +4,7 @@
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using Apollo.Components.Shared
 @using Apollo.Components.Solutions.Commands
-<MudPaper Elevation="0" Outlined="true" Class="@($"{(_hasHover ? "boxshadow-primary" : "")} pa-2")" MaxWidth="180px" @onmouseenter="OnEnter" @onmouseleave="OnLeave">
+<MudPaper Elevation="0" Outlined="true" Class="@($"{(_hasHover ? "boxshadow-primary" : "")} pa-2 flex-grow-1")" @onmouseenter="OnEnter" @onmouseleave="OnLeave">
     <MudStack Spacing="1" Justify="Justify.SpaceBetween" Class="mud-height-full">
         <MudStack Row Justify="Justify.SpaceBetween">
             <MudText>@Solution.Name</MudText>
