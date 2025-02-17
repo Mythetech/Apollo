@@ -1,0 +1,30 @@
+@using Apollo.Components.Shared
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Delete Folder
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-1">
+            <MudText>Are you sure you want to delete folder @Folder.Name and all its contents?</MudText>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton Color="Color.Error" OnClick="Submit" Text="Delete" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter]
+    public Folder Folder { get; set; }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+} 

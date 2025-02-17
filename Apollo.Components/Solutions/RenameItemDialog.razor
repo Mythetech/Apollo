@@ -1,3 +1,4 @@
+@using Apollo.Components.Shared
 <MudDialog Class="pa-1">
     <TitleContent>
         Rename Folder
@@ -10,7 +11,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Submit">Save</MudButton>
+        <PrimaryActionButton OnClick="Submit">Save</PrimaryActionButton>
     </DialogActions>
 </MudDialog>
 

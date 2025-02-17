@@ -143,10 +143,6 @@ Imports.RegisterOnMessage(async e =>
                         
                         Imports.PostMessage(diagnosticsResponse.ToSerialized());
                     }
-                    else
-                    {
-                        loggerBridge.LogWarning($"File mismatch: {currentFile?.Path} - {_currentFileUri}, content: {currentFile?.Content} - {_currentContent}");
-                    }
                 }
                 catch (Exception ex)
                 {

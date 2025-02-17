@@ -1,5 +1,7 @@
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Services;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using Shouldly;
 using Xunit;
 
@@ -8,13 +10,15 @@ namespace Apollo.Test.Components.Solutions.Services;
 public class Base64ServiceTests
 {
     private readonly Base64Service _service;
+    private readonly ILogger<Base64Service> _logger;
 
     public Base64ServiceTests()
     {
-        _service = new Base64Service();
+        _logger = Substitute.For<ILogger<Base64Service>>();
+        _service = new Base64Service(_logger);
     }
 
-    [Fact(DisplayName = "EncodeSolution should create valid base64 string")]
+    [Fact(DisplayName = "EncodeSolution should create valid encoded string")]
     public void EncodeSolution_ShouldCreateValidBase64String()
     {
         // Arrange
@@ -26,7 +30,7 @@ public class Base64ServiceTests
         // Assert
         base64.ShouldNotBeNullOrEmpty();
 
-        Should.NotThrow(() => Convert.FromBase64String(base64));
+        Should.NotThrow(() => _service.DecodeSolution(base64));
     }
 
     [Fact(DisplayName = "DecodeSolution should restore solution from base64")]
