@@ -43,21 +43,6 @@
 
     private StandaloneCodeEditor? _editor;
 
-    public async Task SetEditorFile(string uri)
-    {
-        /*
-        var file = _files.FirstOrDefault(x => x.Uri.Equals(uri));
-        if (file == null)
-            return;
-
-        await _editor.SetModel(file);
-
-        var s = await file.GetValue(default, true);
-        Console.WriteLine(s);
-  */
-        await _editor.SetValue(((SolutionFile)SolutionsState.Project.Items.First(x => x is SolutionFile && x.Uri.Equals(uri))).Data);
-    }
-
     public async Task<string> GetCodeAsync()
     {
         if (!_editorReady)
@@ -110,9 +95,8 @@
             if (_editor == null)
                 return;
 
-            _diagnosticDebounceTimer?.Dispose();
+            _diagnosticsCancellation?.Dispose();
             
-            // Clear markers before switching
             await BlazorMonaco.Editor.Global.SetModelMarkers(
                 JsRuntime, 
                 await _editor.GetModel(), 
@@ -123,23 +107,20 @@
             if (file != null)
             {
                 await SetCodeAsync(file.Data);
-                // Force immediate diagnostics for file switch
-                //await GetDiagnosticsAsync(new ModelContentChangedEvent());
+
+                await GetDiagnosticsAsync(new ModelContentChangedEvent());
                 
-                _diagnosticDebounceTimer = new Timer(async _ =>
-                {
-                    await InvokeAsync(async () => 
+                _diagnosticsCancellation = new CancellationTokenSource();
+                var token = _diagnosticsCancellation.Token;
+
+                _ = Task.Delay(debounceMilliseconds, token)
+                    .ContinueWith(async _ =>
                     {
-                        if (_editor != null)
+                        if (!token.IsCancellationRequested)
                         {
-                            var currentContent = await _editor.GetValue();
-                            if (currentContent != file.Data)
-                            {
-                                await GetDiagnosticsAsync(new ModelContentChangedEvent());
-                            }
+                            await GetDiagnosticsAsync(new ModelContentChangedEvent());
                         }
-                    });
-                }, null, debounceMilliseconds, Timeout.Infinite);
+                    }, token);
             }
             else
             {
@@ -293,23 +274,45 @@
         };
     }
 
-    private Timer? _diagnosticDebounceTimer;
+    private CancellationTokenSource? _diagnosticsCancellation;
     private const int debounceMilliseconds = 500;
+    
+    private async Task ClearMarkers()
+    => await BlazorMonaco.Editor.Global.SetModelMarkers(
+        JsRuntime, 
+        await _editor.GetModel(), 
+        "owner", 
+        []
+    );
 
     private async Task OnModelDidChangeHandler(ModelContentChangedEvent evt)
     {
-        if (_diagnosticDebounceTimer != null)
+        await ClearMarkers();
+
+        if (_diagnosticsCancellation != null)
         {
-            await _diagnosticDebounceTimer.DisposeAsync();
+            await _diagnosticsCancellation.CancelAsync();
+            _diagnosticsCancellation.Dispose();
         }
 
-        _diagnosticDebounceTimer = new Timer(async _ =>
+        _diagnosticsCancellation = new CancellationTokenSource();
+        var token = _diagnosticsCancellation.Token;
+
+        try
         {
+            await Task.Delay(debounceMilliseconds, token);
+            
             await InvokeAsync(async () => 
             {
-                await GetDiagnosticsAsync(evt);
+                if (!token.IsCancellationRequested)
+                {
+                    await GetDiagnosticsAsync(evt);
+                }
             });
-        }, null, debounceMilliseconds, Timeout.Infinite);
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     private async Task GetDiagnosticsAsync(ModelContentChangedEvent evt)
@@ -318,7 +321,7 @@
         
         try 
         {
-            var currentContent = await _editor.GetValue();
+            var currentContent = await GetCodeAsync();
             var solution = SolutionsState.Project.ToContract();
             
             var activeFile = solution.Items.FirstOrDefault(i => i.Path == SolutionsState.ActiveFile.Uri);
@@ -337,15 +340,11 @@
                 solution,
                 SolutionsState.ActiveFile.Uri
             );
-            
-            // Always clear existing markers first
-            await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", []);
 
-            // Only set new markers if we have diagnostics
             if (diagnostics?.Any() == true)
             {
                 await BlazorMonaco.Editor.Global.SetModelMarkers(JsRuntime, await _editor.GetModel(), "owner", 
-                    diagnostics.Select(x =>
+                    diagnostics.DistinctBy(x => x.Message).Select(x =>
                     {
                         if (x.FilePath != SolutionsState.ActiveFile.Uri)
                         {
@@ -355,35 +354,41 @@
                         var mark = new MarkerData()
                         {
                             StartLineNumber = x.StartPosition,
-                            StartColumn = x.StartColumn,
+                            StartColumn = x.StartColumn + 1,
                             EndLineNumber = x.EndPosition,
-                            EndColumn = x.EndColumn,
+                            EndColumn = x.EndColumn + 1,
                             Message = x.Message,
                             Severity = (MarkerSeverity)x.Severity
                         };
-                        string markerMsg = $"{x.Message}, line {x.StartPosition} ({x.StartColumn}-{x.EndColumn})";
-                    switch ((MarkerSeverity)x.Severity)
-                    {
-                        case MarkerSeverity.Hint:
-                            Console.AddTrace("[Trace] " + markerMsg);
-                            break;
-                        case MarkerSeverity.Info:
-                            Console.AddInfo("[Info] " + markerMsg);
-                            break;
-                        case MarkerSeverity.Warning:
-                            Console.AddWarning("[Warning] " + markerMsg);
-                            break;
-                        case MarkerSeverity.Error:
-                            Console.AddError("[Error] " + markerMsg);
-                            break;
-                        default:
-                            Console.AddInfo("[Info] " + markerMsg);
-                            break;
-                    }
-                    
-                    return mark;
+                        
+                        string markerMsg = $"{x.Message}, line {x.StartPosition} ({x.StartColumn + 1}-{x.EndColumn + 1})";
+                        
+                        switch ((MarkerSeverity)x.Severity)
+                        {
+                            case MarkerSeverity.Hint:
+                                Console.AddTrace("[Trace] " + markerMsg);
+                                break;
+                            case MarkerSeverity.Info:
+                                Console.AddInfo("[Info] " + markerMsg);
+                                break;
+                            case MarkerSeverity.Warning:
+                                Console.AddWarning("[Warning] " + markerMsg);
+                                break;
+                            case MarkerSeverity.Error:
+                                Console.AddError("[Error] " + markerMsg);
+                                break;
+                            default:
+                                Console.AddInfo("[Info] " + markerMsg);
+                                break;
+                        }
+                        
+                        return mark;
                     })
                     .Where(m => m != null).ToList());
+            }
+            else
+            {
+                await ClearMarkers();
             }
         }
         catch (Exception ex)
@@ -396,7 +401,7 @@
     public void Dispose()
     {
         _editor?.Dispose();
-        _diagnosticDebounceTimer?.Dispose();
+        _diagnosticsCancellation?.Dispose();
         SolutionsState.BuildRequested -= HandleBuildRequested;
         SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
         SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);

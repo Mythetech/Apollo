@@ -151,6 +151,8 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
 
     public async Task<byte[]> GetDiagnosticsAsync(string serializedSolution)
     {
+        _diagnosticsResponse = null;
+        
         await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage 
         {
             Action = "get_diagnostics",
@@ -159,7 +161,7 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
         
         for(int i = 0; i < 50; i++) 
         {
-            if(_diagnosticsResponse.Length < 1)
+            if(_diagnosticsResponse == null)
             {
                 await Task.Delay(50);
                 await Task.Yield();
@@ -173,5 +175,5 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
         return _diagnosticsResponse;
     }
 
-    private byte[] _diagnosticsResponse = [];
+    private byte[]? _diagnosticsResponse = null;
 }
