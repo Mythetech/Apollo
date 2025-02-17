@@ -62,14 +62,6 @@ public class CodeAnalysisState
         _messageBus = messageBus;
         _solutionsState = solutionsState;
     }
-    
-    public async Task FormatDocumentAsync()
-    {
-        if (!_workerReady)
-            return;
-
-       // await _workerProxy.GetFormattedDocumentAsync();
-    }
 
     public async Task<CompletionResponse?> GetCompletionAsync(string code, string completion)
     {
@@ -77,13 +69,11 @@ public class CodeAnalysisState
             return null;
         
         var bytes = await _workerProxy.GetCompletionAsync(code, completion);
-        //_console.AddDebug($"Completion response {bytes.Length} bytes");
         if (bytes == null || bytes.Length == 0)
             return null;
 
         try 
         {
-            // The worker wraps responses in a ResponsePayload
             var response = JsonSerializer.Deserialize<ResponsePayload>(
                 System.Text.Encoding.UTF8.GetString(bytes),
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
@@ -92,9 +82,6 @@ public class CodeAnalysisState
             if (response?.Payload == null)
                 return null;
             
-            //_console.AddDebug($"{JsonSerializer.Serialize(response.Payload)}");
-
-            // Convert the payload back to a CompletionResponse
             var completionResponse = JsonSerializer.Deserialize<CompletionResponseWrapper>(
                 response.Payload.ToString(), 
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
