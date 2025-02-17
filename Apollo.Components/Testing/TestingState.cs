@@ -73,7 +73,6 @@ public class TestingState
         
         try
         {
-            // Get the type containing the test method
             var type = _cachedBuild.GetType(test.ClassName);
             if (type == null)
             {
@@ -85,7 +84,6 @@ public class TestingState
                 return;
             }
 
-            // Get the test method
             var method = type.GetMethod(test.MethodName);
             if (method == null)
             {
@@ -97,7 +95,6 @@ public class TestingState
                 return;
             }
 
-            // Create an instance of the class if the method is non-static
             object? instance = null;
             if (!method.IsStatic)
             {
@@ -115,7 +112,6 @@ public class TestingState
             
             _console.AddDebug($"Running test {test.MethodName}");
 
-            // Invoke the method
             method.Invoke(instance, null);
 
             stopwatch.Stop();

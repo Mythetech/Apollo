@@ -34,8 +34,13 @@ public class OpenBase64SolutionPrompter : IConsumer<PromptOpenBase64Solution>
                 MaxWidth = MaxWidth.Large,
                 CloseButton = true,
             };
+
+            var parameters = new DialogParameters()
+            {
+                ["EncodedSolution"] = message.Base64
+            };
             
-            var dialog = await _dialogService.ShowAsync<Base64OpenDialog>("Open Base64 Solution", options);
+            var dialog = await _dialogService.ShowAsync<Base64OpenDialog>("Open Base64 Solution", parameters, options);
             await dialog.Result;
         }
     }

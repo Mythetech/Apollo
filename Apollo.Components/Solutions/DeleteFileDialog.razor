@@ -1,0 +1,29 @@
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Delete File
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-1">
+            <MudText>Are you sure you want to delete @File.Name?</MudText>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton Color="Color.Error" OnClick="Submit" Text="Delete" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+    
+    [Parameter]
+    public SolutionFile File { get; set; }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+} 

@@ -229,7 +229,7 @@
             Logger.LogInformation("Formatting document...");
             
             var current = SolutionsState.ActiveFile?.Data;
-            var formatted = await CodeFormatter.FormatAsync(current);
+            var formatted = await CSharpier.CodeFormatter.FormatAsync(current);
             
             var model = await _editor.GetModel();
             var lineCount = await model.GetLineCount();

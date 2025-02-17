@@ -29,6 +29,8 @@
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public string? EncodedSolution { get; set; } = default!;
     
     private string _input = "";
     private bool _loading;
@@ -38,7 +40,6 @@
         if (string.IsNullOrWhiteSpace(input))
             yield return "Input is required";
         
-        // If it's a URL, extract the base64 part
         var base64 = input;
         if (input.Contains("?solution="))
         {
@@ -48,6 +49,32 @@
         var solution = Base64Service.DecodeSolution(base64);
         if (solution == null)
             yield return "Invalid solution data";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(EncodedSolution))
+            await HandleSolution(EncodedSolution);
+    }
+
+    private async Task HandleSolution(string input)
+    {
+        var base64 = input;
+        if (input.Contains("?solution="))
+        {
+            base64 = input.Split("?solution=").Last();
+        }
+
+        var solution = Base64Service.DecodeSolution(base64);
+        if (solution == null)
+        {
+            Snackbar.AddApolloNotification("Invalid solution data", Severity.Error);
+            return;
+        }
+
+        await State.LoadSolutionAsync(solution);
+        Snackbar.AddApolloNotification($"Opened solution: {solution.Name}", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(true));
     }
     
     private async Task Submit()
@@ -60,22 +87,7 @@
             _loading = true;
             StateHasChanged();
 
-            var base64 = _input;
-            if (_input.Contains("?solution="))
-            {
-                base64 = _input.Split("?solution=").Last();
-            }
-
-            var solution = Base64Service.DecodeSolution(base64);
-            if (solution == null)
-            {
-                Snackbar.AddApolloNotification("Invalid solution data", Severity.Error);
-                return;
-            }
-
-            await State.LoadSolutionAsync(solution);
-            Snackbar.AddApolloNotification($"Opened solution: {solution.Name}", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
+            await HandleSolution(_input);
         }
         catch (Exception ex)
         {

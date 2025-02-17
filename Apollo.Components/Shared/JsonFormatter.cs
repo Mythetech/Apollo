@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Apollo.Components.Shared;
 
-public static class CodeFormatter
+public static class JsonFormatter
 {
     private static readonly JsonSerializerOptions _options = new()
     {

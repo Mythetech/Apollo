@@ -21,8 +21,6 @@ public class ConsoleProjectBuilder : IConsumer<BuildSolution>
 
     public async Task Consume(BuildSolution message)
     {
-        return;
-        
         var solution = message.Solution ?? _state.Project;
         
         if (solution.ProjectType != ProjectType.Console)
