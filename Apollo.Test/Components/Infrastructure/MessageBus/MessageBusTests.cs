@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
 using Xunit;
+using TestContext = Bunit.TestContext;
 
 namespace Apollo.Test.Components.Infrastructure.MessageBus;
 

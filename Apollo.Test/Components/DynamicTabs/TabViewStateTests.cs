@@ -5,6 +5,7 @@ using Bunit;
 using Shouldly;
 using Xunit;
 using static Apollo.Test.Components.DynamicTabs.TestDynamicTabs;
+using TestContext = Bunit.TestContext;
 
 namespace Apollo.Test.Components.DynamicTabs;
 

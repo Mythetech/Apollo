@@ -4,6 +4,7 @@ using MudBlazor;
 using NetArchTest.Rules;
 using Shouldly;
 using Xunit;
+using Assembly = System.Reflection.Assembly;
 
 namespace Apollo.Test.Architecture;
 

@@ -1,5 +1,6 @@
 using Apollo.Hosting;
 using Xunit;
+using Assert = Xunit.Assert;
 
 namespace Apollo.Test.Hosting;
 

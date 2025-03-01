@@ -1,5 +1,6 @@
 using System.Reflection;
 using Apollo.Components.Infrastructure.Environment;
+using Assembly = System.Reflection.Assembly;
 
 namespace Apollo.Test.Components.Infrastructure;
 
