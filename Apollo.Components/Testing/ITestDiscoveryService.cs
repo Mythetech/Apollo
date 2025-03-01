@@ -4,6 +4,6 @@ namespace Apollo.Components.Testing;
 
 public interface ITestDiscoveryService
 {
-    public List<string> DiscoverTests(Assembly assembly);
-
+    string Framework { get; }
+    Task<List<TestCase>> DiscoverTestsAsync(Assembly assembly);
 }

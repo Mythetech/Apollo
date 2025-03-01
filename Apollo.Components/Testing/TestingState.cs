@@ -3,6 +3,7 @@ using System.Reflection;
 using Apollo.Components.Code;
 using Apollo.Components.Console;
 using Apollo.Components.Solutions;
+using System.Linq;
 
 namespace Apollo.Components.Testing;
 
@@ -42,10 +43,9 @@ public class TestingState
         {
             return [];
         }
-        var discoverer = new XunitTestDiscoveryService(_console);
-        TestCases = discoverer.DiscoverTests(_cachedBuild);
+        var discoverer = new TestDiscoveryService(_console);
+        TestCases = await discoverer.DiscoverTests(_cachedBuild);
         NotifyTestStateChanged();
-        await Task.CompletedTask;
         return TestCases;
     }
 
@@ -99,6 +99,14 @@ public class TestingState
             if (!method.IsStatic)
             {
                 instance = Activator.CreateInstance(type);
+                
+                if (test.TestPlatform == "NUnit")
+                {
+                    var setupMethod = type.GetMethods()
+                        .FirstOrDefault(m => m.GetCustomAttributes(typeof(NUnit.Framework.SetUpAttribute), true).Any());
+                    setupMethod?.Invoke(instance, null);
+                }
+                
                 if (instance == null)
                 {
                     stopwatch.Stop();

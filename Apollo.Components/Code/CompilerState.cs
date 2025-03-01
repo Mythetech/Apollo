@@ -9,6 +9,7 @@ using Apollo.Contracts.Compilation;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
 using MudBlazor.Extensions;
+using Assembly = System.Reflection.Assembly;
 
 namespace Apollo.Components.Code;
 

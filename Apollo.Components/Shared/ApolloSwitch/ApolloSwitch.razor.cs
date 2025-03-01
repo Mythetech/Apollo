@@ -72,14 +72,14 @@ namespace Apollo.Components.Shared.ApolloSwitch
         /// Shows an icon on Switch's thumb.
         /// </summary>
         [Parameter]
-        [Category(CategoryTypes.FormComponent.Appearance)]
+        [MudBlazor.Category(CategoryTypes.FormComponent.Appearance)]
         public string? ThumbIcon { get; set; }
 
         /// <summary>
         /// Shows an icon on Switch's thumb (off state).
         /// </summary>
         [Parameter]
-        [Category(CategoryTypes.FormComponent.Appearance)]
+        [MudBlazor.Category(CategoryTypes.FormComponent.Appearance)]
         public string? ThumbOffIcon { get; set; }
 
         /// <summary>

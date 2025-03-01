@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Apollo.Components.Solutions.Services;
 using Apollo.Components.Solutions.Commands;
+using Assembly = System.Reflection.Assembly;
 
 namespace Apollo.Components.Infrastructure.MessageBus;
 

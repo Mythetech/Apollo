@@ -22,6 +22,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.FluentUI.AspNetCore.Components;
 using MudBlazor;
 using MudBlazor.Services;
+using Assembly = System.Reflection.Assembly;
 using IDialogService = MudBlazor.IDialogService;
 using DialogService = MudBlazor.DialogService;
 
