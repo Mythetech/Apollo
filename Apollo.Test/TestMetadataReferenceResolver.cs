@@ -41,7 +41,6 @@ public class TestMetadataReferenceResolver : IMetadataReferenceResolver
             return Task.FromResult(reference);
         }
 
-        // Try to load dynamically if not in cache
         try
         {
             var assembly = Assembly.Load(moduleName.Replace(".wasm", ""));
@@ -51,13 +50,10 @@ public class TestMetadataReferenceResolver : IMetadataReferenceResolver
         }
         catch
         {
-            // If we can't find it, return a reference to mscorlib as fallback
-            // This helps tests continue without failing on missing references
             return Task.FromResult(_referenceCache["System.Runtime.wasm"]);
         }
     }
 
-    // Helper to add custom references for specific tests
     public void AddCustomReference(string moduleName, PortableExecutableReference reference)
     {
         var name = moduleName.EndsWith(".wasm") ? moduleName : moduleName + ".wasm";
