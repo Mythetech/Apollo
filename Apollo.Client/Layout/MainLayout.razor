@@ -66,6 +66,7 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
     if (firstRender)
     {
         await Settings.TryLoadSettingsFromStorageAsync();
+        await Settings.TrySetSystemThemeAsync();
         //HandleAppStateChanged();
     }
 }
