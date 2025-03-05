@@ -16,6 +16,7 @@ public class SettingsState
 
     private ThemeMode _themeMode = ThemeMode.Dark;
     private EditorThemeDefinition _currentTheme = ApolloTheme.Instance.Theme;
+    private ThemeMode _systemTheme = Settings.ThemeMode.Dark;
     public event Action SettingsChanged;
 
     public SettingsState(IMessageBus bus, ILocalStorageService localStorageService, IJSRuntime jsRuntime)
@@ -37,6 +38,13 @@ public class SettingsState
         
         if(saved?.Mode != null)
             ThemeMode = saved.Mode.Value;
+    }
+
+    public async Task TrySetSystemThemeAsync()
+    {
+        var (_, value) = await _jsRuntime.InvokeAsyncWithErrorHandling(false, "darkModeChange");
+        
+        _systemTheme = value ? ThemeMode.Dark : ThemeMode.Light;
     }
 
     public ThemeMode ThemeMode
@@ -83,17 +91,10 @@ public class SettingsState
             {
                 ThemeMode.Light => false,
                 ThemeMode.Dark => true,
-                ThemeMode.System => IsSystemDarkMode(),
+                ThemeMode.System => _systemTheme == ThemeMode.Dark,
                 _ => true
             };
         }
-    }
-
-    private bool IsSystemDarkMode()
-    {
-        var (_, value) =  _jsRuntime.InvokeAsyncWithErrorHandling(false, "darkModeChange").Result;
-        
-        return value;
     }
 
     private async void NotifyStateChanged()

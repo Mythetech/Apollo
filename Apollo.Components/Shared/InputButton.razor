@@ -52,7 +52,6 @@
     [Parameter] public Size Size { get; set; } = Size.Medium;
     [Parameter] public Color Color { get; set; } = Color.Default;
     
-    // TextField parameters
     [Parameter] public string Label { get; set; } = "";
     [Parameter] public string Placeholder { get; set; } = "";
     [Parameter] public Variant Variant { get; set; } = Variant.Text;
@@ -88,7 +87,6 @@
 
     private async Task HandleBlur()
     {
-        // Only cancel on blur if we're still editing
         if (_editing)
         {
             await Cancel();
