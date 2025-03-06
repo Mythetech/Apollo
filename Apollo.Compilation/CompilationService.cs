@@ -54,10 +54,12 @@ public class CompilationService
             var entryPoint = assembly.EntryPoint;
             if (entryPoint == null)
             {
-                logAction?.Invoke("No entry point found in the assembly.");
+                string message = "No entry point found in the assembly.";
+                logAction?.Invoke(message);
                 return new ExecutionResult
                 {
-                    Error = true
+                    Error = true,
+                    Messages = [message],
                 };
             }
 
