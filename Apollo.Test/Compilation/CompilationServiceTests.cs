@@ -55,6 +55,44 @@ public class CompilationServiceTests
         logs.ShouldBeEmpty();
     }
     
+    [Fact]
+    public void Can_Compile_Library()
+    {
+        // Arrange
+        var solution = SimpleLibraryProject.Create();
+        
+        // Act
+        var result = _service.Compile(solution.ToContract(), GetDefaultReferences());
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.ShouldBeNull();
+        result.Assembly.ShouldNotBeNull();
+        result.Assembly.Length.ShouldBeGreaterThan(0);
+    }
+    
+    [Fact]
+    public void Executing_Library_GracefullyExits()
+    {
+        // Arrange
+        var solution = SimpleLibraryProject.Create();
+        var bytes = _service.Compile(solution.ToContract(), GetDefaultReferences()).Assembly;
+        var asm = Assembly.Load(bytes);
+
+        List<string> logs = [];
+        
+        // Act
+        var result = _service.Execute(asm, (log) =>
+        {
+            logs.Add(log);
+        }, CancellationToken.None);
+
+        // Assert
+        result.Error.ShouldBeTrue();
+        result.Messages.Any(x => x.Contains("no entry point", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
+        logs.Any(x => x.Contains("no entry point", StringComparison.OrdinalIgnoreCase)).ShouldBeTrue();
+    }
+    
     private IEnumerable<MetadataReference> GetDefaultReferences()
     {
         var references = new List<MetadataReference>
