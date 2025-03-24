@@ -28,7 +28,7 @@
         }
         else if (item is SolutionFile file)
         {
-            <MudMenu ActivationEvent="@MouseEvent.RightClick" Dense="true" Class="d-flex" ListClass="mw-160">
+            <MudMenu ActivationEvent="@MouseEvent.RightClick" Dense="true" Class="d-flex pl-4 mud-treeview-item-content cursor-pointer" ListClass="mw-160 pa-1">
                 <ActivatorContent>
                     <FileTypeItem File="@((SolutionFile)item)" OnClick="async () => await OnFileSelected.InvokeAsync(file)"/>
                 </ActivatorContent>
