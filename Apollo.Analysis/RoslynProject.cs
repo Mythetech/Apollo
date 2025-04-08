@@ -50,7 +50,8 @@ public class RoslynProject
         "System.ComponentModel.Primitives.wasm",
         "System.Linq.Expressions.wasm",
         "System.Runtime.CompilerServices.Unsafe.wasm",
-        "System.Runtime.InteropServices.wasm"
+        "System.Runtime.InteropServices.wasm",
+        "Apollo.Hosting.wasm",
     ];
 
     public static IEnumerable<MetadataReference> GetMetadataReferences(RoslynProject project) => project._metadataReferences;
@@ -99,7 +100,6 @@ public class RoslynProject
 
     private async Task LoadInitialReferences()
     {
-        // Load core assemblies
         foreach (var assembly in _coreAssemblies)
         {
             var reference = await _resolver.GetMetadataReferenceAsync(assembly);
@@ -114,7 +114,6 @@ public class RoslynProject
             }
         }
 
-        // Load xUnit assemblies
         var xunitAssemblies = new[] { "xunit.core.wasm", "xunit.assert.wasm", "xunit.abstractions.wasm" };
         foreach (var assembly in xunitAssemblies)
         {
@@ -126,7 +125,6 @@ public class RoslynProject
             }
         }
 
-        // Update project with loaded references
         var project = _workspace.CurrentSolution.GetProject(DocumentId.ProjectId);
         if (project != null)
         {
@@ -144,7 +142,6 @@ public class RoslynProject
             var project = _workspace.CurrentSolution.GetProject(DocumentId.ProjectId);
             if (project == null) return;
 
-            // Update compilation options based on project type
             project = project.WithCompilationOptions(CompilationDefaults.GetCompilationOptions(apolloSolution.Type));
 
             var compilation = await project.GetCompilationAsync();
@@ -153,10 +150,14 @@ public class RoslynProject
             var diagnostics = compilation.GetDiagnostics();
             var requiredAssemblies = DetectRequiredAssemblies(apolloSolution);
 
-            // Use resolver to get additional references
             var resolver = new AssemblyResolver(_resolver, _logger);
-            var additionalReferences = await resolver.ResolveAssemblies(_workspace.CurrentSolution, diagnostics);
-            
+            var additionalReferences = (await resolver.ResolveAssemblies(_workspace.CurrentSolution, diagnostics)).ToList();
+
+            foreach (string s in requiredAssemblies)
+            {
+                _logger.LogTrace($"Determined assembly {s} is required");
+                //additionalReferences.Add(await _resolver.GetMetadataReferenceAsync(s));
+            }
             foreach (var reference in additionalReferences)
             {
                 if (!_metadataReferences.Contains(reference))
@@ -165,7 +166,6 @@ public class RoslynProject
                 }
             }
 
-            // Create new project with updated references
             var newProject = project
                 .WithMetadataReferences(_metadataReferences)
                 .WithCompilationOptions(CompilationDefaults.GetCompilationOptions(apolloSolution.Type));
@@ -204,7 +204,6 @@ public class RoslynProject
             {
                 var trimmed = line.Trim();
                
-                // Check using statements
                 if (trimmed.StartsWith("using ") && trimmed.EndsWith(";"))
                 {
                     var ns = trimmed["using ".Length..^1].Trim();

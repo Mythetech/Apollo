@@ -115,7 +115,7 @@ class Program
             if (completions == null)
             {
                 _workerLogger.LogTrace("No completions found");
-                return Array.Empty<byte>();
+                return [];
             }
 
             _workerLogger.LogTrace($"Found {completions.ItemsList.Count} completion items");
@@ -154,7 +154,7 @@ class Program
         {
             _workerLogger.LogError($"Error getting completions: {ex.Message}");
             _workerLogger.LogTrace(ex.StackTrace ?? string.Empty);
-            return Array.Empty<byte>();
+            return [];
         }
     }
 
