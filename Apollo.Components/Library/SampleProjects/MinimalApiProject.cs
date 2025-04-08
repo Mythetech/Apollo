@@ -24,8 +24,6 @@ public static class MinimalApiProject
                     Name = "Program.cs",
                     Uri = "virtual/MinimalApi/Program.cs",
                     Data = @"
-using Microsoft.AspNetCore.Builder;
-
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 

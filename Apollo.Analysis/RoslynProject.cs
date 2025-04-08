@@ -150,7 +150,7 @@ public class RoslynProject
             var diagnostics = compilation.GetDiagnostics();
             var requiredAssemblies = DetectRequiredAssemblies(apolloSolution);
 
-            var resolver = new AssemblyResolver(_resolver, _logger);
+            var resolver = new DiagnosticAssemblyResolver(_resolver, _logger);
             var additionalReferences = (await resolver.ResolveAssemblies(_workspace.CurrentSolution, diagnostics)).ToList();
 
             foreach (string s in requiredAssemblies)

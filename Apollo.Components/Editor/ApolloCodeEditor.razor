@@ -161,17 +161,25 @@
         {
             await SaveActiveFileAsync();
         });
+        
 
         await Global.RegisterCompletionItemProvider(JsRuntime, "csharp", async (modelUri, position, context) =>
         {
             try
             {
                 Console.AddTrace("Completion item request");
+                /*await _editor.SetModel(new TextModel()
+                {
+                    Id = "apollo-editor",
+                    JsRuntime = JsRuntime,
+                    Uri = SolutionsState?.ActiveFile?.Uri ?? modelUri,
+                });*/
+                
                 var code = await _editor.GetValue();
                 
                 var completionRequest = new CompletionRequest
                 {
-                    FileName = SolutionsState.ActiveFile.Uri,
+                    FileName = SolutionsState?.ActiveFile?.Uri ?? modelUri,
                     Line = position.LineNumber - 1,
                     Column = position.Column - 1,
                     CompletionTrigger = (OmniSharp.Models.v1.Completion.CompletionTriggerKind)context.TriggerKind,
@@ -196,6 +204,7 @@
                         .Where(item => item != null)
                         .Select(item => new CompletionItem
                         {
+                            
                             LabelAsString = item.Label,
                             Kind = MapCompletionKind(item.Kind),
                             Detail = item.Detail,
@@ -206,14 +215,14 @@
                             Preselect = item.Preselect,
                             CommitCharacters = item.CommitCharacters?.Select(c => c.ToString()).ToList(),
                             RangeAsObject = item.TextEdit != null ? new Range(
-                                item.TextEdit.StartLine + 1,
-                                item.TextEdit.StartColumn,
-                                item.TextEdit.EndLine + 1,
-                                item.TextEdit.EndColumn
+                                position.LineNumber,
+                                position.Column,
+                                item.TextEdit.EndLine,
+                                item.TextEdit.EndColumn + item.TextEdit.NewText.Length
                             ) : null,
-                            InsertTextRules = CompletionItemInsertTextRule.InsertAsSnippet
+                            InsertTextRules = CompletionItemInsertTextRule.None
                         }).ToList(),
-                    Incomplete = completions.IsIncomplete
+                    Incomplete = completions?.IsIncomplete ?? false
                 };
             }
             catch (Exception ex)
@@ -222,6 +231,10 @@
                 Console.AddTrace(ex.StackTrace ?? string.Empty);
                 return new CompletionList();
             }
+        }, async (item) =>
+        {
+            await Task.CompletedTask;
+            return item;
         });
 
         await Global.RegisterDocumentFormattingEditProvider(JsRuntime, "csharp", async (uri, options) =>

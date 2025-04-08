@@ -99,7 +99,7 @@ Imports.RegisterOnMessage(async e =>
                 try 
                 {
                     var solutionPayloadJson = message.Payload;
-                    loggerBridge.LogTrace($"Received payload: {solutionPayloadJson}");
+                    loggerBridge.LogDebug($"Received payload: {solutionPayloadJson}");
                     
                     var request = JsonSerializer.Deserialize<DiagnosticRequestWrapper>(solutionPayloadJson);
                     if (request?.Solution == null)
@@ -120,11 +120,11 @@ Imports.RegisterOnMessage(async e =>
                     
                     var currentFile = cleanSolution.Items.FirstOrDefault(i => i.Path == request.Uri);
                     
-                    loggerBridge.LogTrace($"Received solution with {cleanSolution.Items.Count} files");
+                    loggerBridge.LogDebug($"Received solution with {cleanSolution.Items.Count} files");
                     foreach (var item in cleanSolution.Items)
                     {
-                        loggerBridge.LogTrace($"File: {item.Path}");
-                        loggerBridge.LogTrace($"Content: {item.Content}");
+                        loggerBridge.LogDebug($"File: {item.Path}");
+                        loggerBridge.LogDebug($"Content: {item.Content}");
                     }
                     
                     if (currentFile?.Path != _currentFileUri || currentFile?.Content != _currentContent)
