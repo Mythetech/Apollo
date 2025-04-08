@@ -21,7 +21,7 @@
         }
     </TooltipContent>
     <ChildContent>
-        <MudText onclick="@(ToggleParameterMenu)">
+        <MudText onclick="@(async () => await ToggleParameterMenu())">
             @if (ShowValue)
             {
                 <code class="cursor-pointer">
@@ -45,53 +45,14 @@
     </ChildContent>
 </MudTooltip>
 <MudPopover @bind-Open="@_open" TransformOrigin="Origin.BottomLeft">
-    <MudStack Row Class="mud-width-full" AlignItems="AlignItems.Center">
-        <MudTextField @bind-Value="@_editValue"></MudTextField>
+    <MudStack Row Class="mud-width-full pa-1" AlignItems="AlignItems.Center">
+        <MudTextField @ref="_editField" @bind-Value="@_editValue"></MudTextField>
         <MudSpacer />
         <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Close" Color="Color.Error" Tooltip="Cancel" OnClick="Cancel"/>
         <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Accept" Tooltip="Save" OnClick="Save"/>
     </MudStack>
 </MudPopover>
 
-@*
-<MudMenu Open="_open" ActivationEvent="MouseEvent.MouseOver">
-    <ActivatorContent>
-        <MudText>
-            @if (ShowValue)
-            {
-                @Value
-            }
-            else
-            {
-                <code>
-                    {@Parameter}
-                </code>
-            }
-        </MudText>
-    </ActivatorContent>
-    <ChildContent>
-        <MudStack Row Class="mud-width-full pa-4" AlignItems="AlignItems.Center">
-            @if (_editing)
-            {
-                <MudTextField @ref="_editField" Underline="@_editing" @bind-Value="@_editValue"></MudTextField>
-            }
-            else
-            {
-                <MudText>@(string.IsNullOrWhiteSpace(Value) ? "{Empty}" : Value)</MudText>
-            }
-            @if (_editing)
-            {
-                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Close" Color="Color.Error" Tooltip="Cancel" OnClick="Cancel"/>
-                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Accept" Tooltip="Save" OnClick="Save"/>
-            }
-            else
-            {
-                <ApolloIconButton Size="Size.Small" Icon="@ApolloIcons.Edit" Tooltip="Edit" OnClick="Edit" />
-            }
-        </MudStack>
-    </ChildContent>
-</MudMenu>
-*@
 @code {
     [Parameter] public string Parameter { get; set; } = "";
 
@@ -111,9 +72,13 @@
 
     private MudTextField<string>? _editField = default;
 
-    private void ToggleParameterMenu()
+    private async Task ToggleParameterMenu()
     {
         _open = !_open;
+        if (_open)
+        {
+            await FocusParameterMenu();
+        }
         StateHasChanged();
     }
 
@@ -134,18 +99,12 @@
         StateHasChanged();
     }
 
-    private async Task Edit()
+    private async Task FocusParameterMenu()
     {        
         _editing = true;
-
-        StateHasChanged();
-
+        
         await Task.Yield();
         
-        await Task.Delay(1000);
-        
-        //await InvokeAsync(async () => await _menu.OpenMenuAsync(new MouseEventArgs(), false));
-
         StateHasChanged();
         
         if(_editField != null)
