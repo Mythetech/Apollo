@@ -33,6 +33,11 @@ public class MonacoService
     JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    private JsonSerializerOptions _indentedJson = new JsonSerializerOptions()
+    {
+        WriteIndented = true
+    };
     
     public MonacoService(IMetadataReferenceResolver resolver, ILoggerProxy workerLogger)
     {
@@ -91,9 +96,7 @@ class Program
 
             _workerLogger.LogTrace($"Completion request with trigger '{request.TriggerCharacter}' at {request.Line}:{request.Column}");
             _workerLogger.LogTrace($"Looking for document with ID {_completionProject.DocumentId.Id}");
-            _workerLogger.LogTrace($"Current solution has projects: {string.Join(", ", _completionProject.Workspace.CurrentSolution.Projects.Select(p => p.Name))}");
-            _workerLogger.LogTrace($"Current solution has documents: {string.Join(", ", _completionProject.Workspace.CurrentSolution.Projects.SelectMany(p => p.Documents).Select(d => d.Name))}");
-
+         
             var document = _completionProject.Workspace.CurrentSolution
                 .GetDocument(_completionProject.DocumentId);
 
@@ -118,7 +121,15 @@ class Program
                 return [];
             }
 
-            _workerLogger.LogTrace($"Found {completions.ItemsList.Count} completion items");
+            _workerLogger.LogInformation($"Found {completions.ItemsList.Count} completion items");
+
+            if (completions.ItemsList.Count <= 100)
+            {
+                foreach (var completionItem in completions.ItemsList)
+                {
+                    _workerLogger.LogTrace(JsonSerializer.Serialize(completionItem, _indentedJson));
+                }
+            }
 
             var response = new CompletionResponse
             {
@@ -198,10 +209,8 @@ class Program
 
     public async Task<byte[]> GetDiagnosticsAsync(string uri, Solution solution)
     {
-        // First update the solution and wait for references to load
         await _diagnosticProject.UpdateReferences(solution);
         
-        // If still loading, return empty diagnostics
         if (_diagnosticProject.IsLoadingReferences)
         {
             return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
@@ -209,7 +218,6 @@ class Program
                 jsonOptions));
         }
 
-        // Create compilation immediately after update
         var syntaxTrees = solution.Items
             .Where(item => !string.IsNullOrWhiteSpace(item.Content))
             .Select(item => {
@@ -228,7 +236,6 @@ class Program
             references: RoslynProject.GetMetadataReferences(_diagnosticProject)
         );
 
-        // Get diagnostics and log them for debugging
         var allDiagnostics = await GetAllDiagnosticsAsync(compilation, syntaxTrees);
         foreach (var diagnostic in allDiagnostics)
         {
@@ -244,7 +251,6 @@ class Program
     {
         var allDiagnostics = new List<Contracts.Analysis.Diagnostic>();
         
-        // Get syntax diagnostics
         foreach (var tree in syntaxTrees)
         {
             var diagnostics = tree.GetDiagnostics();
@@ -254,7 +260,6 @@ class Program
             }
         }
 
-        // Get semantic diagnostics
         using var temp = new MemoryStream();
         var result = compilation.Emit(temp);
         

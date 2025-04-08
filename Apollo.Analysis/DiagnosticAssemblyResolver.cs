@@ -12,13 +12,13 @@ using Apollo.Analysis;
 
 namespace Apollo.Analysis;
 
-public class AssemblyResolver
+public class DiagnosticAssemblyResolver
 {
     private readonly IMetadataReferenceResolver _resolver;
     private readonly ILoggerProxy _logger;
     private readonly Dictionary<string, HashSet<string>> _typeResolutionCache = new();
 
-    public AssemblyResolver(IMetadataReferenceResolver resolver, ILoggerProxy logger)
+    public DiagnosticAssemblyResolver(IMetadataReferenceResolver resolver, ILoggerProxy logger)
     {
         _resolver = resolver;
         _logger = logger;
@@ -28,7 +28,6 @@ public class AssemblyResolver
     {
         var references = new HashSet<MetadataReference>();
         
-        // First try direct namespace mapping
         var directAssemblies = GetDirectAssemblies(solution);
         _logger.LogTrace($"Attempting to load assemblies: {string.Join(", ", directAssemblies)}");
         
@@ -37,7 +36,6 @@ public class AssemblyResolver
             await TryAddReference(references, assembly);
         }
 
-        // Then look for unresolved type errors
         var unresolvedTypes = diagnostics
             .Where(d => d.Id.Equals("CS0246"))
             .GroupBy(d => d.Location.GetLineSpan().StartLinePosition)
@@ -86,7 +84,6 @@ public class AssemblyResolver
 
     private string ExtractTypeName(string diagnosticMessage)
     {
-        // Example: "The type or namespace name 'Xunit' could not be found"
         const string prefix = "The type or namespace name '";
         const string suffix = "' could not be found";
 
