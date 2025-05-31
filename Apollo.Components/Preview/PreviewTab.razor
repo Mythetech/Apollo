@@ -1,0 +1,144 @@
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Solutions
+@using Apollo.Components.Infrastructure
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Shared
+@using Microsoft.JSInterop
+@inherits DynamicTabView
+@implements IDisposable
+
+<div class="pa-4 mud-height-full">
+    <MudStack>
+        <MudSelect T="SolutionFile?" 
+                  Label="Preview Component" 
+                  AnchorOrigin="Origin.BottomCenter" 
+                  Value="@_selectedPreviewFile" 
+                  ValueChanged="HandlePreviewFileChange" 
+                  Class="flex-grow-1">
+            @if (_availableComponents != null)
+            {
+                @foreach (var component in _availableComponents)
+                {
+                    <MudSelectItem T="SolutionFile" Value="@component">@component.Name</MudSelectItem>
+                }
+            }
+        </MudSelect>
+        
+        <div class="preview-container mud-border mud-border-primary mud-rounded-lg pa-4 flex-grow-1">
+            @if (_selectedPreviewFile != null)
+            {
+                @if (IsComponentFile(_selectedPreviewFile))
+                {
+                    <DynamicComponent Type="@GetComponentType(_selectedPreviewFile)" />
+                }
+                else if (IsHtmlFile(_selectedPreviewFile))
+                {
+                    <div class="html-preview" @ref="_htmlPreviewContainer"></div>
+                }
+            }
+            else
+            {
+                <MudText>Select a component to preview</MudText>
+            }
+        </div>
+    </MudStack>
+</div>
+
+@code {
+    [Inject] public SolutionsState State { get; set; } = default!;
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+    [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
+
+    private SolutionFile? _selectedPreviewFile;
+    private List<SolutionFile>? _availableComponents;
+    private ElementReference _htmlPreviewContainer;
+
+    public override string Name { get; set; } = "Preview";
+    public override Type ComponentType { get; set; } = typeof(PreviewTab);
+    public override string DefaultArea => DropZones.Right;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        State.ActiveFileChanged += HandleActiveFileChanged;
+        State.SolutionFilesChanged += RefreshAvailableComponents;
+    }
+
+    public void Dispose()
+    {
+        State.ActiveFileChanged -= HandleActiveFileChanged;
+        State.SolutionFilesChanged -= RefreshAvailableComponents;
+    }
+
+    private async void HandleActiveFileChanged(SolutionFile? file)
+    {
+        if (file != null && (IsComponentFile(file) || IsHtmlFile(file)))
+        {
+            _selectedPreviewFile = file;
+            try
+            {
+                await RefreshPreview();
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+    }
+
+    private async Task HandlePreviewFileChange(SolutionFile? file)
+    {
+        _selectedPreviewFile = file;
+        await RefreshPreview();
+    }
+
+    private void RefreshAvailableComponents()
+    {
+        // TODO: Implement component discovery from compiled solution
+        _availableComponents = State.Project?.Files
+            .Where(f => IsComponentFile(f) || IsHtmlFile(f))
+            .ToList();
+        
+        StateHasChanged();
+    }
+
+    private async Task RefreshPreview()
+    {
+        if (_selectedPreviewFile == null) return;
+
+        if (IsHtmlFile(_selectedPreviewFile))
+        {
+            try
+            {
+                await JsRuntime.InvokeVoidAsync("updateHtmlPreview",
+                    _htmlPreviewContainer,
+                    _selectedPreviewFile.Data);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool IsComponentFile(SolutionFile file)
+    {
+        // TODO: Implement proper component file detection
+        return file.Extension.Equals(".razor", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsHtmlFile(SolutionFile file)
+    {
+        //TODO: Implement proper web file detection
+        return file.Extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
+               file.Extension.Equals(".htm", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Type? GetComponentType(SolutionFile file)
+    {
+        // TODO: Implement component type resolution from compiled solution
+        return null;
+    }
+} 

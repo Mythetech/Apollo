@@ -34,3 +34,17 @@ export function saveAsFile(filename, bytesBase64) {
     link.click();
     document.body.removeChild(link);
 }
+
+window.updateHtmlPreview = (element, html) => {
+    if (!element) return;
+
+    // Sanitize the HTML before rendering
+    /*
+    const sanitizedHtml = DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'img', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'br', 'hr', 'strong', 'em', 'code', 'pre'],
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+    });
+    */
+
+    element.innerHTML = html;
+};

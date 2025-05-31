@@ -5,6 +5,7 @@ using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.Environment;
 using Apollo.Components.Infrastructure.Logging;
 using Apollo.Components.Library;
+using Apollo.Components.Preview;
 using Apollo.Components.Solutions;
 using Apollo.Components.Terminal;
 using Apollo.Components.Testing;
@@ -195,7 +196,6 @@ public class TabViewState
                 AreaIdentifier = DropZones.Right,
                 IsActive = true
             },
-
             new TestingTab()
             {
                 AreaIdentifier = DropZones.Right,
@@ -205,7 +205,6 @@ public class TabViewState
             {
                 AreaIdentifier = DropZones.Bottom,
             },
-
             new WebHostOutputTab()
             {
                 AreaIdentifier = DropZones.Bottom
@@ -226,7 +225,14 @@ public class TabViewState
         ];
         
         if(_environment.IsDevelopment())
+        {
             defaultTabs.Add(new SystemLogViewer());
+            defaultTabs.Add(new PreviewTab()
+            {
+                AreaIdentifier = DropZones.Right,
+                IsActive = false
+            });
+        }
 
         return defaultTabs;
     }
