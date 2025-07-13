@@ -7,13 +7,6 @@ assignees: ''
 
 ---
 
----
-name: "Bug report \U0001F41E"
-about: Create a bug report
-labels: bug
-
----
-
 ## Describe the bug
 A clear and concise description of what the bug is.
 
@@ -27,6 +20,8 @@ A clear and concise description of what you expected to happen.
  - OS: [e.g. Windows, Mac, Linux]
  - Host: [e.g. Desktop vs Web Client]
  - Other details that you think may affect.
+
+### Technical Details (Optional)
 
 ### Additional context
 Add any other context about the problem here.
