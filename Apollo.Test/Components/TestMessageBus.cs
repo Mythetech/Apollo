@@ -9,6 +9,11 @@ public class TestMessageBus : IMessageBus
         await Task.CompletedTask;
     }
 
+    public async Task PublishAsync(Type messageType, object message)
+    {
+        await Task.CompletedTask;
+    }
+
     public void RegisterConsumerType<TMessage, TConsumer>() where TMessage : class where TConsumer : IConsumer<TMessage>
     {
     }
