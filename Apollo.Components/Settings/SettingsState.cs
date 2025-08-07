@@ -17,6 +17,7 @@ public class SettingsState
     private ThemeMode _themeMode = ThemeMode.Dark;
     private EditorThemeDefinition _currentTheme = ApolloTheme.Instance.Theme;
     private ThemeMode _systemTheme = Settings.ThemeMode.Dark;
+    private readonly SettingsProvider _settingsProvider;
     public event Action SettingsChanged;
 
     public SettingsState(IMessageBus bus, ILocalStorageService localStorageService, IJSRuntime jsRuntime)
@@ -25,6 +26,7 @@ public class SettingsState
         _localStorageService = localStorageService;
         _jsRuntime = jsRuntime;
         _currentTheme.Initialize(this);
+        _settingsProvider = new SettingsProvider(bus);
     }
 
     public async Task TryLoadSettingsFromStorageAsync()
@@ -95,6 +97,11 @@ public class SettingsState
                 _ => true
             };
         }
+    }
+
+    public List<SettingsBase> GetSettingsModels()
+    {
+        return _settingsProvider.Settings;
     }
 
     private async void NotifyStateChanged()
