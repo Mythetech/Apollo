@@ -1,7 +1,11 @@
+@using System.Reflection
 @using Apollo.Components.Analysis
 @using Apollo.Components.Code
 @using Apollo.Components.Console
 @using Apollo.Components.Hosting
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Settings.Attributes
+@using Apollo.Components.Settings.Events
 @using Apollo.Components.Shared
 @using Apollo.Components.Theme
 @using Apollo.Components.Shared.ApolloSwitch
@@ -115,6 +119,36 @@
                         @bind-Value="WebHostConsoleService.AutoScroll" />
                 </MudStack>
             </MudItem>
+            
+            @foreach (var settingsGroup in Settings.GetSettingsModels())
+            {
+                <MudItem xs="12">
+                    <MudDivider Class="my-4"/>
+                    <MudText Class="mb-4 mud-text-secondary">@settingsGroup.Section</MudText>
+                    <MudStack>
+                        @foreach (var property in settingsGroup.Type.GetProperties())
+                        {
+                            if (property.PropertyType == typeof(bool))
+                            {
+                                <ApolloSwitch
+                                    LabelPlacement="Placement.Left"
+                                    Color="Color.Secondary"
+                                    Label="@((property.GetCustomAttribute(typeof(SettingAttribute), false) as SettingAttribute)?.Label)"
+                                    Value="@((bool)property.GetValue(settingsGroup, null))"/>
+                            }
+                            else if (property.PropertyType == typeof(int))
+                            {
+                                <MudInputLabel>@((property.GetCustomAttribute(typeof(SettingAttribute), true) as SettingAttribute)?.Label)</MudInputLabel>
+                                <MudInput
+                                    T="int"
+                                    Label="@((property.GetCustomAttribute(typeof(SettingAttribute), true) as SettingAttribute)?.Label)"
+                                    Value="@((int)property.GetValue(settingsGroup, null))"
+                                    ValueChanged="(async (value) => { property.SetValue(settingsGroup, value); await Bus.PublishAsync(new SettingsModelChanged(settingsGroup.Type, settingsGroup)); })"/>
+                            }
+                        }
+                    </MudStack>
+                </MudItem>
+            }
         </MudGrid>
     </DialogContent>
     <DialogActions>
@@ -132,6 +166,7 @@
     [Inject] private CodeAnalysisState CodeAnalysisState { get; set; }
     [Inject] private WebHostConsoleService WebHostConsoleService { get; set; }
     [Inject] private CodeAnalysisConsoleService CodeAnalysisConsoleService { get; set; }
+    [Inject] private IMessageBus Bus { get; set; }
     
     private bool _codeAnalysisEnabled
     {

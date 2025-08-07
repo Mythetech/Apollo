@@ -1,5 +1,7 @@
 @using System.Text.Json
 @using Apollo.Components.Analysis
+@using Apollo.Components.Settings
+@using Apollo.Components.Settings.Events
 @using Apollo.Components.Solutions
 @using BlazorMonaco
 @using CSharpier
@@ -19,6 +21,7 @@
 @using Command = BlazorMonaco.Languages.Command
 @using InsertTextRule = BlazorMonaco.Languages
 @implements IDisposable
+@inherits Apollo.Components.Infrastructure.MessageBus.ComponentConsumer<Apollo.Components.Settings.Events.SettingsModelChanged>
 
 <StandaloneCodeEditor @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
 
@@ -28,6 +31,7 @@
     [Inject] CodeAnalysisConsoleService Console { get; set; } = default!;
     [Inject] IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] ILogger<ApolloCodeEditor> Logger { get; set; } = default!;
+    [Inject] SettingsState Settings { get; set; } = default!;
 
     private List<TextModel> _files = [];
 
@@ -39,6 +43,7 @@
             AutomaticLayout = true,
             Language = "csharp",
             Value = SolutionsState.ActiveFile.Data,
+            LineHeight = ((EditorSettings)Settings.GetSettingsModels().First(model => model.Type == typeof(EditorSettings))).LineHeight,
         };
 
     private StandaloneCodeEditor? _editor;
@@ -66,6 +71,18 @@
         SolutionsState.ActiveFileChangeRequested += async (file) => await HandleBeforeFileChanged(file);
         SolutionsState.SaveProjectRequested += SaveActiveFileAsync;
         SolutionsState.SolutionFilesChanged += async () => await HandleIfProjectClosedAsync();
+        base.OnInitialized();
+    }
+
+    private async Task HandleSettingsChangedAsync(EditorSettings settings)
+    {
+        if (_editor != null)
+        {
+            await _editor.UpdateOptions(new()
+            {
+                LineHeight = settings.LineHeight
+            });
+        }
     }
 
     protected async Task HandleIfProjectClosedAsync()
@@ -419,6 +436,13 @@
         SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
         SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);
         SolutionsState.SaveProjectRequested -= SaveActiveFileAsync;
+    }
+
+    protected override async Task Consume(SettingsModelChanged message, CancellationToken cancellationToken)
+    {
+        if (message.Type != typeof(EditorSettings)) return;
+        
+        await HandleSettingsChangedAsync((EditorSettings)message.Model);
     }
 
 }
