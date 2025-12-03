@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using Apollo.Components.Analysis;
 using Apollo.Components.Console;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
@@ -28,6 +29,7 @@ public class CompilerState
     private readonly ConsoleOutputService _console;
     private readonly IMessageBus _messageBus;
     private readonly ILogger<CompilerState> _logger;
+    private readonly UserAssemblyStore _userAssemblyStore;
     public event Func<Task>? OnCompilerStatusChanged;
     private bool _workerReady = false;
 
@@ -50,12 +52,13 @@ public class CompilerState
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     public CompilerState(ICompilerWorkerFactory compilerWorkerFactory, ConsoleOutputService console,
-        IMessageBus messageBus, ILogger<CompilerState> logger)
+        IMessageBus messageBus, ILogger<CompilerState> logger, UserAssemblyStore userAssemblyStore)
     {
         _compilerWorkerFactory = compilerWorkerFactory;
         _console = console;
         _messageBus = messageBus;
         _logger = logger;
+        _userAssemblyStore = userAssemblyStore;
 
         StartInternal();
     }
@@ -167,12 +170,15 @@ public class CompilerState
         
         _console.AddLog($"Build completed in {result.BuildTime.Milliseconds}ms", ConsoleSeverity.Debug);
         
-        if (result.Success)
+        if (result.Success && result.Assembly != null)
         {
             try
             {
                 var asm = Assembly.Load(result.Assembly);
                 await _messageBus.PublishAsync(new BuildCompleted(new CompilationResult(true, asm)));
+                
+                await _userAssemblyStore.UpdateAssemblyAsync(result.Assembly);
+                _console.AddLog("User assembly updated for intellisense", ConsoleSeverity.Debug);
             }
             catch (Exception ex)
             {

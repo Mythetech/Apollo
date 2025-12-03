@@ -62,7 +62,7 @@ Imports.RegisterOnMessage(async e =>
                 var wrapper = JsonSerializer.Deserialize<CompletionRequestWrapper>(message.Payload);
                 ArgumentException.ThrowIfNullOrWhiteSpace(wrapper?.Code);
                 ArgumentNullException.ThrowIfNull(wrapper?.Request);
-                var completion = await monacoService.GetCompletionAsync(wrapper.Code,  wrapper.Request);
+                var completion = await monacoService.GetCompletionAsync(wrapper.Code, wrapper.Request);
 
                 var completionResponse = new WorkerMessage()
                 {
@@ -84,6 +84,7 @@ Imports.RegisterOnMessage(async e =>
                 
                 Imports.PostMessage(resolveCompletionResponse.ToSerialized());
                 break;
+                
             case "get_quick_hint":
                 var quickHint = await monacoService.GetQuickInfoAsync(message.Payload);
 
@@ -95,6 +96,7 @@ Imports.RegisterOnMessage(async e =>
                 
                 Imports.PostMessage(quickHintResponse.ToSerialized());
                 break;
+                
             case "get_diagnostics":
                 try 
                 {
@@ -148,6 +150,59 @@ Imports.RegisterOnMessage(async e =>
                 {
                     loggerBridge.LogTrace($"Error processing diagnostics: {ex.Message}");
                     throw;
+                }
+                break;
+                
+            case "update_document":
+                try
+                {
+                    var updateResult = await monacoService.HandleDocumentUpdateAsync(message.Payload);
+                    var updateResponse = new WorkerMessage
+                    {
+                        Action = "document_update_response",
+                        Payload = Convert.ToBase64String(updateResult)
+                    };
+                    Imports.PostMessage(updateResponse.ToSerialized());
+                }
+                catch (Exception ex)
+                {
+                    loggerBridge.LogTrace($"Error updating document: {ex.Message}");
+                }
+                break;
+                
+            case "set_current_document":
+                try
+                {
+                    var setDocResult = await monacoService.HandleSetCurrentDocumentAsync(message.Payload);
+                    var setDocResponse = new WorkerMessage
+                    {
+                        Action = "set_current_document_response",
+                        Payload = Convert.ToBase64String(setDocResult)
+                    };
+                    Imports.PostMessage(setDocResponse.ToSerialized());
+                }
+                catch (Exception ex)
+                {
+                    loggerBridge.LogTrace($"Error setting current document: {ex.Message}");
+                }
+                break;
+                
+            case "update_user_assembly":
+                try
+                {
+                    loggerBridge.LogDebug("Received user assembly update request");
+                    var assemblyResult = await monacoService.HandleUserAssemblyUpdateAsync(message.Payload);
+                    var assemblyResponse = new WorkerMessage
+                    {
+                        Action = "user_assembly_update_response",
+                        Payload = Convert.ToBase64String(assemblyResult)
+                    };
+                    Imports.PostMessage(assemblyResponse.ToSerialized());
+                    loggerBridge.LogDebug("User assembly reference updated for intellisense");
+                }
+                catch (Exception ex)
+                {
+                    loggerBridge.LogTrace($"Error updating user assembly: {ex.Message}");
                 }
                 break;
         }
