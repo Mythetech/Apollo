@@ -39,14 +39,23 @@
     private bool _editorReady = false;
     private string? _lastKnownContent;
 
-    private StandaloneEditorConstructionOptions DefaultOptions(StandaloneCodeEditor editor) =>
-        new StandaloneEditorConstructionOptions
+    private StandaloneEditorConstructionOptions DefaultOptions(StandaloneCodeEditor editor)
+    {
+        var editorSettings = (EditorSettings)Settings.GetSettingsModels().First(model => model.Type == typeof(EditorSettings));
+        return new StandaloneEditorConstructionOptions
         {
             AutomaticLayout = true,
             Language = "csharp",
             Value = SolutionsState.ActiveFile.Data,
-            LineHeight = ((EditorSettings)Settings.GetSettingsModels().First(model => model.Type == typeof(EditorSettings))).LineHeight,
+            FontSize = editorSettings.FontSize,
+            LineHeight = editorSettings.LineHeight,
+            TabSize = editorSettings.TabSize,
+            InsertSpaces = editorSettings.InsertSpaces,
+            WordWrap = editorSettings.WordWrap ? "on" : "off",
+            Minimap = new EditorMinimapOptions { Enabled = editorSettings.MinimapEnabled },
+            RenderWhitespace = editorSettings.RenderWhitespace.ToString().ToLowerInvariant(),
         };
+    }
 
     private StandaloneCodeEditor? _editor;
 
@@ -79,13 +88,18 @@
 
     private async Task HandleSettingsChangedAsync(EditorSettings settings)
     {
-        if (_editor != null)
+        if (_editor == null) return;
+        
+        await _editor.UpdateOptions(new EditorUpdateOptions
         {
-            await _editor.UpdateOptions(new()
-            {
-                LineHeight = settings.LineHeight
-            });
-        }
+            FontSize = settings.FontSize,
+            LineHeight = settings.LineHeight,
+            TabSize = settings.TabSize,
+            InsertSpaces = settings.InsertSpaces,
+            WordWrap = settings.WordWrap ? "on" : "off",
+            Minimap = new EditorMinimapOptions { Enabled = settings.MinimapEnabled },
+            RenderWhitespace = settings.RenderWhitespace.ToString().ToLowerInvariant(),
+        });
     }
 
     protected async Task HandleIfProjectClosedAsync()
