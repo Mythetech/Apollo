@@ -126,24 +126,41 @@
                     <MudDivider Class="my-4"/>
                     <MudText Class="mb-4 mud-text-secondary">@settingsGroup.Section</MudText>
                     <MudStack>
-                        @foreach (var property in settingsGroup.Type.GetProperties())
+                        @foreach (var property in settingsGroup.Type.GetProperties().Where(p => p.GetCustomAttribute<SettingAttribute>() != null))
                         {
+                            var label = property.GetCustomAttribute<SettingAttribute>()?.Label;
+                            
                             if (property.PropertyType == typeof(bool))
                             {
                                 <ApolloSwitch
                                     LabelPlacement="Placement.Left"
                                     Color="Color.Secondary"
-                                    Label="@((property.GetCustomAttribute(typeof(SettingAttribute), false) as SettingAttribute)?.Label)"
-                                    Value="@((bool)property.GetValue(settingsGroup, null))"/>
+                                    Label="@label"
+                                    Value="@((bool)property.GetValue(settingsGroup)!)"
+                                    ValueChanged="@(async (bool value) => { property.SetValue(settingsGroup, value); await Bus.PublishAsync(new SettingsModelChanged(settingsGroup.Type, settingsGroup)); })"/>
                             }
                             else if (property.PropertyType == typeof(int))
                             {
-                                <MudInputLabel>@((property.GetCustomAttribute(typeof(SettingAttribute), true) as SettingAttribute)?.Label)</MudInputLabel>
-                                <MudInput
+                                <MudNumericField
                                     T="int"
-                                    Label="@((property.GetCustomAttribute(typeof(SettingAttribute), true) as SettingAttribute)?.Label)"
-                                    Value="@((int)property.GetValue(settingsGroup, null))"
-                                    ValueChanged="(async (value) => { property.SetValue(settingsGroup, value); await Bus.PublishAsync(new SettingsModelChanged(settingsGroup.Type, settingsGroup)); })"/>
+                                    Label="@label"
+                                    Variant="Variant.Outlined"
+                                    Value="@((int)property.GetValue(settingsGroup)!)"
+                                    ValueChanged="@(async (int value) => { property.SetValue(settingsGroup, value); await Bus.PublishAsync(new SettingsModelChanged(settingsGroup.Type, settingsGroup)); })"/>
+                            }
+                            else if (property.PropertyType.IsEnum)
+                            {
+                                <MudSelect
+                                    T="string"
+                                    Label="@label"
+                                    Variant="Variant.Outlined"
+                                    Value="@(property.GetValue(settingsGroup)!.ToString())"
+                                    ValueChanged="@(async (string value) => { property.SetValue(settingsGroup, Enum.Parse(property.PropertyType, value)); await Bus.PublishAsync(new SettingsModelChanged(settingsGroup.Type, settingsGroup)); })">
+                                    @foreach (var enumValue in Enum.GetNames(property.PropertyType))
+                                    {
+                                        <MudSelectItem Value="@enumValue">@enumValue</MudSelectItem>
+                                    }
+                                </MudSelect>
                             }
                         }
                     </MudStack>

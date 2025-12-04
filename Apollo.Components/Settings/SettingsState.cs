@@ -33,13 +33,17 @@ public class SettingsState
     {
         var saved = await _localStorageService.GetItemAsync<StoredUserPreferences>(SettingsStorage.UserPreferencesKey);
 
-        if (saved == null) return;
-        
-        if(!string.IsNullOrWhiteSpace(saved?.Theme))
-            SetTheme(saved.Theme);
-        
-        if(saved?.Mode != null)
-            ThemeMode = saved.Mode.Value;
+        if (saved != null)
+        {
+            if (!string.IsNullOrWhiteSpace(saved.Theme))
+                SetTheme(saved.Theme);
+
+            if (saved.Mode != null)
+                ThemeMode = saved.Mode.Value;
+        }
+
+        var appSettings = await _localStorageService.GetItemAsync<Dictionary<string, Dictionary<string, object>>>(SettingsStorage.AppSettingsKey);
+        await _settingsProvider.ApplyStoredSettingsAsync(appSettings);
     }
 
     public async Task TrySetSystemThemeAsync()
