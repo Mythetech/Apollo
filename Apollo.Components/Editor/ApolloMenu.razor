@@ -27,6 +27,14 @@
                 <ThemeMenuItem ThemeName="Apollo" Text="Apollo" />
                 <ThemeMenuItem ThemeName="Stealth" Text="Stealth" />
                 <ThemeMenuItem ThemeName="Siren" Text="Siren" />
+                @if (Settings.CustomThemes.Themes.Count > 0)
+                {
+                    <MudDivider />
+                    @foreach (var customTheme in Settings.CustomThemes.Themes.Values)
+                    {
+                        <CustomThemeMenuItem Theme="@customTheme" />
+                    }
+                }
             </MudMenu>
     </ChildContent>
 </MudMenu>

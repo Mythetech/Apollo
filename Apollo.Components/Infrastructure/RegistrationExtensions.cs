@@ -14,6 +14,7 @@ using Apollo.Components.Solutions.Services;
 using Apollo.Components.Terminal;
 using Apollo.Components.Terminal.CommandServices;
 using Apollo.Components.Testing;
+using Apollo.Components.Theme;
 using Blazored.LocalStorage;
 using KristofferStrube.Blazor.FileSystemAccess;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,7 @@ public static class RegistrationExtensions
         services.AddTransient<IGitHubService, GitHubService>();
         services.AddTransient<Base64Service>();
         services.AddScoped<AppState>();
+        services.AddSingleton<CustomThemeService>();
         services.AddScoped<SettingsState>();
         
         services.AddSingleton<TerminalState>();

@@ -9,6 +9,9 @@
 @using Apollo.Components.Shared
 @using Apollo.Components.Theme
 @using Apollo.Components.Shared.ApolloSwitch
+@using Microsoft.JSInterop
+@using Apollo.Components.Shared
+@implements IDisposable
 
 <MudDialog Class="pa-4 glassmorphic" Style="width: 65vw; height: 75vh;">
     <DialogContent>
@@ -53,10 +56,12 @@
             
             <MudItem xs="12">
                 <MudDivider Class="my-4"/>
-                <MudText Class="mb-4 mud-text-secondary">Theme Settings</MudText>
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Class="mud-text-secondary">Built-in Themes</MudText>
+                </MudStack>
                 <MudToggleGroup T="string" 
-                                Value="@Settings.CurrentTheme.Name"
-                                ValueChanged="@(value => Settings.SetTheme(value))"
+                                Value="@GetCurrentThemeValue()"
+                                ValueChanged="@OnThemeSelected"
                                 Class="mud-width-full" 
                                 SelectedClass="box-shadow-primary"
                                 Style="border:none!important;">
@@ -65,7 +70,7 @@
                             Title="Apollo"
                             Description="Solar-inspired with golden accents"
                             ChipText="Default"
-                            IsSelected="@(Settings.CurrentTheme.Name == "Apollo")"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Apollo" && !Settings.IsUsingCustomTheme)"
                             CardTheme="@ApolloTheme.Instance.Theme.BaseTheme"/>
                     </MudToggleItem>
                     <MudToggleItem Value="@("Stealth")" Class="rounded">
@@ -73,7 +78,7 @@
                             Title="Stealth"
                             Description="Minimalist flat design"
                             ChipText="Stealth"
-                            IsSelected="@(Settings.CurrentTheme.Name == "Stealth")"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Stealth" && !Settings.IsUsingCustomTheme)"
                             CardTheme="@StealthTheme.Instance.Theme.BaseTheme"/>
                     </MudToggleItem>
                     <MudToggleItem Value="@("Siren")" Class="rounded">
@@ -81,10 +86,60 @@
                             Title="Siren"
                             Description="Siren's signature blue theme"
                             ChipText="Siren"
-                            IsSelected="@(Settings.CurrentTheme.Name == "Siren")"
+                            IsSelected="@(Settings.CurrentTheme.Name == "Siren" && !Settings.IsUsingCustomTheme)"
                             CardTheme="@SirenTheme.Instance.Theme.BaseTheme"/>
                     </MudToggleItem>
                 </MudToggleGroup>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudDivider Class="my-4"/>
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Class="mud-text-secondary">Custom Themes</MudText>
+                    <MudStack Row Spacing="2">
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.TwoTone.ContentPaste" OnClick="ImportTheme">
+                            Import
+                        </MudButton>
+                        @if (Settings.CustomThemes.Themes.Count > 0)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@ApolloIcons.Export" OnClick="ExportAllThemes">
+                                Export All
+                            </MudButton>
+                        }
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@ApolloIcons.Add" OnClick="CreateNewTheme">
+                            New Theme
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+                
+                @if (Settings.CustomThemes.Themes.Count == 0)
+                {
+                    <MudPaper Class="pa-4 d-flex flex-column align-center justify-center" Elevation="0" Style="background: var(--mud-palette-dark); min-height: 100px;">
+                        <MudIcon Icon="@Icons.Material.TwoTone.Palette" Size="Size.Large" Class="mb-2 mud-text-secondary" />
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">No custom themes yet</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Create or import a theme to get started</MudText>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudToggleGroup T="string" 
+                                    Value="@GetCurrentThemeValue()"
+                                    ValueChanged="@OnThemeSelected"
+                                    Class="mud-width-full" 
+                                    SelectedClass="box-shadow-primary"
+                                    Style="border:none!important;">
+                        @foreach (var customTheme in Settings.CustomThemes.Themes.Values)
+                        {
+                            <MudToggleItem Value="@($"custom:{customTheme.Data.Id}")" Class="rounded">
+                                <CustomThemeCard 
+                                    Theme="@customTheme" 
+                                    IsSelected="@(Settings.CurrentCustomThemeId == customTheme.Data.Id)"
+                                    OnEdit="@(() => EditTheme(customTheme))"
+                                    OnExport="@(() => ExportTheme(customTheme))" />
+                            </MudToggleItem>
+                        }
+                    </MudToggleGroup>
+                }
             </MudItem>
 
             <MudItem xs="12">
@@ -177,13 +232,18 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
-    [Inject] private SettingsState Settings { get; set; }
-    [Inject] private ConsoleOutputService ConsoleOutputService { get; set; }
-    [Inject] private CodeAnalysisState CodeAnalysisState { get; set; }
-    [Inject] private WebHostConsoleService WebHostConsoleService { get; set; }
-    [Inject] private CodeAnalysisConsoleService CodeAnalysisConsoleService { get; set; }
-    [Inject] private IMessageBus Bus { get; set; }
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private SettingsState Settings { get; set; } = default!;
+    [Inject] private ConsoleOutputService ConsoleOutputService { get; set; } = default!;
+    [Inject] private CodeAnalysisState CodeAnalysisState { get; set; } = default!;
+    [Inject] private WebHostConsoleService WebHostConsoleService { get; set; } = default!;
+    [Inject] private CodeAnalysisConsoleService CodeAnalysisConsoleService { get; set; } = default!;
+    [Inject] private IMessageBus Bus { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+    
+    private IJSObjectReference? _jsModule;
     
     private bool _codeAnalysisEnabled
     {
@@ -191,5 +251,146 @@
         set => CodeAnalysisState.Disabled = !value;
     }
     
+    protected override async Task OnInitializedAsync()
+    {
+        _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Apollo.Components/app.js");
+        Settings.CustomThemes.OnThemesChanged += OnThemesChanged;
+    }
+    
+    private void OnThemesChanged() => InvokeAsync(StateHasChanged);
+    
+    public void Dispose()
+    {
+        Settings.CustomThemes.OnThemesChanged -= OnThemesChanged;
+    }
+    
+    private string GetCurrentThemeValue()
+    {
+        if (Settings.IsUsingCustomTheme && Settings.CurrentCustomThemeId != null)
+            return $"custom:{Settings.CurrentCustomThemeId}";
+        return Settings.CurrentTheme.Name;
+    }
+    
+    private void OnThemeSelected(string value)
+    {
+        if (value.StartsWith("custom:"))
+        {
+            var id = value[7..];
+            var customTheme = Settings.CustomThemes.GetTheme(id);
+            if (customTheme != null)
+            {
+                Settings.SetCustomTheme(customTheme);
+            }
+        }
+        else
+        {
+            Settings.SetTheme(value);
+        }
+    }
+    
+    private async Task CreateNewTheme()
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            NoHeader = true,
+            MaxWidth = MaxWidth.Large
+        };
+        
+        var parameters = new DialogParameters<ThemeCustomizer>
+        {
+            { x => x.BaseTheme, Settings.CurrentTheme }
+        };
+        
+        var dialog = await DialogService.ShowAsync<ThemeCustomizer>("Create Theme", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result!.Canceled && result.Data is CustomTheme newTheme)
+        {
+            Settings.SetCustomTheme(newTheme);
+        }
+    }
+    
+    private async Task EditTheme(CustomTheme theme)
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            NoHeader = true,
+            MaxWidth = MaxWidth.Large
+        };
+        
+        var parameters = new DialogParameters<ThemeCustomizer>
+        {
+            { x => x.ExistingTheme, theme }
+        };
+        
+        var dialog = await DialogService.ShowAsync<ThemeCustomizer>("Edit Theme", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result!.Canceled)
+        {
+            if (result.Data is CustomTheme updatedTheme)
+            {
+                Settings.SetCustomTheme(updatedTheme);
+            }
+            else if (Settings.CurrentCustomThemeId == theme.Data.Id)
+            {
+                Settings.SetTheme("Apollo");
+            }
+        }
+    }
+    
+    private async Task ExportTheme(CustomTheme theme)
+    {
+        if (_jsModule == null) return;
+        
+        var json = Settings.CustomThemes.ExportTheme(theme.Data.Id);
+        await _jsModule.InvokeVoidAsync("copyToClipboard", json);
+        Snackbar.Add($"Theme '{theme.Name}' copied to clipboard!", Severity.Success);
+    }
+    
+    private async Task ExportAllThemes()
+    {
+        if (_jsModule == null) return;
+        
+        var json = Settings.CustomThemes.ExportAllThemes();
+        await _jsModule.InvokeVoidAsync("copyToClipboard", json);
+        Snackbar.Add($"All {Settings.CustomThemes.Themes.Count} themes copied to clipboard!", Severity.Success);
+    }
+    
+    private async Task ExportThemeToFile(CustomTheme theme)
+    {
+        var json = Settings.CustomThemes.ExportTheme(theme.Data.Id);
+        var filename = $"{theme.Name.Replace(" ", "_")}_theme.json";
+        await JsRuntime.SaveAs(filename, json);
+        Snackbar.Add($"Theme '{theme.Name}' saved to file!", Severity.Success);
+    }
+    
+    private async Task ExportAllThemesToFile()
+    {
+        var json = Settings.CustomThemes.ExportAllThemes();
+        var filename = $"apollo_themes_{DateTime.Now:yyyyMMdd}.json";
+        await JsRuntime.SaveAs(filename, json);
+        Snackbar.Add($"All {Settings.CustomThemes.Themes.Count} themes saved to file!", Severity.Success);
+    }
+    
+    private async Task ImportTheme()
+    {
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium
+        };
+        
+        var dialog = await DialogService.ShowAsync<ThemeImportDialog>("Import Theme", options);
+        var result = await dialog.Result;
+        
+        if (!result!.Canceled && result.Data is CustomTheme importedTheme)
+        {
+            Settings.SetCustomTheme(importedTheme);
+        }
+    }
+    
     private void Cancel() => MudDialog.Cancel();
-} 
+}

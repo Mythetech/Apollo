@@ -1,0 +1,103 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using Microsoft.JSInterop
+@using System.Text
+
+<MudDialog Class="pa-4 glassmorphic" Style="width: 500px;">
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.h6">Import Theme</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                Paste theme JSON below or import from clipboard
+            </MudText>
+            
+            <MudTextField @bind-Value="_json" 
+                          Label="Theme JSON" 
+                          Variant="Variant.Outlined" 
+                          Lines="12"
+                          Placeholder="Paste theme JSON here..." />
+            
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudAlert Severity="Severity.Error" Dense>@_error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudStack Row Spacing="2" Class="mud-width-full" Justify="Justify.SpaceBetween">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.TwoTone.ContentPaste" OnClick="PasteFromClipboard">
+                Paste from Clipboard
+            </MudButton>
+            <MudStack Row Spacing="2">
+                <MudButton OnClick="Cancel">Cancel</MudButton>
+                <MudButton Color="Color.Secondary" Variant="Variant.Filled" OnClick="Import" Disabled="@string.IsNullOrWhiteSpace(_json)">
+                    Import
+                </MudButton>
+            </MudStack>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private CustomThemeService ThemeService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+    
+    private IJSObjectReference? _jsModule;
+    private string _json = "";
+    private string? _error;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Apollo.Components/app.js");
+    }
+    
+    private async Task PasteFromClipboard()
+    {
+        if (_jsModule == null) return;
+        
+        try
+        {
+            var text = await _jsModule.InvokeAsync<string?>("readFromClipboard");
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                _json = text;
+                _error = null;
+            }
+            else
+            {
+                _error = "Clipboard is empty or access denied";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to read clipboard: {ex.Message}";
+        }
+    }
+    
+    private async Task Import()
+    {
+        if (string.IsNullOrWhiteSpace(_json))
+        {
+            _error = "Please enter theme JSON";
+            return;
+        }
+        
+        var (success, error, theme) = await ThemeService.ImportThemeAsync(_json);
+        
+        if (success && theme != null)
+        {
+            Snackbar.Add($"Theme '{theme.Name}' imported successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(theme));
+        }
+        else
+        {
+            _error = error ?? "Failed to import theme";
+        }
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+}
+
+

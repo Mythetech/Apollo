@@ -1,0 +1,82 @@
+@using MudBlazor.Utilities
+
+<MudStack Spacing="1">
+    <MudText Typo="Typo.caption" Class="mud-text-secondary">@Label</MudText>
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        <div class="color-swatch" style="@GetSwatchStyle()" @onclick="TogglePicker"></div>
+        <MudTextField T="string" 
+                      Value="@Value" 
+                      ValueChanged="OnValueChange"
+                      Variant="Variant.Outlined" 
+                      Margin="Margin.Dense"
+                      Style="flex: 1;" />
+    </MudStack>
+    @if (_showPicker)
+    {
+        <MudPopover Open="@_showPicker" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="pa-2">
+            <MudColorPicker 
+                Value="@GetMudColor()" 
+                ValueChanged="OnColorPickerChanged"
+                DisableToolbar="false"
+                DisableAlpha="true"
+                DisablePreview="false"
+                DisableModeSwitch="false"
+                ColorPickerMode="ColorPickerMode.HEX" />
+            <MudButton Size="Size.Small" OnClick="ClosePicker" Class="mt-2 mud-width-full">Done</MudButton>
+        </MudPopover>
+    }
+</MudStack>
+
+<style>
+    .color-swatch {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: 2px solid var(--mud-palette-lines-default);
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+    .color-swatch:hover {
+        transform: scale(1.1);
+        border-color: var(--mud-palette-secondary);
+    }
+</style>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "#000000";
+    [Parameter] public EventCallback<string> OnValueChanged { get; set; }
+    
+    private bool _showPicker;
+    
+    private string GetSwatchStyle() => $"background-color: {Value};";
+    
+    private MudColor GetMudColor()
+    {
+        try
+        {
+            return new MudColor(Value);
+        }
+        catch
+        {
+            return new MudColor("#000000");
+        }
+    }
+    
+    private void TogglePicker() => _showPicker = !_showPicker;
+    private void ClosePicker() => _showPicker = false;
+    
+    private async Task OnValueChange(string newValue)
+    {
+        Value = newValue;
+        await OnValueChanged.InvokeAsync(newValue);
+    }
+    
+    private async Task OnColorPickerChanged(MudColor color)
+    {
+        Value = color.Value;
+        await OnValueChanged.InvokeAsync(color.Value);
+    }
+}
+
+

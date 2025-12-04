@@ -1,0 +1,68 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using MudBlazor.Utilities
+@inject AppState State
+
+<div class="@($"mud-width-full mud-height-full pa-4 {(IsSelected ? "boxshadow-primary": "")}")" 
+     style="@GetCardStyle()">
+    <div class="d-flex align-center justify-space-between flex-wrap">
+        <MudText Class="ellipsis" Style="@($"color: {GetTextColor()}")">@Theme.Name</MudText>
+        <MudStack Row Spacing="1">
+            <MudIconButton Icon="@ApolloIcons.Edit" Size="Size.Small" OnClick="OnEdit" OnClickPreventDefault OnClickStopPropagation />
+            <MudIconButton Icon="@ApolloIcons.Export" Size="Size.Small" OnClick="OnExport" OnClickPreventDefault OnClickStopPropagation />
+            <MudChip T="string" Color="@(IsSelected ? Color.Success : Color.Primary)" Size="Size.Small"
+                    Icon="@(IsSelected ? Icons.Material.Filled.Check : "")">
+                Custom
+            </MudChip>
+        </MudStack>
+    </div>
+    @if (!string.IsNullOrEmpty(Theme.Data.Description))
+    {
+        <MudText Typo="Typo.subtitle2" Style="@($"color: {GetTextColor()}")">@Theme.Data.Description</MudText>
+    }
+    
+    <MudStack Row="true" Class="mt-4" Justify="Justify.SpaceBetween">
+        <ThemePreviewButton
+            Color="@(State.IsDarkMode ? Theme.BaseTheme.PaletteDark.Primary : Theme.BaseTheme.PaletteLight.Primary)"  
+            Icon="@ApolloIcons.Build" 
+            Tooltip="Primary"/>
+        
+        <ThemePreviewButton 
+            Color="@(State.IsDarkMode ? Theme.BaseTheme.PaletteDark.Secondary : Theme.BaseTheme.PaletteLight.Secondary)"   
+            Icon="@ApolloIcons.Folder" 
+            Tooltip="Secondary"/>
+        
+        <ThemePreviewButton 
+            Color="@(State.IsDarkMode ? Theme.BaseTheme.PaletteDark.Tertiary : Theme.BaseTheme.PaletteLight.Tertiary)"   
+            Icon="@ApolloIcons.Settings"
+            Tooltip="Tertiary"/>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public required CustomTheme Theme { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnExport { get; set; }
+
+    private MudColor GetTextColor()
+    {
+        return State.IsDarkMode ? Theme.BaseTheme.PaletteDark.TextPrimary : Theme.BaseTheme.PaletteLight.TextPrimary;
+    }
+
+    private string GetCardStyle()
+    {
+        if (State.IsDarkMode)
+        {
+            var darkPalette = Theme.BaseTheme.PaletteDark;
+            return $"background: {darkPalette.Surface}; min-height: 120px; border: 1px solid {darkPalette.Secondary}; border-radius: var(--mud-default-borderradius)";
+        }
+        else
+        {
+            var palette = Theme.BaseTheme.PaletteLight;
+            return $"background: {palette.Surface}; min-height: 120px; border: 1px solid {palette.Secondary}; border-radius: var(--mud-default-borderradius)";
+        }
+    }
+}
+
+
