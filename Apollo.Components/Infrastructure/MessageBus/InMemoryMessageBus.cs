@@ -22,7 +22,7 @@ public class InMemoryMessageBus : IMessageBus
 
         var manualSubscribers = _subscribers.TryGetValue(typeof(TMessage), out var subscribers)
             ? subscribers.Cast<IConsumer<TMessage>>()
-            : Enumerable.Empty<IConsumer<TMessage>>();
+            : [];
 
         var allConsumers = registeredConsumers.Concat(manualSubscribers);
 
@@ -42,6 +42,15 @@ public class InMemoryMessageBus : IMessageBus
         });
         
         await Task.WhenAll(tasks);
+    }
+
+    public async Task PublishAsync(Type messageType, object message)
+    {
+        var method = typeof(InMemoryMessageBus)
+            .GetMethod(nameof(PublishAsync), 1, [Type.MakeGenericMethodParameter(0)])!
+            .MakeGenericMethod(messageType);
+        
+        await (Task)method.Invoke(this, [message])!;
     }
 
     public void RegisterConsumerType<TMessage, TConsumer>() where TMessage : class where TConsumer : IConsumer<TMessage>
