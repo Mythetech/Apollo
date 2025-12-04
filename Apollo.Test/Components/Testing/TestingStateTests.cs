@@ -4,6 +4,7 @@ using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions;
 using Apollo.Components.Testing;
 using Apollo.Compilation;
+using Apollo.Components.Analysis;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Services;
@@ -33,7 +34,8 @@ public class TestingStateTests : ApolloBaseTestContext
         _compilerState = new CompilerState(Substitute.For<ICompilerWorkerFactory>(),
             new ConsoleOutputService(JSInterop.JSRuntime, Substitute.For<IJsApiService>(), Substitute.For<IScrollManager>()),
             _messageBus,
-            Substitute.For<ILogger<CompilerState>>());
+            Substitute.For<ILogger<CompilerState>>(),
+            Substitute.For<UserAssemblyStore>());
         _solutionsState = new SolutionsState(_compilerState, _messageBus, Substitute.For<ISolutionSaveService>(), Substitute.For<IHostingService>());
         _testingState = new TestingState(_compilerState, _solutionsState, _console);
 
