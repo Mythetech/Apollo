@@ -51,6 +51,7 @@ public static class RegistrationExtensions
         services.AddSingleton<SolutionsState>();
         services.AddSingleton<LibraryState>();
         services.AddSingleton<TestingState>();
+        services.AddSingleton<UserAssemblyStore>();
         services.AddSingleton<CompilerState>();
         services.AddSingleton<ActiveTypeState>();
         services.AddSingleton<CodeAnalysisState>();

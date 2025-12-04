@@ -4,13 +4,19 @@ namespace Apollo.Components.Analysis;
 
 public interface ICodeAnalysisWorker : IWorkerProxy
 {
-    public Task<byte[]> GetCompletionAsync(string code, string completionRequestString);
+    Task<byte[]> GetCompletionAsync(string code, string completionRequestString);
 
-    public Task<byte[]> GetCompletionResolveAsync(string completionResolveRequestString);
+    Task<byte[]> GetCompletionResolveAsync(string completionResolveRequestString);
 
-    public Task<byte[]> GetSignatureHelpAsync(string code, string signatureHelpRequestString);
+    Task<byte[]> GetSignatureHelpAsync(string code, string signatureHelpRequestString);
 
-    public Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString);
+    Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString);
 
-    public Task<byte[]> GetDiagnosticsAsync(string serializedSolution);
+    Task<byte[]> GetDiagnosticsAsync(string serializedSolution);
+    
+    Task<byte[]> UpdateDocumentAsync(string documentUpdateRequest);
+    
+    Task<byte[]> SetCurrentDocumentAsync(string setCurrentDocumentRequest);
+    
+    Task<byte[]> UpdateUserAssemblyAsync(string userAssemblyUpdateRequest);
 }

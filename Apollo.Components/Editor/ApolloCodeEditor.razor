@@ -1,6 +1,7 @@
 @using System.Text.Json
 @using Apollo.Components.Analysis
 @using Apollo.Components.Solutions
+@using Apollo.Contracts.Analysis
 @using BlazorMonaco
 @using CSharpier
 @using Microsoft.Extensions.Logging
@@ -32,6 +33,7 @@
     private List<TextModel> _files = [];
 
     private bool _editorReady = false;
+    private string? _lastKnownContent;
 
     private StandaloneEditorConstructionOptions DefaultOptions(StandaloneCodeEditor editor) =>
         new StandaloneEditorConstructionOptions
@@ -56,6 +58,7 @@
         if (!_editorReady)
             return;
 
+        _lastKnownContent = code;
         await _editor.SetValue(code);
     }
 
@@ -71,7 +74,10 @@
     protected async Task HandleIfProjectClosedAsync()
     {
         if (!SolutionsState.HasActiveSolution || SolutionsState.Project == null)
+        {
+            _lastKnownContent = "";
             await _editor?.SetValue("");
+        }
     }
 
     protected async Task HandleBeforeFileChanged(SolutionFile file)
@@ -107,6 +113,8 @@
             if (file != null)
             {
                 await SetCodeAsync(file.Data);
+                await CodeAnalysisState.SetCurrentDocumentAsync(file.Uri);
+                await CodeAnalysisState.UpdateDocumentAsync(file.Uri, file.Data);
 
                 await GetDiagnosticsAsync(new ModelContentChangedEvent());
                 
@@ -157,6 +165,8 @@
     protected async Task Initialize()
     {
         _editorReady = true;
+        _lastKnownContent = SolutionsState.ActiveFile?.Data ?? "";
+        
         await _editor.AddCommand((int)KeyMod.CtrlCmd | (int)KeyCode.KeyS, async (args) =>
         {
             await SaveActiveFileAsync();
@@ -168,12 +178,6 @@
             try
             {
                 Console.AddTrace("Completion item request");
-                /*await _editor.SetModel(new TextModel()
-                {
-                    Id = "apollo-editor",
-                    JsRuntime = JsRuntime,
-                    Uri = SolutionsState?.ActiveFile?.Uri ?? modelUri,
-                });*/
                 
                 var code = await _editor.GetValue();
                 
@@ -313,6 +317,15 @@
 
         try
         {
+            if (SolutionsState.ActiveFile != null && evt.Changes != null && evt.Changes.Any())
+            {
+                var textChanges = ConvertMonacoChangesToTextChanges(evt.Changes);
+                if (textChanges.Count > 0)
+                {
+                    await CodeAnalysisState.ApplyTextChangesAsync(SolutionsState.ActiveFile.Uri, textChanges);
+                }
+            }
+            
             await Task.Delay(debounceMilliseconds, token);
             
             await InvokeAsync(async () => 
@@ -328,6 +341,44 @@
         }
     }
 
+    private List<TextChangeInfo> ConvertMonacoChangesToTextChanges(IEnumerable<ModelContentChange> monacoChanges)
+    {
+        var changes = new List<TextChangeInfo>();
+        
+        if (_lastKnownContent == null) return changes;
+
+        foreach (var change in monacoChanges)
+        {
+            var startOffset = GetOffsetFromPosition(_lastKnownContent, change.Range.StartLineNumber, change.Range.StartColumn);
+            var endOffset = GetOffsetFromPosition(_lastKnownContent, change.Range.EndLineNumber, change.Range.EndColumn);
+            var length = endOffset - startOffset;
+
+            changes.Add(new TextChangeInfo(startOffset, length, change.Text ?? ""));
+        }
+
+        _ = Task.Run(async () =>
+        {
+            _lastKnownContent = await GetCodeAsync();
+        });
+
+        return changes;
+    }
+
+    private int GetOffsetFromPosition(string text, int lineNumber, int column)
+    {
+        var lines = text.Split('\n');
+        var offset = 0;
+        
+        for (int i = 0; i < lineNumber - 1 && i < lines.Length; i++)
+        {
+            offset += lines[i].Length + 1;
+        }
+        
+        offset += column - 1;
+        
+        return Math.Min(offset, text.Length);
+    }
+
     private async Task GetDiagnosticsAsync(ModelContentChangedEvent evt)
     {
         if (!SolutionsState.HasActiveSolution) return;
@@ -335,6 +386,8 @@
         try 
         {
             var currentContent = await GetCodeAsync();
+            _lastKnownContent = currentContent;
+            
             var solution = SolutionsState.Project.ToContract();
             
             var activeFile = solution.Items.FirstOrDefault(i => i.Path == SolutionsState.ActiveFile.Uri);

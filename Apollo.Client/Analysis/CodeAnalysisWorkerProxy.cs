@@ -34,62 +34,70 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
     }
     
     internal async Task InitializeMessageListener()
-{
-    var eventListener = await EventListener<MessageEvent>.CreateAsync(_jsRuntime, async e =>
     {
-        object? data = await e.Data.GetValueAsync();
-        if (data is string json)
+        var eventListener = await EventListener<MessageEvent>.CreateAsync(_jsRuntime, async e =>
         {
-            var message = JsonSerializer.Deserialize<WorkerMessage>(json);
-            if (message == null)
+            object? data = await e.Data.GetValueAsync();
+            if (data is string json)
             {
-                return;
-            }
+                var message = JsonSerializer.Deserialize<WorkerMessage>(json);
+                if (message == null)
+                {
+                    return;
+                }
             
-            switch (message.Action)
-            {
-                case StandardWorkerActions.Log:
-                    if (_callbacks.TryGetValue(StandardWorkerActions.Log, out var logCallback) && logCallback is Func<LogMessage, Task> typedLogCallback)
-                    {
-                        var log = JsonSerializer.Deserialize<LogMessage>(message.Payload);
-                        if (log != null)
+                switch (message.Action)
+                {
+                    case StandardWorkerActions.Log:
+                        if (_callbacks.TryGetValue(StandardWorkerActions.Log, out var logCallback) && logCallback is Func<LogMessage, Task> typedLogCallback)
                         {
-                            await typedLogCallback.Invoke(log);
+                            var log = JsonSerializer.Deserialize<LogMessage>(message.Payload);
+                            if (log != null)
+                            {
+                                await typedLogCallback.Invoke(log);
+                            }
                         }
-                    }
-                    break;
+                        break;
 
-                case StandardWorkerActions.Error:
-                    if (_callbacks.TryGetValue(StandardWorkerActions.Error, out var errorCallback) && errorCallback is Func<string, Task> typedErrorCallback)
-                    {
-                        var error = message.Payload;
-                        if (error != null)
+                    case StandardWorkerActions.Error:
+                        if (_callbacks.TryGetValue(StandardWorkerActions.Error, out var errorCallback) && errorCallback is Func<string, Task> typedErrorCallback)
                         {
-                            await typedErrorCallback.Invoke(error);
+                            var error = message.Payload;
+                            if (error != null)
+                            {
+                                await typedErrorCallback.Invoke(error);
+                            }
                         }
-                    }
-                    break;
-                case "completion_response":
-                    var bytes = Convert.FromBase64String(message.Payload);
-                    if (bytes.Length > 0)
-                    {
-                        _response = bytes;
-                    }
-
-                    break;
-                case "diagnostics_response":
-                    _diagnosticsResponse = Convert.FromBase64String(message.Payload);
-                    break;
-                default:
-                    Console.WriteLine($"Unknown event: {message.Action}", LogSeverity.Debug);
-                    Console.WriteLine(JsonSerializer.Serialize(message.Payload));
-                    break;
+                        break;
+                    case "completion_response":
+                        var bytes = Convert.FromBase64String(message.Payload);
+                        if (bytes.Length > 0)
+                        {
+                            _response = bytes;
+                        }
+                        break;
+                    case "diagnostics_response":
+                        _diagnosticsResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    case "document_update_response":
+                        _documentUpdateResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    case "set_current_document_response":
+                        _setCurrentDocumentResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    case "user_assembly_update_response":
+                        _userAssemblyUpdateResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    default:
+                        Console.WriteLine($"Unknown event: {message.Action}", LogSeverity.Debug);
+                        Console.WriteLine(JsonSerializer.Serialize(message.Payload));
+                        break;
+                }
             }
-        }
-    });
+        });
 
-    await _worker.AddOnMessageEventListenerAsync(eventListener);
-}
+        await _worker.AddOnMessageEventListenerAsync(eventListener);
+    }
 
     public void OnLog(Func<LogMessage, Task> callback)
     {
@@ -172,8 +180,89 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
             }
         }
 
-        return _diagnosticsResponse;
+        return _diagnosticsResponse ?? [];
     }
 
-    private byte[]? _diagnosticsResponse = null;
+    private byte[]? _diagnosticsResponse;
+    private byte[]? _documentUpdateResponse;
+    private byte[]? _setCurrentDocumentResponse;
+    private byte[]? _userAssemblyUpdateResponse;
+
+    public async Task<byte[]> UpdateDocumentAsync(string documentUpdateRequest)
+    {
+        _documentUpdateResponse = null;
+        
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage 
+        {
+            Action = "update_document",
+            Payload = documentUpdateRequest
+        }));
+        
+        for(int i = 0; i < 20; i++) 
+        {
+            if(_documentUpdateResponse == null)
+            {
+                await Task.Delay(50);
+                await Task.Yield();
+            }
+            else
+            {
+                return _documentUpdateResponse;
+            }
+        }
+
+        return _documentUpdateResponse ?? [];
+    }
+
+    public async Task<byte[]> SetCurrentDocumentAsync(string setCurrentDocumentRequest)
+    {
+        _setCurrentDocumentResponse = null;
+        
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage 
+        {
+            Action = "set_current_document",
+            Payload = setCurrentDocumentRequest
+        }));
+        
+        for(int i = 0; i < 20; i++) 
+        {
+            if(_setCurrentDocumentResponse == null)
+            {
+                await Task.Delay(50);
+                await Task.Yield();
+            }
+            else
+            {
+                return _setCurrentDocumentResponse;
+            }
+        }
+
+        return _setCurrentDocumentResponse ?? [];
+    }
+
+    public async Task<byte[]> UpdateUserAssemblyAsync(string userAssemblyUpdateRequest)
+    {
+        _userAssemblyUpdateResponse = null;
+        
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage 
+        {
+            Action = "update_user_assembly",
+            Payload = userAssemblyUpdateRequest
+        }));
+        
+        for(int i = 0; i < 30; i++) 
+        {
+            if(_userAssemblyUpdateResponse == null)
+            {
+                await Task.Delay(100);
+                await Task.Yield();
+            }
+            else
+            {
+                return _userAssemblyUpdateResponse;
+            }
+        }
+
+        return _userAssemblyUpdateResponse ?? [];
+    }
 }

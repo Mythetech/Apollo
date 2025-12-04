@@ -24,27 +24,25 @@ public class MonacoService
 {
     private readonly IMetadataReferenceResolver _resolver;
     private readonly ILoggerProxy _workerLogger;
-    RoslynProject _completionProject;
-    RoslynProject _diagnosticProject;
-    OmniSharpCompletionService _completionService;
-    OmniSharpSignatureHelpService _signatureService;
-    OmniSharpQuickInfoProvider _quickInfoProvider;
+    private readonly RoslynProjectService _projectService;
+    
+    private RoslynProject? _legacyCompletionProject;
+    private OmniSharpCompletionService? _legacyCompletionService;
+    private OmniSharpSignatureHelpService? _signatureService;
+    private OmniSharpQuickInfoProvider? _quickInfoProvider;
 
-    JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private JsonSerializerOptions _indentedJson = new JsonSerializerOptions()
+    private readonly JsonSerializerOptions _indentedJson = new()
     {
         WriteIndented = true
     };
-    
-    public MonacoService(IMetadataReferenceResolver resolver, ILoggerProxy workerLogger)
-    {
-        _resolver = resolver;
-        _workerLogger = workerLogger;
-        DefaultCode =
-            @"
+
+    public string DefaultCode { get; init; } =
+        @"
 using System;
 
 class Program
@@ -59,28 +57,52 @@ class Program
     }
 }
 ";
+
+    public MonacoService(IMetadataReferenceResolver resolver, ILoggerProxy workerLogger)
+    {
+        _resolver = resolver;
+        _workerLogger = workerLogger;
+        _projectService = new RoslynProjectService(resolver, workerLogger);
     }
-
-
-    public string DefaultCode { get; init; }
-    
-
 
     public async Task Init(string uri)
     {
         _workerLogger.Trace($"Roslyn initializing for {uri}");
-        _completionProject = new RoslynProject(uri, _resolver, _workerLogger);
-        await _completionProject.Init(uri);
-        _diagnosticProject = new RoslynProject(uri, _resolver, _workerLogger);
-        await _diagnosticProject.Init(uri);
-
-        var loggerFactory = LoggerFactory.Create(configure => { });
+        
+        await _projectService.InitializeAsync();
+        
+        var loggerFactory = LoggerFactory.Create(_ => { });
         var formattingOptions = new FormattingOptions();
 
-        _completionService = new OmniSharpCompletionService(_completionProject.Workspace, formattingOptions, _workerLogger);
-        _signatureService = new OmniSharpSignatureHelpService(_completionProject.Workspace);
-        _quickInfoProvider = new OmniSharpQuickInfoProvider(_completionProject.Workspace, formattingOptions, loggerFactory);
+        _signatureService = new OmniSharpSignatureHelpService(_projectService.Workspace);
+        _quickInfoProvider = new OmniSharpQuickInfoProvider(_projectService.Workspace, formattingOptions, loggerFactory);
+        
+        _workerLogger.Trace("RoslynProjectService initialized successfully");
+    }
 
+    public void UpdateDocument(string path, string fullText)
+    {
+        _projectService.UpdateDocument(path, fullText);
+    }
+
+    public void ApplyTextChanges(string path, IEnumerable<TextChangeInfo> changes)
+    {
+        _projectService.ApplyTextChanges(path, changes);
+    }
+
+    public void SetCurrentDocument(string path)
+    {
+        _projectService.SetCurrentDocument(path);
+    }
+
+    public void UpdateSolution(Solution solution)
+    {
+        _projectService.UpdateSolution(solution);
+    }
+
+    public void SetUserAssemblyReference(byte[] assemblyBytes)
+    {
+        _projectService.SetUserAssemblyReference(assemblyBytes);
     }
 
     public async Task<byte[]> GetCompletionAsync(string code, string completionRequestString)
@@ -91,30 +113,33 @@ class Program
             if (request == null)
             {
                 _workerLogger.LogError("Failed to deserialize completion request");
-                return Array.Empty<byte>();
+                return [];
             }
 
-            _workerLogger.LogTrace($"Completion request with trigger '{request.TriggerCharacter}' at {request.Line}:{request.Column}");
-            _workerLogger.LogTrace($"Looking for document with ID {_completionProject.DocumentId.Id}");
-         
-            var document = _completionProject.Workspace.CurrentSolution
-                .GetDocument(_completionProject.DocumentId);
+            var path = request.FileName;
+            _workerLogger.LogTrace($"Completion request for {path} with trigger '{request.TriggerCharacter}' at {request.Line}:{request.Column}");
 
+            _projectService.UpdateDocument(path, code);
+            _projectService.SetCurrentDocument(path);
+
+            var document = _projectService.GetDocument(path);
             if (document == null)
-                throw new Exception("Document null");
-            
-            document = document.WithText(SourceText.From(code));
-            _completionProject.Workspace.TryApplyChanges(document.Project.Solution);
+            {
+                _workerLogger.LogError($"Document not found: {path}");
+                return [];
+            }
 
             var sourceText = await document.GetTextAsync();
             var position = sourceText.Lines.GetPosition(new LinePosition(request.Line, request.Column));
 
             var completionService = CompletionService.GetService(document);
-            var completions = await completionService.GetCompletionsAsync(
-                document,
-                position
-            );
+            if (completionService == null)
+            {
+                _workerLogger.LogError("CompletionService is null");
+                return [];
+            }
 
+            var completions = await completionService.GetCompletionsAsync(document, position);
             if (completions == null)
             {
                 _workerLogger.LogTrace("No completions found");
@@ -122,14 +147,6 @@ class Program
             }
 
             _workerLogger.LogInformation($"Found {completions.ItemsList.Count} completion items");
-
-            if (completions.ItemsList.Count <= 100)
-            {
-                foreach (var completionItem in completions.ItemsList)
-                {
-                    _workerLogger.LogTrace(JsonSerializer.Serialize(completionItem, _indentedJson));
-                }
-            }
 
             var response = new CompletionResponse
             {
@@ -142,7 +159,7 @@ class Program
                     Documentation = item.Properties.GetValueOrDefault("SymbolDescription") ?? item.InlineDescription,
                     SortText = item.SortText,
                     FilterText = item.FilterText,
-                    Preselect = item.Rules.MatchPriority == Microsoft.CodeAnalysis.Completion.MatchPriority.Preselect,
+                    Preselect = item.Rules.MatchPriority == MatchPriority.Preselect,
                     InsertTextFormat = InsertTextFormat.PlainText,
                     TextEdit = new LinePositionSpanTextChange
                     {
@@ -152,14 +169,14 @@ class Program
                         EndLine = request.Line,
                         EndColumn = request.Column
                     },
-                    CommitCharacters = [ '.', ';', '(', ',' ]
+                    CommitCharacters = ['.', ';', '(', ',']
                 }).ToList()
             };
 
             var wrapper = new CompletionResponseWrapper { Payload = response };
             var payload = new ResponsePayload(wrapper, "GetCompletionAsync");
 
-            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, jsonOptions));
+            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
         }
         catch (Exception ex)
         {
@@ -172,59 +189,79 @@ class Program
     public async Task<byte[]> GetCompletionResolveAsync(string completionResolveRequestString)
     {
         var completionResolveRequest = JsonSerializer.Deserialize<CompletionResolveRequest>(completionResolveRequestString);
-        var document = _completionProject.Workspace.CurrentSolution.GetDocument(_completionProject.DocumentId);
-        var completionResponse = await _completionService.Handle(completionResolveRequest, document);
+        var document = _projectService.GetCurrentDocument();
+        
+        if (document == null || _legacyCompletionService == null)
+        {
+            return [];
+        }
+        
+        var completionResponse = await _legacyCompletionService.Handle(completionResolveRequest, document);
+        var payload = new ResponsePayload(completionResponse, "GetCompletionResolveAsync");
 
-        ResponsePayload p = new ResponsePayload(completionResponse, "GetCompletionResolveAsync");
-
-        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(p, jsonOptions));
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
     }
 
     public async Task<byte[]> GetSignatureHelpAsync(string code, string signatureHelpRequestString)
     {
-        Microsoft.CodeAnalysis.Solution updatedSolution;
         var signatureHelpRequest = JsonSerializer.Deserialize<SignatureHelpRequest>(signatureHelpRequestString);
-        do
+        if (signatureHelpRequest == null || _signatureService == null)
         {
-            updatedSolution = _completionProject.Workspace.CurrentSolution.WithDocumentText(_completionProject.DocumentId, SourceText.From(code));
-        } while (!_completionProject.Workspace.TryApplyChanges(updatedSolution));
+            return [];
+        }
 
-        var document = updatedSolution.GetDocument(_completionProject.DocumentId);
+        var path = signatureHelpRequest.FileName;
+        _projectService.UpdateDocument(path, code);
+
+        var document = _projectService.GetDocument(path);
+        if (document == null)
+        {
+            return [];
+        }
+
         var signatureHelpResponse = await _signatureService.Handle(signatureHelpRequest, document);
-
-        ResponsePayload p = new ResponsePayload(signatureHelpResponse, "GetSignatureHelpAsync");
-        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(p, jsonOptions));
+        var payload = new ResponsePayload(signatureHelpResponse, "GetSignatureHelpAsync");
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
     }
 
     public async Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString)
     {
         var quickInfoRequest = JsonSerializer.Deserialize<QuickInfoRequest>(quickInfoRequestString);
-        
-        var document = _diagnosticProject.Workspace.CurrentSolution.GetDocument(_diagnosticProject.DocumentId);
+        if (quickInfoRequest == null || _quickInfoProvider == null)
+        {
+            return [];
+        }
+
+        var document = _projectService.GetCurrentDocument();
+        if (document == null)
+        {
+            return [];
+        }
+
         var quickInfoResponse = await _quickInfoProvider.Handle(quickInfoRequest, document);
-        
-        ResponsePayload p = new ResponsePayload(quickInfoResponse, "GetQuickInfoAsync");
-        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(p, jsonOptions));
+        var payload = new ResponsePayload(quickInfoResponse, "GetQuickInfoAsync");
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
     }
 
     public async Task<byte[]> GetDiagnosticsAsync(string uri, Solution solution)
     {
-        await _diagnosticProject.UpdateReferences(solution);
-        
-        if (_diagnosticProject.IsLoadingReferences)
+        _projectService.UpdateSolution(solution);
+
+        if (_projectService.IsLoadingReferences)
         {
             return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                new ResponsePayload(new List<Contracts.Analysis.Diagnostic>(), "GetDiagnosticsAsync"), 
-                jsonOptions));
+                new ResponsePayload(new List<Contracts.Analysis.Diagnostic>(), "GetDiagnosticsAsync"),
+                _jsonOptions));
         }
 
         var syntaxTrees = solution.Items
-            .Where(item => !string.IsNullOrWhiteSpace(item.Content))
-            .Select(item => {
+            .Where(item => !string.IsNullOrWhiteSpace(item.Content) && item.Path.EndsWith(".cs"))
+            .Select(item =>
+            {
                 _workerLogger.LogTrace($"Parsing {item.Path}");
                 return CSharpSyntaxTree.ParseText(
-                    item.Content, 
-                    RoslynProject.CompilationDefaults.ParseOptions, 
+                    item.Content,
+                    RoslynProject.CompilationDefaults.ParseOptions,
                     path: item.Path);
             })
             .ToList();
@@ -233,7 +270,7 @@ class Program
             "Temp" + Random.Shared.Next(),
             syntaxTrees,
             options: RoslynProject.CompilationDefaults.GetCompilationOptions(solution.Type),
-            references: RoslynProject.GetMetadataReferences(_diagnosticProject)
+            references: _projectService.GetSystemReferencesOnly()
         );
 
         var allDiagnostics = await GetAllDiagnosticsAsync(compilation, syntaxTrees);
@@ -243,14 +280,102 @@ class Program
         }
 
         return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-            new ResponsePayload(allDiagnostics, "GetDiagnosticsAsync"), 
-            jsonOptions));
+            new ResponsePayload(allDiagnostics, "GetDiagnosticsAsync"),
+            _jsonOptions));
+    }
+
+    public async Task<byte[]> HandleDocumentUpdateAsync(string requestJson)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<DocumentUpdateRequest>(requestJson, _jsonOptions);
+            if (request == null)
+            {
+                return CreateErrorResponse("Invalid document update request");
+            }
+
+            if (request.IsFullContent && request.FullContent != null)
+            {
+                _projectService.UpdateDocument(request.Path, request.FullContent);
+            }
+            else if (request.Changes != null && request.Changes.Count > 0)
+            {
+                _projectService.ApplyTextChanges(request.Path, request.Changes);
+            }
+
+            return CreateSuccessResponse("Document updated");
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error handling document update: {ex.Message}");
+            return CreateErrorResponse(ex.Message);
+        }
+    }
+
+    public async Task<byte[]> HandleSetCurrentDocumentAsync(string requestJson)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<SetCurrentDocumentRequest>(requestJson, _jsonOptions);
+            if (request == null)
+            {
+                return CreateErrorResponse("Invalid set current document request");
+            }
+
+            _projectService.SetCurrentDocument(request.Path);
+            return CreateSuccessResponse("Current document set");
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error setting current document: {ex.Message}");
+            return CreateErrorResponse(ex.Message);
+        }
+    }
+
+    public async Task<byte[]> HandleUserAssemblyUpdateAsync(string requestJson)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<UserAssemblyUpdateRequest>(requestJson, _jsonOptions);
+            if (request == null)
+            {
+                return CreateErrorResponse("Invalid user assembly update request");
+            }
+
+            if (request.AssemblyBytes != null && request.AssemblyBytes.Length > 0)
+            {
+                _projectService.SetUserAssemblyReference(request.AssemblyBytes);
+            }
+            else
+            {
+                _projectService.ClearUserAssemblyReference();
+            }
+
+            return CreateSuccessResponse("User assembly reference updated");
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error updating user assembly: {ex.Message}");
+            return CreateErrorResponse(ex.Message);
+        }
+    }
+
+    private byte[] CreateSuccessResponse(string message)
+    {
+        var response = new { Success = true, Message = message };
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response, _jsonOptions));
+    }
+
+    private byte[] CreateErrorResponse(string message)
+    {
+        var response = new { Success = false, Message = message };
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response, _jsonOptions));
     }
 
     private async Task<List<Contracts.Analysis.Diagnostic>> GetAllDiagnosticsAsync(CSharpCompilation compilation, List<SyntaxTree> syntaxTrees)
     {
         var allDiagnostics = new List<Contracts.Analysis.Diagnostic>();
-        
+
         foreach (var tree in syntaxTrees)
         {
             var diagnostics = tree.GetDiagnostics();
@@ -262,7 +387,7 @@ class Program
 
         using var temp = new MemoryStream();
         var result = compilation.Emit(temp);
-        
+
         var semanticDiagnostics = compilation.GetDiagnostics()
             .Concat(result.Diagnostics)
             .Where(d => d.Location.IsInSource)
@@ -284,8 +409,6 @@ class Program
             FilePath = diagnostic.Location.SourceTree?.FilePath ?? string.Empty,
             StartColumn = lineSpan.Span.Start.Character,
             StartPosition = lineSpan.Span.Start.Line + 1,
-            //Start = lineSpan.StartLinePosition,
-            //End = lineSpan.EndLinePosition,
             EndColumn = lineSpan.Span.End.Character,
             EndPosition = lineSpan.Span.End.Line + 1,
             Message = diagnostic.GetMessage(),
@@ -293,7 +416,7 @@ class Program
         };
     }
 
-    private int GetSeverity(DiagnosticSeverity severity)
+    private static int GetSeverity(DiagnosticSeverity severity)
     {
         return severity switch
         {
@@ -305,9 +428,8 @@ class Program
         };
     }
 
-    private OmniSharp.Models.v1.Completion.CompletionItemKind GetCompletionItemKind(ImmutableArray<string> tags)
+    private static OmniSharp.Models.v1.Completion.CompletionItemKind GetCompletionItemKind(ImmutableArray<string> tags)
     {
-        // Check most specific tags first
         if (tags.Contains(WellKnownTags.Method))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Method;
         if (tags.Contains(WellKnownTags.Class))
@@ -336,8 +458,7 @@ class Program
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Variable;
         if (tags.Contains(WellKnownTags.Namespace))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Module;
-        
-        // Default to text if no specific tag is found
+
         return OmniSharp.Models.v1.Completion.CompletionItemKind.Text;
     }
 }
