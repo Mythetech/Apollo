@@ -35,6 +35,25 @@ export function saveAsFile(filename, bytesBase64) {
     document.body.removeChild(link);
 }
 
+export async function readFromClipboard() {
+    try {
+        return await navigator.clipboard.readText();
+    } catch (err) {
+        console.error('Failed to read clipboard:', err);
+        return null;
+    }
+}
+
+export async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch (err) {
+        console.error('Failed to copy to clipboard:', err);
+        return false;
+    }
+}
+
 window.updateHtmlPreview = (element, html) => {
     if (!element) return;
 

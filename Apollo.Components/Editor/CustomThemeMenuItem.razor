@@ -1,0 +1,20 @@
+@using Apollo.Components.Settings
+@using Apollo.Components.Theme
+
+<MudMenuItem Icon="@Icons.Material.TwoTone.Palette" 
+             IconColor="@(IsActive ? Color.Secondary : Color.Default)"
+             Class="@(IsActive ? "mud-secondary-text" : "")"
+             OnClick="@SelectTheme">
+    @Theme.Name
+</MudMenuItem>
+
+@code {
+    [Inject] protected SettingsState Settings { get; set; } = default!;
+    
+    [Parameter] public required CustomTheme Theme { get; set; }
+    
+    private bool IsActive => Settings.CurrentCustomThemeId == Theme.Data.Id;
+    
+    private void SelectTheme() => Settings.SetCustomTheme(Theme);
+}
+

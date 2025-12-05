@@ -1,0 +1,392 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using MudBlazor.Utilities
+@using Microsoft.JSInterop
+
+<MudDialog Class="pa-4 glassmorphic" Style="width: 80vw; max-width: 1200px; height: 85vh;">
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5">@(IsEditing ? "Edit Theme" : "Create Theme")</MudText>
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.TwoTone.ContentPaste" OnClick="ImportFromClipboard" Size="Size.Small">
+                            Import
+                        </MudButton>
+                        @if (IsEditing)
+                        {
+                            <MudButton Variant="Variant.Outlined" StartIcon="@ApolloIcons.Export" OnClick="ExportToClipboard" Size="Size.Small">
+                                Export
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4" Elevation="0" Style="background: var(--mud-palette-dark); max-height: 65vh; overflow-y: auto;">
+                    <MudStack Spacing="4">
+                        <MudTextField @bind-Value="_name" Label="Theme Name" Variant="Variant.Outlined" Required />
+                        <MudTextField @bind-Value="_description" Label="Description" Variant="Variant.Outlined" />
+                        <MudTextField @bind-Value="_author" Label="Author" Variant="Variant.Outlined" />
+
+                        <MudDivider Class="my-2" />
+
+                        <MudTabs Elevation="0" ApplyEffectsToContainer Border Rounded PanelClass="pa-4">
+                            <MudTabPanel Text="Dark Palette" Icon="@Icons.Material.TwoTone.DarkMode">
+                                <PaletteEditor Palette="_darkPalette" OnPaletteChanged="OnDarkPaletteChanged" />
+                            </MudTabPanel>
+                            <MudTabPanel Text="Light Palette" Icon="@Icons.Material.TwoTone.LightMode">
+                                <PaletteEditor Palette="_lightPalette" OnPaletteChanged="OnLightPaletteChanged" />
+                            </MudTabPanel>
+                            <MudTabPanel Text="Typography" Icon="@Icons.Material.TwoTone.FormatSize">
+                                <MudStack Spacing="3">
+                                    <MudSelect T="string" Label="Font Family" @bind-Value="_fontFamily" Variant="Variant.Outlined">
+                                        <MudSelectItem Value="@("Tahoma, Geneva, Verdana")">Tahoma</MudSelectItem>
+                                        <MudSelectItem Value="@("Segoe UI, Arial, sans-serif")">Segoe UI</MudSelectItem>
+                                        <MudSelectItem Value="@("Roboto, Arial, sans-serif")">Roboto</MudSelectItem>
+                                        <MudSelectItem Value="@("Cascadia Code, monospace")">Cascadia Code</MudSelectItem>
+                                        <MudSelectItem Value="@("JetBrains Mono, monospace")">JetBrains Mono</MudSelectItem>
+                                        <MudSelectItem Value="@("Fira Code, monospace")">Fira Code</MudSelectItem>
+                                    </MudSelect>
+                                    <MudTextField @bind-Value="_fontSize" Label="Base Font Size" Variant="Variant.Outlined" HelperText="e.g., 0.75, 0.875rem" />
+                                    <MudTextField @bind-Value="_buttonFontSize" Label="Button Font Size" Variant="Variant.Outlined" HelperText="e.g., 1em" />
+                                </MudStack>
+                            </MudTabPanel>
+                            <MudTabPanel Text="Layout" Icon="@Icons.Material.TwoTone.Dashboard">
+                                <MudStack Spacing="3">
+                                    <MudTextField @bind-Value="_borderRadius" Label="Border Radius" Variant="Variant.Outlined" HelperText="e.g., 0.5em, 8px" />
+                                    <MudTextField @bind-Value="_appbarHeight" Label="App Bar Height" Variant="Variant.Outlined" HelperText="e.g., 3rem, 48px" />
+                                    <MudTextField @bind-Value="_drawerWidth" Label="Drawer Width" Variant="Variant.Outlined" HelperText="e.g., 3.25em" />
+                                </MudStack>
+                            </MudTabPanel>
+                            <MudTabPanel Text="App Bar" Icon="@Icons.Material.TwoTone.WebAsset">
+                                <MudStack Spacing="3">
+                                    <MudSwitch @bind-Value="_hideAppIcon" Label="Hide App Icon" Color="Color.Secondary" />
+                                    <MudTextField @bind-Value="_appIconClass" Label="App Icon CSS Class" Variant="Variant.Outlined" Disabled="@_hideAppIcon" />
+                                    <MudTextField @bind-Value="_darkAppBarStyle" Label="Dark Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in dark mode" />
+                                    <MudTextField @bind-Value="_lightAppBarStyle" Label="Light Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in light mode" />
+                                </MudStack>
+                            </MudTabPanel>
+                        </MudTabs>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Live Preview</MudText>
+                <MudPaper Class="pa-3" Elevation="2" Style="@GetPreviewStyle()">
+                    <MudStack Spacing="2">
+                        <MudPaper Class="pa-2" Style="@GetPreviewAppBarStyle()">
+                            <MudText Style="@GetPreviewTextStyle()">App Bar</MudText>
+                        </MudPaper>
+                        
+                        <MudStack Row Spacing="2">
+                            <MudPaper Class="pa-2 flex-grow-1" Style="@GetPreviewPrimaryStyle()">
+                                <MudText Style="color: inherit" Typo="Typo.caption">Primary</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-2 flex-grow-1" Style="@GetPreviewSecondaryStyle()">
+                                <MudText Style="color: inherit" Typo="Typo.caption">Secondary</MudText>
+                            </MudPaper>
+                            <MudPaper Class="pa-2 flex-grow-1" Style="@GetPreviewTertiaryStyle()">
+                                <MudText Style="color: inherit" Typo="Typo.caption">Tertiary</MudText>
+                            </MudPaper>
+                        </MudStack>
+                        
+                        <MudPaper Class="pa-2" Style="@GetPreviewDarkStyle()">
+                            <MudText Style="@GetPreviewTextStyle()" Typo="Typo.caption">Dark Background</MudText>
+                        </MudPaper>
+                        
+                        <MudStack Row Spacing="1" Class="mt-2">
+                            <MudChip T="string" Style="@GetPreviewSuccessStyle()">Success</MudChip>
+                            <MudChip T="string" Style="@GetPreviewWarningStyle()">Warning</MudChip>
+                            <MudChip T="string" Style="@GetPreviewErrorStyle()">Error</MudChip>
+                            <MudChip T="string" Style="@GetPreviewInfoStyle()">Info</MudChip>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+                
+                <MudStack Row Class="mt-4">
+                    <MudToggleGroup T="bool" @bind-Value="_previewDarkMode" Color="Color.Secondary" Class="mud-width-full">
+                        <MudToggleItem Value="false" Class="flex-grow-1">
+                            <MudIcon Icon="@Icons.Material.TwoTone.LightMode" Size="Size.Small" />
+                        </MudToggleItem>
+                        <MudToggleItem Value="true" Class="flex-grow-1">
+                            <MudIcon Icon="@Icons.Material.TwoTone.DarkMode" Size="Size.Small" />
+                        </MudToggleItem>
+                    </MudToggleGroup>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudStack Row Spacing="2" Class="mud-width-full" Justify="Justify.SpaceBetween">
+            <MudStack Row Spacing="2">
+                @if (IsEditing)
+                {
+                    <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="Delete" StartIcon="@ApolloIcons.Delete">
+                        Delete
+                    </MudButton>
+                }
+            </MudStack>
+            <MudStack Row Spacing="2">
+                <MudButton OnClick="Cancel">Cancel</MudButton>
+                @if (IsEditing)
+                {
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Update">
+                        Save Changes
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Color="Color.Secondary" Variant="Variant.Filled" OnClick="Create">
+                        Create Theme
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private CustomThemeService ThemeService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+    
+    private IJSObjectReference? _jsModule;
+    
+    [Parameter] public CustomTheme? ExistingTheme { get; set; }
+    [Parameter] public EditorThemeDefinition? BaseTheme { get; set; }
+    
+    private bool IsEditing => ExistingTheme != null;
+    
+    private string _name = "";
+    private string _description = "";
+    private string _author = "";
+    
+    private CustomPalette _lightPalette = CustomPalette.DefaultLight;
+    private CustomPalette _darkPalette = CustomPalette.DefaultDark;
+    
+    private string _fontFamily = "Tahoma, Geneva, Verdana";
+    private string _fontSize = "0.75";
+    private string _buttonFontSize = "1em";
+    
+    private string _borderRadius = "0.5em";
+    private string _appbarHeight = "3rem";
+    private string _drawerWidth = "3.25em";
+    
+    private bool _hideAppIcon;
+    private string _appIconClass = "";
+    private string _darkAppBarStyle = "";
+    private string _lightAppBarStyle = "";
+    
+    private bool _previewDarkMode = true;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Apollo.Components/app.js");
+        
+        if (ExistingTheme != null)
+        {
+            LoadFromData(ExistingTheme.Data);
+        }
+        else if (BaseTheme != null)
+        {
+            var data = CustomThemeData.FromBuiltIn(BaseTheme);
+            LoadFromData(data);
+            _name = $"{BaseTheme.Name} Custom";
+        }
+    }
+    
+    private void LoadFromData(CustomThemeData data)
+    {
+        _name = data.Name;
+        _description = data.Description ?? "";
+        _author = data.Author ?? "";
+        _lightPalette = data.Light;
+        _darkPalette = data.Dark;
+        
+        if (data.Typography != null)
+        {
+            _fontFamily = string.Join(", ", data.Typography.FontFamily);
+            _fontSize = data.Typography.FontSize;
+            _buttonFontSize = data.Typography.ButtonFontSize ?? "1em";
+        }
+        
+        if (data.Layout != null)
+        {
+            _borderRadius = data.Layout.BorderRadius;
+            _appbarHeight = data.Layout.AppbarHeight;
+            _drawerWidth = data.Layout.DrawerWidthLeft;
+        }
+        
+        if (data.AppBar != null)
+        {
+            _hideAppIcon = data.AppBar.HideAppIcon;
+            _appIconClass = data.AppBar.AppIconClass;
+            _darkAppBarStyle = data.AppBar.DarkStyle ?? "";
+            _lightAppBarStyle = data.AppBar.LightStyle ?? "";
+        }
+    }
+    
+    private CustomThemeData BuildThemeData() => new()
+    {
+        Id = ExistingTheme?.Data.Id ?? Guid.NewGuid().ToString("N")[..8],
+        Name = _name,
+        Description = string.IsNullOrWhiteSpace(_description) ? null : _description,
+        Author = string.IsNullOrWhiteSpace(_author) ? null : _author,
+        Light = _lightPalette,
+        Dark = _darkPalette,
+        Typography = new CustomTypography
+        {
+            FontFamily = _fontFamily.Split(',').Select(f => f.Trim()).ToArray(),
+            FontSize = _fontSize,
+            ButtonFontSize = _buttonFontSize
+        },
+        Layout = new CustomLayout
+        {
+            BorderRadius = _borderRadius,
+            AppbarHeight = _appbarHeight,
+            DrawerWidthLeft = _drawerWidth
+        },
+        AppBar = new CustomAppBar
+        {
+            HideAppIcon = _hideAppIcon,
+            AppIconClass = _appIconClass,
+            DarkStyle = string.IsNullOrWhiteSpace(_darkAppBarStyle) ? null : _darkAppBarStyle,
+            LightStyle = string.IsNullOrWhiteSpace(_lightAppBarStyle) ? null : _lightAppBarStyle
+        },
+        CreatedAt = ExistingTheme?.Data.CreatedAt ?? DateTimeOffset.UtcNow,
+        ModifiedAt = DateTimeOffset.UtcNow
+    };
+    
+    private void OnLightPaletteChanged(CustomPalette palette)
+    {
+        _lightPalette = palette;
+        StateHasChanged();
+    }
+    
+    private void OnDarkPaletteChanged(CustomPalette palette)
+    {
+        _darkPalette = palette;
+        StateHasChanged();
+    }
+    
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Theme name is required", Severity.Warning);
+            return;
+        }
+        
+        var data = BuildThemeData();
+        var theme = await ThemeService.AddThemeAsync(data);
+        Snackbar.Add($"Theme '{_name}' created!", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(theme));
+    }
+    
+    private async Task Update()
+    {
+        if (string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("Theme name is required", Severity.Warning);
+            return;
+        }
+        
+        var data = BuildThemeData();
+        var theme = await ThemeService.UpdateThemeAsync(ExistingTheme!.Data.Id, data);
+        Snackbar.Add($"Theme '{_name}' updated!", Severity.Success);
+        MudDialog.Close(DialogResult.Ok(theme));
+    }
+    
+    private async Task Delete()
+    {
+        await ThemeService.DeleteThemeAsync(ExistingTheme!.Data.Id);
+        Snackbar.Add($"Theme '{_name}' deleted", Severity.Info);
+        MudDialog.Close(DialogResult.Ok<CustomTheme?>(null));
+    }
+    
+    private async Task ExportToClipboard()
+    {
+        if (_jsModule == null) return;
+        
+        var data = BuildThemeData();
+        var json = CustomThemeSerializer.Serialize(data);
+        await _jsModule.InvokeVoidAsync("copyToClipboard", json);
+        Snackbar.Add("Theme exported to clipboard!", Severity.Success);
+    }
+    
+    private async Task ImportFromClipboard()
+    {
+        if (_jsModule == null) return;
+        
+        try
+        {
+            var json = await _jsModule.InvokeAsync<string?>("readFromClipboard");
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                Snackbar.Add("Clipboard is empty or access denied", Severity.Warning);
+                return;
+            }
+            
+            var (isValid, error) = CustomThemeSerializer.Validate(json);
+            if (!isValid)
+            {
+                Snackbar.Add($"Invalid theme: {error}", Severity.Error);
+                return;
+            }
+            
+            var data = CustomThemeSerializer.Deserialize(json);
+            if (data != null)
+            {
+                LoadFromData(data);
+                Snackbar.Add("Theme imported from clipboard!", Severity.Success);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to read clipboard: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private void Cancel() => MudDialog.Cancel();
+    
+    private CustomPalette CurrentPreviewPalette => _previewDarkMode ? _darkPalette : _lightPalette;
+    
+    private string GetPreviewStyle() => 
+        $"background: {CurrentPreviewPalette.Surface}; border: 1px solid {CurrentPreviewPalette.Divider}; border-radius: {_borderRadius};";
+    
+    private string GetPreviewAppBarStyle() => 
+        $"background: {CurrentPreviewPalette.AppbarBackground}; border-radius: {_borderRadius};";
+    
+    private string GetPreviewTextStyle() => 
+        $"color: {(_previewDarkMode ? "#fff" : "#000")};";
+    
+    private string GetPreviewPrimaryStyle() => 
+        $"background: {CurrentPreviewPalette.Primary}; color: {(_previewDarkMode ? "#fff" : "#000")};";
+    
+    private string GetPreviewSecondaryStyle() => 
+        $"background: {CurrentPreviewPalette.Secondary}; color: #000;";
+    
+    private string GetPreviewTertiaryStyle() => 
+        $"background: {CurrentPreviewPalette.Tertiary}; color: #fff;";
+    
+    private string GetPreviewDarkStyle() => 
+        $"background: {CurrentPreviewPalette.Dark}; color: {(_previewDarkMode ? "#fff" : "#000")};";
+    
+    private string GetPreviewSuccessStyle() => 
+        $"background: {CurrentPreviewPalette.Success ?? "#4caf50"}; color: #fff;";
+    
+    private string GetPreviewWarningStyle() => 
+        $"background: {CurrentPreviewPalette.Warning ?? "#ff9800"}; color: #000;";
+    
+    private string GetPreviewErrorStyle() => 
+        $"background: {CurrentPreviewPalette.Error ?? "#f44336"}; color: #fff;";
+    
+    private string GetPreviewInfoStyle() => 
+        $"background: {CurrentPreviewPalette.Info ?? "#2196f3"}; color: #fff;";
+}
+

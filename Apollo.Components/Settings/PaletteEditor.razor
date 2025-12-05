@@ -1,0 +1,66 @@
+@using Apollo.Components.Theme
+@using MudBlazor.Utilities
+
+<MudGrid Spacing="2">
+    <MudItem xs="6" md="4">
+        <ColorField Label="Primary" Value="@Palette.Primary" OnValueChanged="v => UpdatePalette(p => p with { Primary = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Primary Lighten" Value="@Palette.PrimaryLighten" OnValueChanged="v => UpdatePalette(p => p with { PrimaryLighten = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Secondary" Value="@Palette.Secondary" OnValueChanged="v => UpdatePalette(p => p with { Secondary = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Tertiary" Value="@Palette.Tertiary" OnValueChanged="v => UpdatePalette(p => p with { Tertiary = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Surface" Value="@Palette.Surface" OnValueChanged="v => UpdatePalette(p => p with { Surface = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Background" Value="@Palette.Background" OnValueChanged="v => UpdatePalette(p => p with { Background = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="App Bar Background" Value="@Palette.AppbarBackground" OnValueChanged="v => UpdatePalette(p => p with { AppbarBackground = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Dark" Value="@Palette.Dark" OnValueChanged="v => UpdatePalette(p => p with { Dark = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Divider" Value="@Palette.Divider" OnValueChanged="v => UpdatePalette(p => p with { Divider = v })" />
+    </MudItem>
+    <MudItem xs="6" md="4">
+        <ColorField Label="Gray Darker" Value="@Palette.GrayDarker" OnValueChanged="v => UpdatePalette(p => p with { GrayDarker = v })" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-2" />
+        <MudText Typo="Typo.subtitle2" Class="mb-2 mud-text-secondary">Status Colors (optional)</MudText>
+    </MudItem>
+    
+    <MudItem xs="6" md="3">
+        <ColorField Label="Success" Value="@(Palette.Success ?? "#4caf50")" OnValueChanged="v => UpdatePalette(p => p with { Success = v })" />
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <ColorField Label="Warning" Value="@(Palette.Warning ?? "#ff9800")" OnValueChanged="v => UpdatePalette(p => p with { Warning = v })" />
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <ColorField Label="Error" Value="@(Palette.Error ?? "#f44336")" OnValueChanged="v => UpdatePalette(p => p with { Error = v })" />
+    </MudItem>
+    <MudItem xs="6" md="3">
+        <ColorField Label="Info" Value="@(Palette.Info ?? "#2196f3")" OnValueChanged="v => UpdatePalette(p => p with { Info = v })" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public CustomPalette Palette { get; set; } = CustomPalette.DefaultDark;
+    [Parameter] public EventCallback<CustomPalette> OnPaletteChanged { get; set; }
+    
+    private async Task UpdatePalette(Func<CustomPalette, CustomPalette> update)
+    {
+        Palette = update(Palette);
+        await OnPaletteChanged.InvokeAsync(Palette);
+    }
+}
+
+
