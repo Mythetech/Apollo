@@ -246,6 +246,7 @@
     [Inject] private IScrollManager ScrollManager { get; set; } = default!;
     
     private IJSObjectReference? _jsModule;
+    private DotNetObjectReference<SettingsDialog>? _dotNetRef;
     private string _activeSection = "section-appearance";
     
     private record SettingsSection(string Id, string Name, string Icon);
@@ -258,11 +259,31 @@
         set => CodeAnalysisState.Disabled = !value;
     }
     
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Apollo.Components/app.js");
         Settings.CustomThemes.OnThemesChanged += OnThemesChanged;
         BuildSectionsList();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Apollo.Components/app.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            var sectionIds = _sections.Select(s => s.Id).ToArray();
+            await _jsModule.InvokeVoidAsync("setupScrollSpy", _dotNetRef, "settings-scroll-container", sectionIds);
+        }
+    }
+    
+    [JSInvokable]
+    public void OnSectionVisible(string sectionId)
+    {
+        if (_activeSection != sectionId)
+        {
+            _activeSection = sectionId;
+            StateHasChanged();
+        }
     }
     
     private void BuildSectionsList()
@@ -294,9 +315,23 @@
     
     private void OnThemesChanged() => InvokeAsync(StateHasChanged);
     
-    public void Dispose()
+    public async void Dispose()
     {
         Settings.CustomThemes.OnThemesChanged -= OnThemesChanged;
+        
+        if (_jsModule != null)
+        {
+            try
+            {
+                await _jsModule.InvokeVoidAsync("disposeScrollSpy");
+            }
+            catch
+            {
+                // Ignore errors during disposal
+            }
+        }
+        
+        _dotNetRef?.Dispose();
     }
     
     private string GetCurrentThemeValue()

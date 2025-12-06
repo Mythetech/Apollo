@@ -67,3 +67,51 @@ window.updateHtmlPreview = (element, html) => {
 
     element.innerHTML = html;
 };
+
+let scrollSpyCleanup = null;
+
+export function setupScrollSpy(dotnetHelper, containerId, sectionIds) {
+    disposeScrollSpy();
+    
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const handleScroll = () => {
+        const containerRect = container.getBoundingClientRect();
+        const containerTop = containerRect.top;
+        
+        let activeSection = null;
+        let closestDistance = Infinity;
+        
+        for (const id of sectionIds) {
+            const element = document.getElementById(id);
+            if (!element) continue;
+            
+            const rect = element.getBoundingClientRect();
+            const distance = rect.top - containerTop;
+            
+            if (distance <= 50 && distance > -rect.height + 50) {
+                if (distance < closestDistance || (distance <= 0 && closestDistance > 0)) {
+                    closestDistance = distance;
+                    activeSection = id;
+                }
+            }
+        }
+        
+        if (activeSection) {
+            dotnetHelper.invokeMethodAsync('OnSectionVisible', activeSection);
+        }
+    };
+    
+    container.addEventListener('scroll', handleScroll);
+    scrollSpyCleanup = () => container.removeEventListener('scroll', handleScroll);
+    
+    handleScroll();
+}
+
+export function disposeScrollSpy() {
+    if (scrollSpyCleanup) {
+        scrollSpyCleanup();
+        scrollSpyCleanup = null;
+    }
+}
