@@ -43,7 +43,7 @@ public static class RegistrationExtensions
             cfg.SnackbarConfiguration.VisibleStateDuration = 3750;
             cfg.SnackbarConfiguration.BackgroundBlurred = true;
         });
-        
+
         services.AddFluentUIComponents();
         services.AddSingleton<IHostingService, HostingService>();
         services.AddSingleton<ConsoleOutputService>();
@@ -60,14 +60,13 @@ public static class RegistrationExtensions
         services.AddSingleton<CodeAnalysisConsoleService>();
         services.AddSingleton<WebHostConsoleService>();
         services.AddScoped<KeyboardService>();
-        services.AddSingleton<IFileSystemAccessServiceInProcess, FileSystemAccessServiceInProcess>(); 
-        services.AddSingleton<IFileSystemAccessService>(sp => (IFileSystemAccessService) sp.GetRequiredService<IFileSystemAccessServiceInProcess>());
+        services.AddSingleton<IFileSystemAccessServiceInProcess, FileSystemAccessServiceInProcess>();
+        services.AddSingleton<IFileSystemAccessService>(sp => (IFileSystemAccessService)sp.GetRequiredService<IFileSystemAccessServiceInProcess>());
         services.AddTransient<IGitHubService, GitHubService>();
         services.AddTransient<Base64Service>();
-        services.AddScoped<AppState>();
         services.AddSingleton<CustomThemeService>();
-        services.AddScoped<SettingsState>();
-        
+        services.AddSingleton<SettingsState>();
+
         services.AddSingleton<TerminalState>();
 
         services.AddTerminalCommands();
@@ -76,17 +75,17 @@ public static class RegistrationExtensions
         {
             config.JsonSerializerOptions.Converters.Add(new ISolutionItemConverter());
         });
-        
+
         services.AddTransient<ISolutionSaveService, SolutionsStorageService>();
 
         var systemLoggingProvider = new SystemLoggerProvider();
         services.AddSingleton(systemLoggingProvider);
-        services.AddLogging(logging => 
+        services.AddLogging(logging =>
         {
             logging.ClearProviders();
             logging.AddProvider(systemLoggingProvider);
         });
-        
+
         return services;
     }
 
@@ -94,7 +93,7 @@ public static class RegistrationExtensions
     {
         var commandTypes = Assembly.GetExecutingAssembly()
             .GetTypes()
-            .Where(t => !t.IsAbstract && !t.IsInterface && 
+            .Where(t => !t.IsAbstract && !t.IsInterface &&
                         typeof(ITerminalCommand).IsAssignableFrom(t));
 
         foreach (var commandType in commandTypes)

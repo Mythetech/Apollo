@@ -1,8 +1,9 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Apollo.Infrastructure.Resources;
 
-public class ResourceResolver : IResourceResolver
+public partial class ResourceResolver : IResourceResolver
 {
     private readonly HttpClient _httpClient;
     private readonly Lazy<Task<Dictionary<string, string>>> _resourceMappings;
@@ -33,7 +34,7 @@ public class ResourceResolver : IResourceResolver
             return hashedName;
         }
 
-        throw new FileNotFoundException($"Resource '{logicalName}' not found in blazor.boot.json.");
+        throw new FileNotFoundException($"Resource '{logicalName}' not found in dotnet.js");
     }
 
     private async Task<Dictionary<string, string>> FetchResourcesAsync()
@@ -43,29 +44,32 @@ public class ResourceResolver : IResourceResolver
         {
             baseUri += "/Apollo";
         }
-        var bootJsonUrl = $"{baseUri}/_framework/blazor.boot.json";
+        var bootJsonUrl = $"{baseUri}/_framework/dotnet.js";
         var bootJsonContent = await _httpClient.GetStringAsync(bootJsonUrl);
-
-        var bootJson = JsonSerializer.Deserialize<BlazorBootJson>(bootJsonContent);
-        if (bootJson?.Resources?.Fingerprinting == null)
+        string content = BootJsonRegex().Match(bootJsonContent).Value;
+        content = content.Substring(13, content.Length - 24);
+        
+        var bootJson = JsonSerializer.Deserialize<BlazorBootJson>(content);
+        
+        if (bootJson?.Resources?.Assembly.Length < 1)
         {
-            throw new InvalidOperationException("Invalid blazor.boot.json structure.");
+            throw new InvalidOperationException("Invalid dotnet.js resource structure.");
         }
 
         var allResources = new Dictionary<string, string>();
 
-        AddResources(bootJson.Resources.Fingerprinting);
-
+        AddResources(bootJson.Resources.Assembly.Concat(bootJson.Resources.CoreAssembly).ToArray());
+        
         return allResources;
 
-        void AddResources(Dictionary<string, string> resources)
+        void AddResources(AssemblyResource[] resources)
         {
             if (resources == null) return;
             foreach (var resource in resources)
             {
-                if (!allResources.ContainsKey(resource.Value))
+                if (!allResources.ContainsKey(resource.virtualPath))
                 {
-                    allResources.Add(resource.Value, resource.Key);
+                    allResources.Add(resource.virtualPath, resource.name);
                 }
             }
         }
@@ -76,4 +80,7 @@ public class ResourceResolver : IResourceResolver
         // Assume the base URI can be derived from the current environment or configuration.
         return _httpClient.BaseAddress.ToString().TrimEnd('/');
     }
+
+    [GeneratedRegex(@"\*json-start\*/([\s\S]*?)/\*json-end\*")]
+    private static partial Regex BootJsonRegex();
 }

@@ -4,7 +4,7 @@
 <MudMenuItem Icon="@Icons.Material.TwoTone.Palette" 
              IconColor="@(IsActive ? Color.Secondary : Color.Default)"
              Class="@(IsActive ? "mud-secondary-text" : "")"
-             OnClick="@SelectTheme">
+             OnClick="@(() => Settings.SetCustomTheme(Theme))">
     @Theme.Name
 </MudMenuItem>
 
@@ -14,7 +14,4 @@
     [Parameter] public required CustomTheme Theme { get; set; }
     
     private bool IsActive => Settings.CurrentCustomThemeId == Theme.Data.Id;
-    
-    private void SelectTheme() => Settings.SetCustomTheme(Theme);
 }
-
