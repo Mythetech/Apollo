@@ -2,6 +2,8 @@
 @using Apollo.Components.Shared
 @using MudBlazor.Utilities
 @using Microsoft.JSInterop
+@using Mythetech.Components.Components.SimpleTabs
+
 
 <MudDialog Class="pa-4 glassmorphic" Style="width: 80vw; max-width: 1200px; height: 85vh;">
     <DialogContent>
@@ -32,15 +34,19 @@
 
                         <MudDivider Class="my-2" />
 
-                        <MudTabs Elevation="0" ApplyEffectsToContainer Border Rounded PanelClass="pa-4">
-                            <MudTabPanel Text="Dark Palette" Icon="@Icons.Material.TwoTone.DarkMode">
-                                <PaletteEditor Palette="_darkPalette" OnPaletteChanged="OnDarkPaletteChanged" />
-                            </MudTabPanel>
-                            <MudTabPanel Text="Light Palette" Icon="@Icons.Material.TwoTone.LightMode">
-                                <PaletteEditor Palette="_lightPalette" OnPaletteChanged="OnLightPaletteChanged" />
-                            </MudTabPanel>
-                            <MudTabPanel Text="Typography" Icon="@Icons.Material.TwoTone.FormatSize">
-                                <MudStack Spacing="3">
+                        <SimpleTabs>
+                            <Tab Name="Dark Palette" Icon="@Icons.Material.TwoTone.DarkMode">
+                                <div class="pa-4">
+                                    <PaletteEditor Palette="_darkPalette" OnPaletteChanged="OnDarkPaletteChanged" />
+                                </div>
+                            </Tab>
+                            <Tab Name="Light Palette" Icon="@Icons.Material.TwoTone.LightMode">
+                                <div class="pa-4">
+                                    <PaletteEditor Palette="_lightPalette" OnPaletteChanged="OnLightPaletteChanged" />
+                                </div>
+                            </Tab>
+                            <Tab Name="Typography" Icon="@Icons.Material.TwoTone.FormatSize">
+                                <MudStack Spacing="3" Class="pa-4">
                                     <MudSelect T="string" Label="Font Family" @bind-Value="_fontFamily" Variant="Variant.Outlined">
                                         <MudSelectItem Value="@("Tahoma, Geneva, Verdana")">Tahoma</MudSelectItem>
                                         <MudSelectItem Value="@("Segoe UI, Arial, sans-serif")">Segoe UI</MudSelectItem>
@@ -52,23 +58,23 @@
                                     <MudTextField @bind-Value="_fontSize" Label="Base Font Size" Variant="Variant.Outlined" HelperText="e.g., 0.75, 0.875rem" />
                                     <MudTextField @bind-Value="_buttonFontSize" Label="Button Font Size" Variant="Variant.Outlined" HelperText="e.g., 1em" />
                                 </MudStack>
-                            </MudTabPanel>
-                            <MudTabPanel Text="Layout" Icon="@Icons.Material.TwoTone.Dashboard">
-                                <MudStack Spacing="3">
+                            </Tab>
+                            <Tab Name="Layout" Icon="@Icons.Material.TwoTone.Dashboard">
+                                <MudStack Spacing="3" Class="pa-4">
                                     <MudTextField @bind-Value="_borderRadius" Label="Border Radius" Variant="Variant.Outlined" HelperText="e.g., 0.5em, 8px" />
                                     <MudTextField @bind-Value="_appbarHeight" Label="App Bar Height" Variant="Variant.Outlined" HelperText="e.g., 3rem, 48px" />
                                     <MudTextField @bind-Value="_drawerWidth" Label="Drawer Width" Variant="Variant.Outlined" HelperText="e.g., 3.25em" />
                                 </MudStack>
-                            </MudTabPanel>
-                            <MudTabPanel Text="App Bar" Icon="@Icons.Material.TwoTone.WebAsset">
-                                <MudStack Spacing="3">
+                            </Tab>
+                            <Tab Name="App Bar" Icon="@Icons.Material.TwoTone.WebAsset">
+                                <MudStack Spacing="3" Class="pa-4">
                                     <MudSwitch @bind-Value="_hideAppIcon" Label="Hide App Icon" Color="Color.Secondary" />
                                     <MudTextField @bind-Value="_appIconClass" Label="App Icon CSS Class" Variant="Variant.Outlined" Disabled="@_hideAppIcon" />
                                     <MudTextField @bind-Value="_darkAppBarStyle" Label="Dark Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in dark mode" />
                                     <MudTextField @bind-Value="_lightAppBarStyle" Label="Light Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in light mode" />
                                 </MudStack>
-                            </MudTabPanel>
-                        </MudTabs>
+                            </Tab>
+                        </SimpleTabs>
                     </MudStack>
                 </MudPaper>
             </MudItem>
