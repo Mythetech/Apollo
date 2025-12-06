@@ -339,8 +339,15 @@
 
         if (_diagnosticsCancellation != null)
         {
-            await _diagnosticsCancellation.CancelAsync();
-            _diagnosticsCancellation.Dispose();
+            try
+            {
+                await _diagnosticsCancellation.CancelAsync();
+                _diagnosticsCancellation?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error handling diagnostic cancellation");
+            }
         }
 
         _diagnosticsCancellation = new CancellationTokenSource();
