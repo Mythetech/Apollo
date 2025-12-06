@@ -34,7 +34,7 @@
 
                         <MudDivider Class="my-2" />
 
-                        <SimpleTabs>
+                        <SimpleTabs Color="Color.Secondary">
                             <Tab Name="Dark Palette" Icon="@Icons.Material.TwoTone.DarkMode">
                                 <div class="pa-4">
                                     <PaletteEditor Palette="_darkPalette" OnPaletteChanged="OnDarkPaletteChanged" />
@@ -70,8 +70,8 @@
                                 <MudStack Spacing="3" Class="pa-4">
                                     <MudSwitch @bind-Value="_hideAppIcon" Label="Hide App Icon" Color="Color.Secondary" />
                                     <MudTextField @bind-Value="_appIconClass" Label="App Icon CSS Class" Variant="Variant.Outlined" Disabled="@_hideAppIcon" />
-                                    <MudTextField @bind-Value="_darkAppBarStyle" Label="Dark Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in dark mode" />
-                                    <MudTextField @bind-Value="_lightAppBarStyle" Label="Light Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom CSS for app bar in light mode" />
+                                    <MudTextField @bind-Value="_darkAppBarStyle" Label="Dark Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom style for app bar in dark mode" />
+                                    <MudTextField @bind-Value="_lightAppBarStyle" Label="Light Mode App Bar Style" Variant="Variant.Outlined" Lines="2" HelperText="Custom style for app bar in light mode" />
                                 </MudStack>
                             </Tab>
                         </SimpleTabs>
@@ -122,6 +122,29 @@
                         </MudToggleItem>
                     </MudToggleGroup>
                 </MudStack>
+                
+                <MudDivider Class="my-4" />
+                
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Generate from Color</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary mb-3">Pick a seed color to auto-generate a Material-inspired palette</MudText>
+                <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                    <MudColorPicker 
+                        @bind-Value="_seedColor"
+                        DisableToolbar="true"
+                        DisableAlpha="true"
+                        DisablePreview="true"
+                        DisableModeSwitch="true"
+                        PickerVariant="PickerVariant.Inline"
+                        Style="width: 100%;" />
+                </MudStack>
+                <MudButton 
+                    Variant="Variant.Filled" 
+                    Color="Color.Secondary" 
+                    StartIcon="@Icons.Material.TwoTone.AutoAwesome"
+                    OnClick="GenerateFromSeedColor"
+                    Class="mt-3 mud-width-full">
+                    Generate Palette
+                </MudButton>
             </MudItem>
         </MudGrid>
     </DialogContent>
@@ -188,6 +211,7 @@
     private string _lightAppBarStyle = "";
     
     private bool _previewDarkMode = true;
+    private MudBlazor.Utilities.MudColor _seedColor = new("#6750A4");
     
     protected override async Task OnInitializedAsync()
     {
@@ -359,6 +383,20 @@
     }
     
     private void Cancel() => MudDialog.Cancel();
+    
+    private void GenerateFromSeedColor()
+    {
+        var (light, dark) = MaterialColorGenerator.GenerateFromSeed(_seedColor.Value);
+        _lightPalette = light;
+        _darkPalette = dark;
+        
+        const string appBarGradient = "background: linear-gradient(190deg, var(--mud-palette-primary) 70%, var(--mud-palette-primary-lighten));";
+        _darkAppBarStyle = appBarGradient;
+        _lightAppBarStyle = appBarGradient;
+        
+        Snackbar.Add("Palette generated from seed color!", Severity.Success);
+        StateHasChanged();
+    }
     
     private CustomPalette CurrentPreviewPalette => _previewDarkMode ? _darkPalette : _lightPalette;
     
