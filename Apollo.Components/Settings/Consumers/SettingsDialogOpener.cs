@@ -18,7 +18,7 @@ public class SettingsDialogOpener : IConsumer<OpenSettingsDialog>
         {
             CloseOnEscapeKey = true,
             NoHeader = true,
-            MaxWidth = MaxWidth.Medium
+            MaxWidth = MaxWidth.Large,
         };
         
         await _dialogService.ShowAsync<SettingsDialog>("Settings", options);

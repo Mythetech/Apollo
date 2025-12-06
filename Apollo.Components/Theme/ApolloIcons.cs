@@ -24,6 +24,18 @@ public static class ApolloIcons
 
     public const string Settings = Icons.Material.TwoTone.Settings;
     
+    public const string Appearance = Icons.Material.TwoTone.Palette;
+    
+    public const string Themes = Icons.Material.TwoTone.ColorLens;
+    
+    public const string CustomThemes = Icons.Material.TwoTone.Brush;
+    
+    public const string Console = Icons.Material.TwoTone.Terminal;
+    
+    public const string Code = Icons.Material.TwoTone.Code;
+    
+    public const string Web = Icons.Material.TwoTone.Web;
+    
     public const string Save = Icons.Material.TwoTone.Save;
     
     public const string SaveAs = Icons.Material.TwoTone.SaveAs;

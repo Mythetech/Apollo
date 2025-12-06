@@ -1,0 +1,23 @@
+<MudElement id="@Id">
+    @if (HeaderContent != null)
+    {
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h6" Class="mud-text-secondary">@Title</MudText>
+            @HeaderContent
+        </MudStack>
+    }
+    else
+    {
+        <MudText Typo="Typo.h6" Class="mb-4 mud-text-secondary">@Title</MudText>
+    }
+    <MudDivider Class="mb-4" />
+    @ChildContent
+</MudElement>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = default!;
+    [Parameter, EditorRequired] public string Title { get; set; } = default!;
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
