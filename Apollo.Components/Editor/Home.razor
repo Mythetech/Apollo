@@ -16,6 +16,7 @@
 @using Apollo.Components.Infrastructure.MessageBus
 @using Apollo.Components.Terminal
 @using Apollo.Components.DynamicTabs.Commands
+@using Apollo.Components.Settings.Commands
 @implements IDisposable
 
 <MudAppBar Elevation="1" Style="@Settings.CurrentTheme.AppBarStyle">
@@ -205,15 +206,7 @@
 
     private async Task OpenSettingsDialog()
     {
-        var options = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            NoHeader = true,
-            BackgroundClass = "bg-transparent",
-            MaxWidth = MaxWidth.Medium
-        };
-        
-        await DialogService.ShowAsync<SettingsDialog>("Settings", options);
+        await Bus.PublishAsync(new OpenSettingsDialog());
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
