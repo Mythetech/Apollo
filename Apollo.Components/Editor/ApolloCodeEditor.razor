@@ -45,7 +45,7 @@
         return new StandaloneEditorConstructionOptions
         {
             AutomaticLayout = true,
-            Language = "csharp",
+            Language = SolutionsState.ActiveFile?.GetMonacoLanguage() ?? "csharp",
             Value = SolutionsState.ActiveFile.Data,
             FontSize = editorSettings.FontSize,
             LineHeight = editorSettings.LineHeight,
@@ -143,23 +143,30 @@
 
             if (file != null)
             {
-                await SetCodeAsync(file.Data);
-                await CodeAnalysisState.SetCurrentDocumentAsync(file.Uri);
-                await CodeAnalysisState.UpdateDocumentAsync(file.Uri, file.Data);
-
-                await GetDiagnosticsAsync(new ModelContentChangedEvent());
+                var model = await _editor.GetModel();
+                await BlazorMonaco.Editor.Global.SetModelLanguage(JsRuntime, model, file.GetMonacoLanguage());
                 
-                _diagnosticsCancellation = new CancellationTokenSource();
-                var token = _diagnosticsCancellation.Token;
+                await SetCodeAsync(file.Data);
+                
+                if (file.IsCSharp())
+                {
+                    await CodeAnalysisState.SetCurrentDocumentAsync(file.Uri);
+                    await CodeAnalysisState.UpdateDocumentAsync(file.Uri, file.Data);
 
-                _ = Task.Delay(debounceMilliseconds, token)
-                    .ContinueWith(async _ =>
-                    {
-                        if (!token.IsCancellationRequested)
+                    await GetDiagnosticsAsync(new ModelContentChangedEvent());
+                    
+                    _diagnosticsCancellation = new CancellationTokenSource();
+                    var token = _diagnosticsCancellation.Token;
+
+                    _ = Task.Delay(debounceMilliseconds, token)
+                        .ContinueWith(async _ =>
                         {
-                            await GetDiagnosticsAsync(new ModelContentChangedEvent());
-                        }
-                    }, token);
+                            if (!token.IsCancellationRequested)
+                            {
+                                await GetDiagnosticsAsync(new ModelContentChangedEvent());
+                            }
+                        }, token);
+                }
             }
             else
             {
@@ -337,6 +344,9 @@
     {
         await ClearMarkers();
 
+        if (SolutionsState.ActiveFile == null || !SolutionsState.ActiveFile.IsCSharp())
+            return;
+
         if (_diagnosticsCancellation != null)
         {
             try
@@ -355,7 +365,7 @@
 
         try
         {
-            if (SolutionsState.ActiveFile != null && evt.Changes != null && evt.Changes.Any())
+            if (evt.Changes != null && evt.Changes.Any())
             {
                 var textChanges = ConvertMonacoChangesToTextChanges(evt.Changes);
                 if (textChanges.Count > 0)
@@ -420,6 +430,7 @@
     private async Task GetDiagnosticsAsync(ModelContentChangedEvent evt)
     {
         if (!SolutionsState.HasActiveSolution) return;
+        if (SolutionsState.ActiveFile == null || !SolutionsState.ActiveFile.IsCSharp()) return;
         
         try 
         {
