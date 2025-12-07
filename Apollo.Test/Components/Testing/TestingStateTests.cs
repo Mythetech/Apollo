@@ -7,6 +7,7 @@ using Apollo.Compilation;
 using Apollo.Components.Analysis;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.MessageBus;
+using Apollo.Components.NuGet;
 using Apollo.Components.Solutions.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ using MudBlazor;
 using NSubstitute;
 using NUnit.Framework.Internal;
 using Xunit;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 using TestResult = Apollo.Components.Testing.TestResult;
 
 namespace Apollo.Test.Components.Testing;
@@ -35,7 +37,8 @@ public class TestingStateTests : ApolloBaseTestContext
             new ConsoleOutputService(JSInterop.JSRuntime, Substitute.For<IJsApiService>(), Substitute.For<IScrollManager>()),
             _messageBus,
             Substitute.For<ILogger<CompilerState>>(),
-            Substitute.For<UserAssemblyStore>());
+            Substitute.For<UserAssemblyStore>(),
+            new NuGetState(Substitute.For<INuGetService>(), Substitute.For<INuGetStorageService>(), Substitute.For<ILogger<NuGetState>>()));
         _solutionsState = new SolutionsState(_compilerState, _messageBus, Substitute.For<ISolutionSaveService>(), Substitute.For<IHostingService>());
         _testingState = new TestingState(_compilerState, _solutionsState, _console);
 

@@ -1,0 +1,137 @@
+@using Apollo.Components.Theme
+
+<MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default);">
+    <MudStack Spacing="2">
+        <MudStack Row AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
+            <MudStack Spacing="0">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@Package.Id</MudText>
+                    @if (Package.Verified)
+                    {
+                        <MudIcon Icon="@ApolloIcons.Verified" Size="Size.Small" Color="Color.Info" />
+                    }
+                    @if (IsInstalled)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">
+                            v@(InstalledVersion)
+                        </MudChip>
+                    }
+                </MudStack>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">by @Package.Authors</MudText>
+            </MudStack>
+
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudSelect T="string"
+                           @bind-Value="_selectedVersion"
+                           Dense
+                           Variant="Variant.Outlined"
+                           Style="min-width: 120px;"
+                           AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var version in Package.Versions.Take(10))
+                    {
+                        <MudSelectItem Value="@version">@version</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (IsInstalling)
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               Disabled
+                               Size="Size.Small"
+                               Style="min-width: 100px;">
+                        <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                        Installing
+                    </MudButton>
+                }
+                else if (IsInstalled && _selectedVersion == InstalledVersion)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Success"
+                               Disabled
+                               Size="Size.Small"
+                               StartIcon="@ApolloIcons.Accept"
+                               Style="min-width: 100px;">
+                        Installed
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               Size="Size.Small"
+                               StartIcon="@ApolloIcons.Download"
+                               OnClick="HandleInstall"
+                               Style="min-width: 100px;">
+                        @(IsInstalled ? "Update" : "Install")
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="@DescriptionStyle">
+            @Package.Description
+        </MudText>
+
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.TwoTone.Download" Size="Size.Small" Class="mud-text-secondary" />
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@FormatDownloads(Package.TotalDownloads)</MudText>
+            </MudStack>
+            @if (!string.IsNullOrEmpty(Package.ProjectUrl))
+            {
+                <MudLink Href="@Package.ProjectUrl" Target="_blank" Typo="Typo.caption">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.TwoTone.Link" Size="Size.Small" />
+                        Project
+                    </MudStack>
+                </MudLink>
+            }
+            @if (!string.IsNullOrEmpty(Package.LicenseUrl))
+            {
+                <MudLink Href="@Package.LicenseUrl" Target="_blank" Typo="Typo.caption">
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                        <MudIcon Icon="@Icons.Material.TwoTone.Gavel" Size="Size.Small" />
+                        License
+                    </MudStack>
+                </MudLink>
+            }
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public NuGetPackage Package { get; set; } = default!;
+    [Parameter] public bool IsInstalled { get; set; }
+    [Parameter] public string? InstalledVersion { get; set; }
+    [Parameter] public EventCallback<(NuGetPackage Package, string Version)> OnInstall { get; set; }
+    [Parameter] public bool IsInstalling { get; set; }
+
+    private string _selectedVersion = string.Empty;
+    private const string DescriptionStyle = "display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;";
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(_selectedVersion) || !Package.Versions.Contains(_selectedVersion))
+        {
+            _selectedVersion = InstalledVersion ?? Package.Version;
+        }
+    }
+
+    private async Task HandleInstall()
+    {
+        await OnInstall.InvokeAsync((Package, _selectedVersion));
+    }
+
+    private static string FormatDownloads(long downloads)
+    {
+        return downloads switch
+        {
+            >= 1_000_000_000 => $"{downloads / 1_000_000_000.0:0.#}B",
+            >= 1_000_000 => $"{downloads / 1_000_000.0:0.#}M",
+            >= 1_000 => $"{downloads / 1_000.0:0.#}K",
+            _ => downloads.ToString()
+        };
+    }
+}
+

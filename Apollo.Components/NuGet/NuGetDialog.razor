@@ -1,0 +1,201 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Shared
+@using Mythetech.Components.Components.SimpleTabs
+@implements IDisposable
+
+<MudDialog Class="pa-4 glassmorphic">
+    <DialogContent>
+        <MudGrid Style="height: 100%; min-width: 700px;">
+            <MudItem xs="12">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudText Class="app-header-font" Typo="Typo.h5">NuGet Packages</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">
+                        @NuGetState.InstalledPackages.Count installed
+                    </MudChip>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <SimpleTabs Color="Color.Secondary">
+                    <Tab Name="Browse" Icon="@ApolloIcons.Search">
+                        <MudStack Spacing="3" Class="pa-3">
+                            <MudTextField @bind-Value="_searchQuery"
+                                          Placeholder="Search NuGet packages..."
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@ApolloIcons.Search"
+                                          Immediate
+                                          DebounceInterval="400"
+                                          OnDebounceIntervalElapsed="SearchPackagesAsync"
+                                          Class="mb-2" />
+
+                            @if (_isSearching)
+                            {
+                                <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-8">
+                                    <MudProgressCircular Indeterminate Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Searching...</MudText>
+                                </MudStack>
+                            }
+                            else if (_searchResults.Count == 0 && !string.IsNullOrEmpty(_searchQuery))
+                            {
+                                <MudPaper Class="pa-6 d-flex flex-column align-center" Elevation="0" Style="background: var(--mud-palette-dark);">
+                                    <MudIcon Icon="@ApolloIcons.Empty" Size="Size.Large" Class="mb-2 mud-text-secondary" />
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No packages found</MudText>
+                                </MudPaper>
+                            }
+                            else if (_searchResults.Count > 0)
+                            {
+                                <MudStack Spacing="2" Style="max-height: 400px; overflow-y: auto;">
+                                    @foreach (var package in _searchResults)
+                                    {
+                                        <PackageCard Package="@package"
+                                                     IsInstalled="@NuGetState.IsInstalled(package.Id)"
+                                                     InstalledVersion="@(NuGetState.GetInstalledPackage(package.Id)?.Version)"
+                                                     OnInstall="@(async (args) => await InstallPackageAsync(args.Package, args.Version))"
+                                                     IsInstalling="@(_installingPackages.Contains(package.Id))" />
+                                    }
+                                </MudStack>
+                            }
+                            else
+                            {
+                                <MudPaper Class="pa-6 d-flex flex-column align-center" Elevation="0" Style="background: var(--mud-palette-dark);">
+                                    <MudIcon Icon="@ApolloIcons.Search" Size="Size.Large" Class="mb-2 mud-text-secondary" />
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Search for packages on nuget.org</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Try searching for "Newtonsoft.Json" or "Dapper"</MudText>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    </Tab>
+
+                    <Tab Name="Installed" Icon="@ApolloIcons.Package">
+                        <div class="pa-3">
+                            @if (NuGetState.InstalledPackages.Count == 0)
+                            {
+                                <MudPaper Class="pa-6 d-flex flex-column align-center" Elevation="0" Style="background: var(--mud-palette-dark);">
+                                    <MudIcon Icon="@ApolloIcons.Package" Size="Size.Large" Class="mb-2 mud-text-secondary" />
+                                    <MudText Typo="Typo.body2" Class="mud-text-secondary">No packages installed</MudText>
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Browse and install packages from the Browse tab</MudText>
+                                </MudPaper>
+                            }
+                            else
+                            {
+                                <MudStack Spacing="2" Style="max-height: 400px; overflow-y: auto;">
+                                    @foreach (var package in NuGetState.InstalledPackages)
+                                    {
+                                        <InstalledPackageCard Package="@package"
+                                                              OnUninstall="@(async () => await UninstallPackageAsync(package.Id))"
+                                                              IsUninstalling="@(_uninstallingPackages.Contains(package.Id))" />
+                                    }
+                                </MudStack>
+                            }
+                        </div>
+                    </Tab>
+                </SimpleTabs>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudStack Row Class="mud-width-full" AlignItems="AlignItems.Center">
+            <MudSpacer />
+            <MudButton Class="rounded" OnClick="Close">Close</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private NuGetState NuGetState { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _searchQuery = string.Empty;
+    private List<NuGetPackage> _searchResults = [];
+    private bool _isSearching;
+    private HashSet<string> _installingPackages = [];
+    private HashSet<string> _uninstallingPackages = [];
+    private CancellationTokenSource? _searchCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NuGetState.OnPackagesChanged += OnPackagesChanged;
+        await NuGetState.InitializeAsync();
+    }
+
+    private void OnPackagesChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SearchPackagesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            _searchResults = [];
+            return;
+        }
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+
+        try
+        {
+            _isSearching = true;
+            StateHasChanged();
+
+            _searchResults = await NuGetState.SearchAsync(_searchQuery, _searchCts.Token);
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task InstallPackageAsync(NuGetPackage package, string version)
+    {
+        _installingPackages.Add(package.Id);
+        StateHasChanged();
+
+        try
+        {
+            var success = await NuGetState.InstallPackageAsync(package.Id, version);
+
+            if (success)
+                Snackbar.Add($"Installed {package.Id} v{version}", Severity.Success);
+            else
+                Snackbar.Add($"Failed to install {package.Id}", Severity.Error);
+        }
+        finally
+        {
+            _installingPackages.Remove(package.Id);
+            StateHasChanged();
+        }
+    }
+
+    private async Task UninstallPackageAsync(string packageId)
+    {
+        _uninstallingPackages.Add(packageId);
+        StateHasChanged();
+
+        try
+        {
+            var success = await NuGetState.UninstallPackageAsync(packageId);
+
+            if (success)
+                Snackbar.Add($"Uninstalled {packageId}", Severity.Success);
+            else
+                Snackbar.Add($"Failed to uninstall {packageId}", Severity.Error);
+        }
+        finally
+        {
+            _uninstallingPackages.Remove(packageId);
+            StateHasChanged();
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+
+    public void Dispose()
+    {
+        NuGetState.OnPackagesChanged -= OnPackagesChanged;
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
+}

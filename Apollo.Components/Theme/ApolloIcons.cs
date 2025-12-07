@@ -107,4 +107,14 @@ public static class ApolloIcons
     public const string Values = Icons.Material.TwoTone.Abc;
 
     public const string Empty = Icons.Material.TwoTone.DoNotDisturb;
+    
+    public const string NuGet = Icons.Material.TwoTone.Inventory2;
+    
+    public const string Package = Icons.Material.TwoTone.Inventory;
+    
+    public const string Download = Icons.Material.TwoTone.Download;
+    
+    public const string Search = Icons.Material.TwoTone.Search;
+    
+    public const string Verified = Icons.Material.TwoTone.Verified;
 }

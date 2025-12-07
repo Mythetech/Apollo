@@ -1,6 +1,7 @@
 ﻿@using Apollo.Components
 @using Apollo.Components.Code
 @using Apollo.Components.Infrastructure.Keyboard
+@using Apollo.Components.NuGet
 @using Apollo.Components.Settings
 @using Apollo.Components.Theme
 @using Microsoft.FluentUI.AspNetCore.Components
@@ -32,6 +33,8 @@
 [Inject] public SettingsState Settings { get; set; } = default!;
 
 [Inject] public KeyBindingsState KeyBindings { get; set; } = default!;
+
+[Inject] public NuGetState NuGetState { get; set; } = default!;
 
 bool _drawerOpen = true;
 
@@ -71,6 +74,7 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         await Settings.TryLoadSettingsFromStorageAsync();
         await Settings.TrySetSystemThemeAsync();
         await KeyBindings.LoadFromStorageAsync();
+        await NuGetState.InitializeAsync();
     }
 }
 

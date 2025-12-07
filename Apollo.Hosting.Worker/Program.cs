@@ -27,6 +27,21 @@ var resolver = new MetadataReferenceResourceProvider(HostAddress.BaseUri);
 var loggerBridge = new HostingLogger();
 WebApplication? _currentApp = default;
 HostingCompilationService? _service = default;
+Dictionary<string, Assembly> loadedNuGetAssemblies = new(StringComparer.OrdinalIgnoreCase);
+
+AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+{
+    var assemblyName = new AssemblyName(args.Name);
+    loggerBridge.LogDebug($"Assembly resolve requested: {assemblyName.Name}");
+    
+    if (loadedNuGetAssemblies.TryGetValue(assemblyName.Name ?? "", out var assembly))
+    {
+        loggerBridge.LogDebug($"Resolved from NuGet cache: {assemblyName.Name}");
+        return assembly;
+    }
+    
+    return null;
+};
 
 Console.SetOut(new HostingConsoleWriter(ExecutionLogCallback));
 Console.SetError(new HostingConsoleWriter(ExecutionLogCallback));
@@ -112,6 +127,19 @@ async Task HandleRunMessage(WorkerMessage message)
         await resolver.GetMetadataReferenceAsync("Apollo.Hosting.wasm"),
         await resolver.GetMetadataReferenceAsync("Microsoft.Extensions.DependencyInjection.Abstractions.wasm"),
     };
+    
+    var nugetRefs = solution.NuGetReferences ?? [];
+    
+    foreach (var nugetRef in nugetRefs)
+    {
+        if (nugetRef.AssemblyData?.Length > 0)
+        {
+            var nugetReference = MetadataReference.CreateFromImage(nugetRef.AssemblyData);
+            references.Add(nugetReference);
+            loggerBridge.LogDebug($"Added NuGet reference: {nugetRef.AssemblyName}");
+        }
+    }
+    
     _service = new HostingCompilationService();
     loggerBridge.LogTrace("Compiling solution " + solution.Name);
     if (solution.Type != ProjectType.WebApi)
@@ -126,6 +154,28 @@ async Task HandleRunMessage(WorkerMessage message)
     foreach (var diag in result?.Diagnostics ?? [])
     {
         loggerBridge.LogInformation(diag);
+    }
+
+    // Load NuGet assemblies into runtime before execution and register for resolution
+    foreach (var nugetRef in nugetRefs)
+    {
+        if (nugetRef.AssemblyData?.Length > 0)
+        {
+            try
+            {
+                var loadedAsm = Assembly.Load(nugetRef.AssemblyData);
+                var asmName = loadedAsm.GetName().Name;
+                if (!string.IsNullOrEmpty(asmName))
+                {
+                    loadedNuGetAssemblies[asmName] = loadedAsm;
+                }
+                loggerBridge.LogDebug($"Loaded NuGet assembly for runtime: {nugetRef.AssemblyName} ({asmName})");
+            }
+            catch (Exception ex)
+            {
+                loggerBridge.LogWarning($"Failed to load NuGet assembly {nugetRef.AssemblyName}: {ex.Message}");
+            }
+        }
     }
 
     var assembly = result?.Assembly;
