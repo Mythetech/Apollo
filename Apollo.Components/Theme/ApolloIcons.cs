@@ -99,6 +99,10 @@ public static class ApolloIcons
     public const string Accept = Icons.Material.TwoTone.Check;
 
     public const string Key = Icons.Material.TwoTone.VpnKey;
+    
+    public const string Keyboard = Icons.Material.TwoTone.Keyboard;
+    
+    public const string Reset = Icons.Material.TwoTone.RestartAlt;
 
     public const string Values = Icons.Material.TwoTone.Abc;
 

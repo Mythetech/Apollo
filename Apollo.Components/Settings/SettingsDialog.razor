@@ -3,6 +3,7 @@
 @using Apollo.Components.Code
 @using Apollo.Components.Console
 @using Apollo.Components.Hosting
+@using Apollo.Components.Infrastructure.Keyboard
 @using Apollo.Components.Infrastructure.MessageBus
 @using Apollo.Components.Settings.Attributes
 @using Apollo.Components.Settings.Events
@@ -176,6 +177,35 @@
                             @bind-Value="WebHostConsoleService.AutoScroll" />
                     </MudStack>
                 </SettingsSectionDisplay>
+
+                <SettingsSectionDisplay Id="section-keybindings" Title="Keyboard Shortcuts">
+                    <HeaderContent>
+                        <MudButton Size="Size.Small" 
+                                   Variant="Variant.Outlined" 
+                                   StartIcon="@ApolloIcons.Reset" 
+                                   OnClick="ResetKeybindings">
+                            Reset to Defaults
+                        </MudButton>
+                    </HeaderContent>
+                    <ChildContent>
+                        <MudStack Spacing="1">
+                            @foreach (var binding in KeyBindingsState.KeyBindings)
+                            {
+                                <KeyBindingRow Binding="@binding" 
+                                               OnBindingChanged="OnKeybindingChanged" 
+                                               OnDelete="OnKeybindingDeleted"
+                                               CanDelete="@(!KeyBindingsState.IsDefaultBinding(binding))" />
+                            }
+                            <MudDivider Class="my-2" />
+                            <MudButton Variant="Variant.Text" 
+                                       Color="Color.Secondary" 
+                                       StartIcon="@ApolloIcons.Add"
+                                       OnClick="AddNewKeybinding">
+                                Add Keybinding
+                            </MudButton>
+                        </MudStack>
+                    </ChildContent>
+                </SettingsSectionDisplay>
             
                 @foreach (var settingsGroup in Settings.GetSettingsModels())
                 {
@@ -244,6 +274,7 @@
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] private IScrollManager ScrollManager { get; set; } = default!;
+    [Inject] private KeyBindingsState KeyBindingsState { get; set; } = default!;
     
     private IJSObjectReference? _jsModule;
     private DotNetObjectReference<SettingsDialog>? _dotNetRef;
@@ -296,6 +327,7 @@
             new SettingsSection("section-console", "Console", ApolloIcons.Console),
             new SettingsSection("section-code-analysis", "Code Analysis", ApolloIcons.Code),
             new SettingsSection("section-web-application", "Web Application", ApolloIcons.Web),
+            new SettingsSection("section-keybindings", "Keyboard Shortcuts", ApolloIcons.Keyboard),
         ];
         
         foreach (var settingsGroup in Settings.GetSettingsModels())
@@ -464,4 +496,34 @@
     }
     
     private void Cancel() => MudDialog.Cancel();
+
+    private async Task OnKeybindingChanged(KeyBinding binding)
+    {
+        await KeyBindingsState.UpdateKeyBindingAsync(binding);
+        StateHasChanged();
+    }
+
+    private async Task OnKeybindingDeleted(KeyBinding binding)
+    {
+        await KeyBindingsState.DeleteKeyBindingAsync(binding);
+        StateHasChanged();
+    }
+
+    private async Task ResetKeybindings()
+    {
+        await KeyBindingsState.ResetToDefaultsAsync();
+        StateHasChanged();
+    }
+
+    private async Task AddNewKeybinding()
+    {
+        var newBinding = new KeyBinding
+        {
+            Id = Guid.NewGuid().ToString(),
+            Key = default,
+            Action = KeyBindingAction.None
+        };
+        await KeyBindingsState.UpdateKeyBindingAsync(newBinding);
+        StateHasChanged();
+    }
 }

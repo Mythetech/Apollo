@@ -66,6 +66,7 @@ public static class RegistrationExtensions
         services.AddTransient<Base64Service>();
         services.AddSingleton<CustomThemeService>();
         services.AddSingleton<SettingsState>();
+        services.AddSingleton<KeyBindingsState>();
 
         services.AddSingleton<TerminalState>();
 

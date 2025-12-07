@@ -271,12 +271,7 @@
         await Task.Yield();
         await SolutionsState.BuildAsync();
     }
-
-    protected void OverflowRaised(IEnumerable<FluentOverflowItem> item)
-    {
-        Console.WriteLine(string.Join(", ", item.Select(x => x.Text)));
-    }
-
+    
     protected Task StateHasChangedAsync()
     {
         StateHasChanged();
@@ -301,8 +296,6 @@
         StateHasChanged();
     }
     
-    
-
     protected string GetFloatingContainerStyle()
     {
         return "position:fixed;top:0;left:0;right:0;bottom:0;z-index:1100;pointer-events:none;";

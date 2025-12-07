@@ -1,0 +1,152 @@
+@using Apollo.Components.Infrastructure.Keyboard
+@using Apollo.Components.Theme
+@using Microsoft.FluentUI.AspNetCore.Components
+@using FluentKeyCode = Microsoft.FluentUI.AspNetCore.Components.KeyCode
+
+<MudGrid Class="py-2" Spacing="2">
+    <MudItem xs="7">
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            @if (_isRecording)
+            {
+                <MudIconButton Icon="@ApolloIcons.Accept" 
+                               Size="Size.Small" 
+                               Color="MudBlazor.Color.Success" 
+                               OnClick="ConfirmRecording" 
+                               Disabled="@(_recordedBinding == null)" />
+                <MudIconButton Icon="@ApolloIcons.Close" 
+                               Size="Size.Small" 
+                               Color="MudBlazor.Color.Error" 
+                               OnClick="CancelRecording" />
+                <MudPaper Class="pa-2 rounded d-flex align-center" 
+                          Style="min-width: 160px; background: var(--mud-palette-primary); min-height: 36px;"
+                          Elevation="0">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @(_recordedBinding?.GetDisplayText() ?? "Press keys...")
+                    </MudText>
+                </MudPaper>
+            }
+            else
+            {
+                <MudIconButton Icon="@ApolloIcons.Edit" 
+                               Size="Size.Small" 
+                               Color="MudBlazor.Color.Secondary" 
+                               OnClick="StartRecording" />
+                <MudPaper Class="pa-2 rounded d-flex align-center cursor-pointer" 
+                          Style="min-width: 160px; background: var(--mud-palette-background-grey); min-height: 36px;"
+                          Elevation="0"
+                          @onclick="StartRecording">
+                    <MudText Typo="Typo.body2" Style="font-family: monospace;">
+                        @Binding.GetDisplayText()
+                    </MudText>
+                </MudPaper>
+            }
+        </MudStack>
+    </MudItem>
+    <MudItem xs="5">
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudSelect T="KeyBindingAction" 
+                       Value="@Binding.Action"
+                       ValueChanged="OnActionChanged"
+                       Variant="Variant.Text"
+                       Dense
+                       Style="flex: 1;"
+                       AnchorOrigin="Origin.BottomCenter">
+                @foreach (var (action, description) in KeyBindingActionExtensions.GetAllActions())
+                {
+                    <MudSelectItem Value="@action">@description</MudSelectItem>
+                }
+            </MudSelect>
+            <MudIconButton Icon="@ApolloIcons.Delete" 
+                           Size="Size.Small" 
+                           Color="MudBlazor.Color.Error" 
+                           OnClick="OnDeleteClicked"
+                           Style="@(CanDelete ? "" : "visibility: hidden;")" />
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired] public KeyBinding Binding { get; set; } = default!;
+    [Parameter] public EventCallback<KeyBinding> OnBindingChanged { get; set; }
+    [Parameter] public EventCallback<KeyBinding> OnDelete { get; set; }
+    [Parameter] public bool CanDelete { get; set; }
+    
+    [Inject] private IKeyCodeService KeyCodeService { get; set; } = default!;
+
+    private bool _isRecording;
+    private KeyBinding? _recordedBinding;
+    private Func<FluentKeyCodeEventArgs, Task>? _keyDownHandler;
+
+    private void StartRecording()
+    {
+        _isRecording = true;
+        _recordedBinding = null;
+        _keyDownHandler = HandleKeyDown;
+        KeyCodeService.RegisterListener(_keyDownHandler);
+    }
+
+    private Task HandleKeyDown(FluentKeyCodeEventArgs args)
+    {
+        if (args.Key == FluentKeyCode.Escape)
+        {
+            CancelRecording();
+            return Task.CompletedTask;
+        }
+
+        _recordedBinding = new KeyBinding
+        {
+            Id = Binding.Id,
+            Ctrl = args.CtrlKey,
+            Alt = args.AltKey,
+            Shift = args.ShiftKey,
+            Meta = args.MetaKey,
+            Key = args.Key,
+            Action = Binding.Action
+        };
+        
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private async Task ConfirmRecording()
+    {
+        if (_recordedBinding != null)
+        {
+            StopRecording();
+            await OnBindingChanged.InvokeAsync(_recordedBinding);
+        }
+    }
+
+    private void CancelRecording()
+    {
+        StopRecording();
+    }
+
+    private void StopRecording()
+    {
+        _isRecording = false;
+        _recordedBinding = null;
+        if (_keyDownHandler != null)
+        {
+            KeyCodeService.UnregisterListener(_keyDownHandler);
+            _keyDownHandler = null;
+        }
+    }
+
+    private async Task OnActionChanged(KeyBindingAction newAction)
+    {
+        var updated = Binding.Clone();
+        updated.Action = newAction;
+        await OnBindingChanged.InvokeAsync(updated);
+    }
+
+    private async Task OnDeleteClicked()
+    {
+        await OnDelete.InvokeAsync(Binding);
+    }
+
+    public void Dispose()
+    {
+        StopRecording();
+    }
+}
