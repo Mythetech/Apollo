@@ -1,5 +1,6 @@
 @using Apollo.Components.Infrastructure.MessageBus
 @using Apollo.Components.NuGet.Commands
+@using Apollo.Components.Tools.Commands
 @using Apollo.Components.Theme
 @using MouseEvent = MudBlazor.MouseEvent
 
@@ -7,6 +8,14 @@
     <MudMenuItem Icon="@ApolloIcons.NuGet" OnClick="@(async () => await Bus.PublishAsync(new OpenNuGetDialog()))">
         NuGet Packages
     </MudMenuItem>
+    <MudMenu StartIcon="@ApolloIcons.Guid" Label="Generate GUID">
+        <MudMenuItem Icon="@ApolloIcons.Guid" OnClick="@(async () => await Bus.PublishAsync(new GenerateGuid()))">
+            GUID
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.GuidV7" OnClick="@(async () => await Bus.PublishAsync(new GenerateGuidV7()))">
+            GUID v7 (Timestamp)
+        </MudMenuItem>
+    </MudMenu>
 </MudMenu>
 
 @code {

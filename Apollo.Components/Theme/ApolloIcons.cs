@@ -117,4 +117,8 @@ public static class ApolloIcons
     public const string Search = Icons.Material.TwoTone.Search;
     
     public const string Verified = Icons.Material.TwoTone.Verified;
+    
+    public const string Guid = Icons.Material.TwoTone.Fingerprint;
+    
+    public const string GuidV7 = Icons.Material.TwoTone.Schedule;
 }
