@@ -8,6 +8,7 @@ using Apollo.Components.Infrastructure.Keyboard;
 using Apollo.Components.Infrastructure.Logging;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Library;
+using Apollo.Components.NuGet;
 using Apollo.Components.Settings;
 using Apollo.Components.Solutions;
 using Apollo.Components.Solutions.Services;
@@ -69,6 +70,10 @@ public static class RegistrationExtensions
         services.AddSingleton<KeyBindingsState>();
 
         services.AddSingleton<TerminalState>();
+        
+        services.AddSingleton<INuGetService, NuGetService>();
+        services.AddSingleton<INuGetStorageService, NuGetStorageService>();
+        services.AddSingleton<NuGetState>();
 
         services.AddTerminalCommands();
 

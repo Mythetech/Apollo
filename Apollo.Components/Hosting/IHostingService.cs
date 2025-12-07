@@ -2,8 +2,10 @@ using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
+using Apollo.Components.NuGet;
 using Apollo.Components.Solutions;
 using Apollo.Contracts.Hosting;
+using Apollo.Contracts.Solutions;
 using Microsoft.AspNetCore.Components;
 
 namespace Apollo.Components.Hosting;
@@ -30,6 +32,7 @@ public class HostingService : IHostingService
     private readonly IHostingWorkerFactory _factory;
     private readonly WebHostConsoleService _console;
     private readonly IMessageBus _bus;
+    private readonly NuGetState _nuGetState;
     private IHostingWorker? _hostingWorker;
     private System.Timers.Timer? _uptimeTimer;
     private DateTime _startTime;
@@ -64,11 +67,12 @@ public class HostingService : IHostingService
             await OnRoutesChanged.Invoke();
     }
 
-    public HostingService(IHostingWorkerFactory factory, WebHostConsoleService console, IMessageBus bus)
+    public HostingService(IHostingWorkerFactory factory, WebHostConsoleService console, IMessageBus bus, NuGetState nuGetState)
     {
         _factory = factory;
         _console = console;
         _bus = bus;
+        _nuGetState = nuGetState;
         State = HostingStates.Uninitialized;
     }
 
@@ -83,7 +87,35 @@ public class HostingService : IHostingService
         StartUptimeTimer();
         
         await NotifyStateChangedAsync();
-        await _hostingWorker.RunAsync(JsonSerializer.Serialize(solution.ToContract()));
+        
+        var contract = solution.ToContract();
+        contract.NuGetReferences = await LoadNuGetReferencesAsync();
+        
+        await _hostingWorker.RunAsync(JsonSerializer.Serialize(contract));
+    }
+
+    private async Task<List<NuGetReference>> LoadNuGetReferencesAsync()
+    {
+        var references = new List<NuGetReference>();
+        
+        foreach (var package in _nuGetState.InstalledPackages)
+        {
+            foreach (var assemblyName in package.AssemblyNames)
+            {
+                var assemblyData = await _nuGetState.GetAssemblyDataAsync(package.Id, assemblyName);
+                if (assemblyData != null)
+                {
+                    references.Add(new NuGetReference
+                    {
+                        PackageId = package.Id,
+                        AssemblyName = assemblyName,
+                        AssemblyData = assemblyData
+                    });
+                }
+            }
+        }
+        
+        return references;
     }
 
     public async Task StopAsync()

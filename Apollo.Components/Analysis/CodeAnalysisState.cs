@@ -1,8 +1,10 @@
 using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.Infrastructure.MessageBus;
+using Apollo.Components.NuGet;
 using Apollo.Components.Solutions;
 using Apollo.Contracts.Analysis;
+using Apollo.Contracts.Solutions;
 using Apollo.Contracts.Workers;
 using OmniSharp.Models.v1.Completion;
 using Solution = Apollo.Contracts.Solutions.Solution;
@@ -16,6 +18,8 @@ public class CodeAnalysisState
     private readonly IMessageBus _messageBus;
     private readonly SolutionsState _solutionsState;
     private readonly UserAssemblyStore _userAssemblyStore;
+    private readonly NuGetState _nuGetState;
+    private readonly INuGetStorageService _nuGetStorageService;
     private bool _disabled;
     
     public event Func<Task>? OnCodeAnalysisStateChanged;
@@ -65,13 +69,17 @@ public class CodeAnalysisState
         CodeAnalysisConsoleService console,
         IMessageBus messageBus, 
         SolutionsState solutionsState,
-        UserAssemblyStore userAssemblyStore)
+        UserAssemblyStore userAssemblyStore,
+        NuGetState nuGetState,
+        INuGetStorageService nuGetStorageService)
     {
         _workerFactory = workerFactory;
         _console = console;
         _messageBus = messageBus;
         _solutionsState = solutionsState;
         _userAssemblyStore = userAssemblyStore;
+        _nuGetState = nuGetState;
+        _nuGetStorageService = nuGetStorageService;
         
         _userAssemblyStore.OnAssemblyUpdated += HandleUserAssemblyUpdated;
     }
@@ -130,6 +138,8 @@ public class CodeAnalysisState
         if (Disabled || !_workerReady || solution == null || _workerProxy == null)
             return [];
 
+        solution.NuGetReferences = await LoadNuGetReferencesAsync();
+        
         var request = new DiagnosticRequestWrapper
         {
             Solution = solution,
@@ -144,6 +154,35 @@ public class CodeAnalysisState
         var diagnostics = JsonSerializer.Deserialize<DiagnosticsResponseWrapper>(bytes, JsonOptions)?.Payload;
         
         return diagnostics?.ToList() ?? [];
+    }
+    
+    private async Task<List<NuGetReference>> LoadNuGetReferencesAsync()
+    {
+        var references = new List<NuGetReference>();
+        
+        foreach (var package in _nuGetState.InstalledPackages)
+        {
+            foreach (var assemblyName in package.AssemblyNames)
+            {
+                var assemblyData = await _nuGetStorageService.GetAssemblyDataAsync(
+                    package.Id, 
+                    package.Version, 
+                    assemblyName);
+                    
+                if (assemblyData != null)
+                {
+                    references.Add(new NuGetReference
+                    {
+                        PackageId = package.Id,
+                        AssemblyName = assemblyName,
+                        AssemblyData = assemblyData
+                    });
+                    _console.AddLog($"Loaded NuGet assembly: {assemblyName} from {package.Id}", ConsoleSeverity.Debug);
+                }
+            }
+        }
+        
+        return references;
     }
 
     public async Task UpdateDocumentAsync(string path, string fullContent)

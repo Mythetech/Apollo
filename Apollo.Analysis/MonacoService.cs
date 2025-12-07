@@ -246,6 +246,11 @@ class Program
     public async Task<byte[]> GetDiagnosticsAsync(string uri, Solution solution)
     {
         _projectService.UpdateSolution(solution);
+        
+        if (solution.NuGetReferences?.Count > 0)
+        {
+            _projectService.SetNuGetReferences(solution.NuGetReferences);
+        }
 
         if (_projectService.IsLoadingReferences)
         {
@@ -270,7 +275,7 @@ class Program
             "Temp" + Random.Shared.Next(),
             syntaxTrees,
             options: RoslynProject.CompilationDefaults.GetCompilationOptions(solution.Type),
-            references: _projectService.GetSystemReferencesOnly()
+            references: _projectService.GetAllReferences()
         );
 
         var allDiagnostics = await GetAllDiagnosticsAsync(compilation, syntaxTrees);

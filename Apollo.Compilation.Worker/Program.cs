@@ -1,9 +1,11 @@
 ﻿using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text.Json;
 using Apollo.Compilation;
 using Apollo.Compilation.Worker;
+using Apollo.Contracts.Solutions;
 using Apollo.Contracts.Workers;
 using Apollo.Infrastructure;
 using Apollo.Infrastructure.Workers;
@@ -21,8 +23,24 @@ bool keepRunning = true;
 var resolver = new MetadataReferenceResourceProvider(HostAddress.BaseUri);
 
 byte[]? asmCache = [];
+List<NuGetReference> nugetAssemblyCache = [];
+Dictionary<string, Assembly> loadedNuGetAssemblies = new(StringComparer.OrdinalIgnoreCase);
 
 ConcurrentBag<string> executionMessages = [];
+
+AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+{
+    var assemblyName = new AssemblyName(args.Name);
+    LogMessageWriter.Log($"Assembly resolve requested: {assemblyName.Name}", LogSeverity.Debug);
+    
+    if (loadedNuGetAssemblies.TryGetValue(assemblyName.Name ?? "", out var assembly))
+    {
+        LogMessageWriter.Log($"Resolved from NuGet cache: {assemblyName.Name}", LogSeverity.Debug);
+        return assembly;
+    }
+    
+    return null;
+};
 
 Console.SetOut(new WorkerConsoleWriter());
 Console.SetError(new WorkerConsoleWriter());
@@ -46,6 +64,19 @@ Imports.RegisterOnMessage(async e =>
                     await resolver.GetMetadataReferenceAsync("xunit.assert.wasm"),
                     await resolver.GetMetadataReferenceAsync("xunit.core.wasm")
                 };
+                
+                nugetAssemblyCache = solution.NuGetReferences ?? [];
+                
+                foreach (var nugetRef in nugetAssemblyCache)
+                {
+                    if (nugetRef.AssemblyData?.Length > 0)
+                    {
+                        var nugetReference = MetadataReference.CreateFromImage(nugetRef.AssemblyData);
+                        references.Add(nugetReference);
+                        LogMessageWriter.Log($"Added NuGet reference: {nugetRef.AssemblyName}", LogSeverity.Debug);
+                    }
+                }
+                
                 var result = new CompilationService().Compile(solution, references);
 
                 asmCache = result.Assembly;
@@ -60,7 +91,29 @@ Imports.RegisterOnMessage(async e =>
                 break;
 
             case "execute":
-                // Load assembly and run.
+                // Load NuGet assemblies into runtime first and register for resolution
+                foreach (var nugetRef in nugetAssemblyCache)
+                {
+                    if (nugetRef.AssemblyData?.Length > 0)
+                    {
+                        try
+                        {
+                            var loadedAsm = Assembly.Load(nugetRef.AssemblyData);
+                            var asmName = loadedAsm.GetName().Name;
+                            if (!string.IsNullOrEmpty(asmName))
+                            {
+                                loadedNuGetAssemblies[asmName] = loadedAsm;
+                            }
+                            LogMessageWriter.Log($"Loaded NuGet assembly for runtime: {nugetRef.AssemblyName} ({asmName})", LogSeverity.Debug);
+                        }
+                        catch (Exception ex)
+                        {
+                            LogMessageWriter.Log($"Failed to load NuGet assembly {nugetRef.AssemblyName}: {ex.Message}", LogSeverity.Warning);
+                        }
+                    }
+                }
+                
+                // Load user assembly and run
                 byte[]? asm = Convert.FromBase64String(message.Payload);
 
                 var assembly = Assembly.Load(asm.Length > 0 ? asm : asmCache);

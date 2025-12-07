@@ -4,9 +4,11 @@ using Apollo.Components.Analysis;
 using Apollo.Components.Console;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
+using Apollo.Components.NuGet;
 using Apollo.Components.Solutions;
 using Apollo.Components.Solutions.Events;
 using Apollo.Contracts.Compilation;
+using Apollo.Contracts.Solutions;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
 using MudBlazor.Extensions;
@@ -30,6 +32,7 @@ public class CompilerState
     private readonly IMessageBus _messageBus;
     private readonly ILogger<CompilerState> _logger;
     private readonly UserAssemblyStore _userAssemblyStore;
+    private readonly NuGetState _nuGetState;
     public event Func<Task>? OnCompilerStatusChanged;
     private bool _workerReady = false;
 
@@ -52,13 +55,15 @@ public class CompilerState
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
     public CompilerState(ICompilerWorkerFactory compilerWorkerFactory, ConsoleOutputService console,
-        IMessageBus messageBus, ILogger<CompilerState> logger, UserAssemblyStore userAssemblyStore)
+        IMessageBus messageBus, ILogger<CompilerState> logger, UserAssemblyStore userAssemblyStore,
+        NuGetState nuGetState)
     {
         _compilerWorkerFactory = compilerWorkerFactory;
         _console = console;
         _messageBus = messageBus;
         _logger = logger;
         _userAssemblyStore = userAssemblyStore;
+        _nuGetState = nuGetState;
 
         StartInternal();
     }
@@ -144,7 +149,41 @@ public class CompilerState
         _stopwatch.Restart();
         
         _console.AddLog("Requesting build", ConsoleSeverity.Debug);
-        await _workerProxy.RequestBuildAsync(solution.ToContract());
+        
+        var contract = solution.ToContract();
+        contract.NuGetReferences = await LoadNuGetReferencesAsync();
+        
+        if (contract.NuGetReferences.Count > 0)
+        {
+            _console.AddLog($"Including {contract.NuGetReferences.Count} NuGet assembly references", ConsoleSeverity.Debug);
+        }
+        
+        await _workerProxy.RequestBuildAsync(contract);
+    }
+
+    private async Task<List<NuGetReference>> LoadNuGetReferencesAsync()
+    {
+        var references = new List<NuGetReference>();
+        
+        foreach (var package in _nuGetState.InstalledPackages)
+        {
+            foreach (var assemblyName in package.AssemblyNames)
+            {
+                var assemblyData = await _nuGetState.GetAssemblyDataAsync(package.Id, assemblyName);
+                if (assemblyData != null)
+                {
+                    references.Add(new NuGetReference
+                    {
+                        PackageId = package.Id,
+                        AssemblyName = assemblyName,
+                        AssemblyData = assemblyData
+                    });
+                    _console.AddLog($"Loaded NuGet assembly: {assemblyName} from {package.Id}", ConsoleSeverity.Debug);
+                }
+            }
+        }
+        
+        return references;
     }
 
     private Task HandleError(string error)
@@ -268,9 +307,18 @@ public class CompilerState
 
     private async Task HandleExecuteCompleted(ExecutionResult result)
     {
+        if (result.Messages?.Count > 0)
+        {
+            var severity = result.Error ? ConsoleSeverity.Error : ConsoleSeverity.Info;
+            foreach (var message in result.Messages)
+            {
+                _console.AddLog(message, severity);
+            }
+        }
+        
         if (result.Error)
         {
-            _console.AddLog(string.Join(Environment.NewLine, result.Messages), ConsoleSeverity.Error);
+            _console.AddLog("Execution failed", ConsoleSeverity.Error);
         }
         else
         {

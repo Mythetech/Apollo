@@ -73,7 +73,12 @@ public class CompilationService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            logAction?.Invoke($"Execution error: {ex.Message}");
+            var actualException = ex is System.Reflection.TargetInvocationException tie ? tie.InnerException ?? ex : ex;
+            logAction?.Invoke($"Execution error: {actualException.Message}");
+            if (actualException.StackTrace != null)
+            {
+                logAction?.Invoke(actualException.StackTrace);
+            }
             return new ExecutionResult
             {
                 Error = true,

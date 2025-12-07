@@ -1,0 +1,61 @@
+@using Apollo.Components.Theme
+
+<MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-surface); border: 1px solid var(--mud-palette-lines-default);">
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudStack Spacing="0">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@ApolloIcons.Package" Size="Size.Small" Color="Color.Secondary" />
+                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@Package.Id</MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
+                    v@(Package.Version)
+                </MudChip>
+            </MudStack>
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    @Package.AssemblyNames.Count assembly(s) • @FormatSize(Package.SizeBytes)
+                </MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Installed @Package.InstalledAt.ToLocalTime().ToString("MMM d, yyyy")
+                </MudText>
+            </MudStack>
+        </MudStack>
+
+        @if (IsUninstalling)
+        {
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       Disabled
+                       Size="Size.Small">
+                <MudProgressCircular Size="Size.Small" Indeterminate Class="mr-2" />
+                Removing
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       Size="Size.Small"
+                       StartIcon="@ApolloIcons.Delete"
+                       OnClick="@(() => OnUninstall.InvokeAsync())">
+                Uninstall
+            </MudButton>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public InstalledPackage Package { get; set; } = default!;
+    [Parameter] public EventCallback OnUninstall { get; set; }
+    [Parameter] public bool IsUninstalling { get; set; }
+
+    private static string FormatSize(long bytes)
+    {
+        return bytes switch
+        {
+            >= 1_048_576 => $"{bytes / 1_048_576.0:0.##} MB",
+            >= 1_024 => $"{bytes / 1_024.0:0.##} KB",
+            _ => $"{bytes} B"
+        };
+    }
+}
+

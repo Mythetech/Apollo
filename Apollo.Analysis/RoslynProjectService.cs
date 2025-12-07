@@ -27,6 +27,7 @@ public class RoslynProjectService
     private ProjectId _projectId;
     private string? _currentDocumentPath;
     private MetadataReference? _userAssemblyReference;
+    private readonly List<MetadataReference> _nugetReferences = [];
     private bool _isInitialized;
     private bool _isLoadingReferences;
 
@@ -343,11 +344,47 @@ public class RoslynProjectService
     public IEnumerable<MetadataReference> GetAllReferences()
     {
         var references = new List<MetadataReference>(_systemReferences);
+        references.AddRange(_nugetReferences);
         if (_userAssemblyReference != null)
         {
             references.Add(_userAssemblyReference);
         }
         return references;
+    }
+
+    public void SetNuGetReferences(IEnumerable<NuGetReference> nugetRefs)
+    {
+        _nugetReferences.Clear();
+        foreach (var nugetRef in nugetRefs)
+        {
+            if (nugetRef.AssemblyData?.Length > 0)
+            {
+                try
+                {
+                    var reference = MetadataReference.CreateFromImage(nugetRef.AssemblyData);
+                    _nugetReferences.Add(reference);
+                    _logger.LogTrace($"Added NuGet reference for analysis: {nugetRef.AssemblyName}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"Failed to add NuGet reference {nugetRef.AssemblyName}: {ex.Message}");
+                }
+            }
+        }
+        
+        UpdateNugetProjectReferences();
+    }
+
+    private void UpdateNugetProjectReferences()
+    {
+        var currentSolution = _workspace.CurrentSolution;
+        var project = currentSolution.GetProject(_projectId);
+        if (project == null) return;
+
+        var allReferences = GetAllReferences().ToList();
+        var newSolution = currentSolution.WithProjectMetadataReferences(_projectId, allReferences);
+        _workspace.TryApplyChanges(newSolution);
+        _logger.LogTrace($"Updated project with {allReferences.Count} total references");
     }
 }
 

@@ -1,0 +1,15 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.NuGet.Commands
+@using Apollo.Components.Theme
+@using MouseEvent = MudBlazor.MouseEvent
+
+<MudMenu Label="Tools" Dense ActivationEvent="MouseEvent.MouseOver">
+    <MudMenuItem Icon="@ApolloIcons.NuGet" OnClick="@(async () => await Bus.PublishAsync(new OpenNuGetDialog()))">
+        NuGet Packages
+    </MudMenuItem>
+</MudMenu>
+
+@code {
+    [Inject] public IMessageBus Bus { get; set; } = default!;
+}
+

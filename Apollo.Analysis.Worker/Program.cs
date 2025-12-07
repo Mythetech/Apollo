@@ -117,7 +117,8 @@ Imports.RegisterOnMessage(async e =>
                         {
                             Path = item.Path,
                             Content = item.Content
-                        }).ToList()
+                        }).ToList(),
+                        NuGetReferences = request.Solution.NuGetReferences
                     };
                     
                     var currentFile = cleanSolution.Items.FirstOrDefault(i => i.Path == request.Uri);
