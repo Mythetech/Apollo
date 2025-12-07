@@ -23,6 +23,7 @@
     <ApolloMenu />
     <FileMenu/>
     <EditMenu/>
+    <ToolsMenu />
     <ViewMenu
         Tabs="TabViewState.TabList"
         LeftViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
@@ -32,7 +33,6 @@
         DockedBottomViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
         FloatingViewMenuSelected="@((args) => HandleViewMenuSelection(args.Dropzone, args.TabId))"
     />
-    <ToolsMenu />
     <MudSpacer/>
     @if (!CompilerState.Initialized)
     {
