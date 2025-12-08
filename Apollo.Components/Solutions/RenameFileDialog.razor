@@ -6,7 +6,8 @@
     <DialogContent>
         <MudForm Class="pa-1" @ref="_form">
             <MudText>@File.Name</MudText>
-             <MudTextField @ref="_renameField" @bind-Value="_rename" Label="New Name" Error="@_error" ErrorText="@_errorMessage" Validation="Validate()"></MudTextField>
+            <MudTextField @ref="_renameField" @bind-Value="_rename" Label="New Name" Error="@_error"
+                ErrorText="@_errorMessage" Validation="Validate()"></MudTextField>
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -18,10 +19,10 @@
 @code {
     [CascadingParameter]
     private IMudDialogInstance MudDialog { get; set; }
-    
+
     [Inject]
     SolutionsState State { get; set; }
-    
+
     [Parameter]
     public SolutionFile File { get; set; }
 
@@ -40,7 +41,7 @@
         if (firstRender)
         {
             _rename = File.Name;
-            
+
             StateHasChanged();
 
             await Task.Delay(100);
@@ -52,21 +53,23 @@
     private async Task Submit()
     {
         await _form.Validate();
-        
+
         if (!_form.IsValid)
         {
             StateHasChanged();
             return;
         }
-        
-        State.RenameItemAsync(File, _rename + File.Extension);
-        
+
+        string newName = _rename.IndexOf('.') > 0 ? _rename : _rename + File.Extension;
+        await State.RenameItemAsync(File, newName);
+
         MudDialog.Close(DialogResult.Ok(true));
     }
 
     private bool Validate()
     {
-        bool duplicate = State.Project.Items.Any(x => x.Name.Equals(_rename + File.Extension));
+        string newName = _rename.IndexOf('.') > 0 ? _rename : _rename + File.Extension;
+        bool duplicate = State.Project.Items.Any(x => x.Name.Equals(newName));
         _error = duplicate;
         if (_error)
         {
