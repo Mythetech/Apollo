@@ -16,7 +16,7 @@
         <MudMenuItem Icon="@ApolloIcons.OpenFile" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenFile()))">
             File
         </MudMenuItem>
-        <MudMenuItem Icon="@ApolloIcons.OpenFolder" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenFolder()))" Disabled="true">
+        <MudMenuItem Icon="@ApolloIcons.OpenFolder" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenFolder()))">
             Folder
         </MudMenuItem>
         <MudMenuItem Icon="@ApolloIcons.GitHub" OnClick="@(async () => await Bus.PublishAsync(new PromptOpenGitHubRepo()))" Disabled="true">

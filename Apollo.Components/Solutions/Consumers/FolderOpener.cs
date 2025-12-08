@@ -23,42 +23,83 @@ public class FolderOpener : IConsumer<PromptOpenFolder>
 
     public async Task Consume(PromptOpenFolder message)
     {
-        FileSystemFileHandle[]? fileHandles = null;
+        FileSystemDirectoryHandle? directoryHandle = null;
         try
         {
-            OpenFilePickerOptionsStartInWellKnownDirectory options = new()
+            DirectoryPickerOptionsStartInWellKnownDirectory options = new()
             {
-                Multiple = true,
-                StartIn = WellKnownDirectory.Downloads
+                StartIn = WellKnownDirectory.Documents
             };
-            fileHandles = await _fileSystem.ShowOpenFilePickerAsync(options);
+            directoryHandle = await _fileSystem.ShowDirectoryPickerAsync(options);
         }
-        catch (JSException ex)
+        catch (JSException)
         {
             _snackbar.AddApolloNotification("File system api not supported by current browser", Severity.Error);
+            return;
         }
-        finally
+
+        if (directoryHandle is null)
         {
-            if (fileHandles != null &&  fileHandles?.Length > 0)
+            return;
+        }
+
+        try
+        {
+            var solutionName = await directoryHandle.GetNameAsync();
+            var solution = new SolutionModel(solutionName);
+
+            await ProcessDirectoryAsync(directoryHandle, solution, string.Empty);
+
+            if (solution.Files.Count > 0)
             {
+                await _state.LoadSolutionAsync(solution);
+            }
+            else
+            {
+                _snackbar.AddApolloNotification("No files found in the selected folder", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            _snackbar.AddApolloNotification($"Error reading folder: {ex.Message}", Severity.Error);
+        }
+    }
 
-                var solution = new SolutionModel();
-                foreach (var fh in fileHandles)
+    private async Task ProcessDirectoryAsync(
+        FileSystemDirectoryHandle directoryHandle,
+        SolutionModel solution,
+        string relativePath)
+    {
+        var handles = await directoryHandle.ValuesAsync();
+        foreach (var entry in handles)
+        {
+            if (entry is FileSystemFileHandle fileHandle)
+            {
+                try
                 {
-                    if (fh is not null)
-                    {
-                        var file = await fh.GetFileAsync();
-                        var text = await file.TextAsync();
-                        var name = await file.GetNameAsync();
-
-                        if (string.IsNullOrWhiteSpace(solution.Name))
-                        {
-                            solution.Name = name;
-                        }
-
-                        solution.AddFile(name, text);
-                    }
+                    var file = await fileHandle.GetFileAsync();
+                    var fileName = await fileHandle.GetNameAsync();
+                    var text = await file.TextAsync();
+                    
+                    var folderPath = string.IsNullOrEmpty(relativePath) 
+                        ? solution.Name 
+                        : $"{solution.Name}/{relativePath}";
+                    
+                    solution.AddFile(fileName, folderPath, text);
                 }
+                catch
+                {
+                    // Skip files that can't be read as text
+                }
+            }
+            else if (entry is FileSystemDirectoryHandle subDirectoryHandle)
+            {
+                var subDirectoryName = await subDirectoryHandle.GetNameAsync();
+                var subDirectoryRelativePath = string.IsNullOrEmpty(relativePath) 
+                    ? subDirectoryName 
+                    : $"{relativePath}/{subDirectoryName}";
+                
+                await ProcessDirectoryAsync(subDirectoryHandle, solution, subDirectoryRelativePath);
             }
         }
     }

@@ -445,11 +445,7 @@
                 activeFile.Content = currentContent;
             }
 
-            Console.AddTrace($"Sending solution with files:");
-            foreach (var item in solution.Items)
-            {
-                Console.AddTrace($"{item.Path}: {item.Content}");
-            }
+            Console.AddTrace($"Sending solution with files: {string.Join(", ", solution.Items.Select(i => i.Path))}");
 
             var diagnostics = await CodeAnalysisState.GetDiagnosticsAsync(
                 solution,
