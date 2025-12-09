@@ -418,6 +418,49 @@ app.Run();",
         SolutionFilesChanged?.Invoke();
     }
 
+    public async Task UpdateSolutionPropertiesAsync(SolutionModel solution, string name, string? description, ProjectType projectType)
+    {
+        var oldName = solution.Name;
+        var isCurrentProject = solution.Name.Equals(Project.Name, StringComparison.OrdinalIgnoreCase);
+        
+        solution.Name = name;
+        solution.Description = description;
+        solution.ProjectType = projectType;
+        
+        if (!oldName.Equals(name, StringComparison.OrdinalIgnoreCase))
+        {
+            var rootFolder = solution.GetRootFolder();
+            rootFolder.Name = name;
+            rootFolder.Uri = $"virtual/{name}";
+            rootFolder.ModifiedAt = DateTimeOffset.Now;
+            
+            foreach (var item in solution.Items.Where(i => i != rootFolder))
+            {
+                item.Uri = item.Uri.Replace($"virtual/{oldName}/", $"virtual/{name}/", StringComparison.OrdinalIgnoreCase);
+            }
+            
+            var solutionIndex = Solutions.FindIndex(s => s.Name.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+            if (solutionIndex >= 0)
+            {
+                Solutions[solutionIndex] = solution;
+            }
+            
+            if (isCurrentProject)
+            {
+                Project = solution;
+                ProjectChanged?.Invoke();
+            }
+        }
+        else if (isCurrentProject)
+        {
+            Project = solution;
+            ProjectChanged?.Invoke();
+        }
+        
+        SolutionFilesChanged?.Invoke();
+        await _solutionStorageService.SaveSolutionAsync(solution);
+    }
+
     public void CloseActiveSolution()
     {
         Project = default!;

@@ -1,0 +1,104 @@
+@using Apollo.Contracts.Solutions
+@using Apollo.Components.Shared
+
+<MudDialog Class="pa-4">
+    <TitleContent>
+        Solution Properties
+    </TitleContent>
+    <DialogContent>
+        <MudForm Class="pa-4" Style="min-width: 500px" @ref="_form">
+            <MudTextField @ref="_nameField" 
+                         @bind-Value="_name" 
+                         Label="Solution Name" 
+                         Error="@_nameError" 
+                         ErrorText="@_nameErrorMessage" 
+                         OnlyValidateIfDirty="true"
+                         Validation="@(new Func<string, bool>(ValidateName))"/>
+            
+            <MudTextField @bind-Value="_description" 
+                         Label="Description" 
+                         Lines="3"
+                         Counter="200"
+                         MaxLength="200"/>
+            
+            <MudSelect T="ProjectType" 
+                      @bind-Value="_projectType" 
+                      Label="Project Type">
+                <MudSelectItem Value="@ProjectType.Console">Console Application</MudSelectItem>
+                <MudSelectItem Value="@ProjectType.WebApi">Web API</MudSelectItem>
+                <MudSelectItem Value="@ProjectType.ClassLibrary">Class Library</MudSelectItem>
+                <MudSelectItem Value="@ProjectType.RazorClassLibrary">Razor Class Library</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <PrimaryActionButton OnClick="Submit" Text="Save" />
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; }
+    [Inject] private SolutionsState State { get; set; }
+
+    [Parameter] public SolutionModel Solution { get; set; } = default!;
+
+    private MudTextField<string> _nameField = default!;
+    private MudForm _form = default!;
+    private string _name = "";
+    private string _description = "";
+    private ProjectType _projectType = ProjectType.Console;
+    private bool _nameError;
+    private string _nameErrorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        if (Solution != null)
+        {
+            _name = Solution.Name;
+            _description = Solution.Description ?? "";
+            _projectType = Solution.ProjectType;
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(50);
+            await _nameField.FocusAsync();
+        }
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_form.IsValid)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        await State.UpdateSolutionPropertiesAsync(Solution, _name, _description, _projectType);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private bool ValidateName(string name)
+    {
+        var isDuplicate = State.Solutions.Any(s => 
+            s.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && 
+            !s.Name.Equals(Solution.Name, StringComparison.OrdinalIgnoreCase));
+        
+        _nameError = string.IsNullOrWhiteSpace(name) || isDuplicate;
+                
+        _nameErrorMessage = _nameError ? 
+            (string.IsNullOrWhiteSpace(name) ? "Name is required" : "Solution name already exists") 
+            : "";
+            
+        return !_nameError;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
+

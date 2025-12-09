@@ -9,7 +9,7 @@
 @implements IDisposable
 <div class="pa-4 mud-height-full">
     <MudStack>
-        <MudStack Row="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
             <MudSelect T="SolutionModel?" Label="Solution" AnchorOrigin="Origin.BottomCenter" Value="@State?.Project" ValueChanged="HandleProjectChange" Class="flex-grow-1">
                 @foreach (var solution in State?.Solutions)
                 {
@@ -17,14 +17,21 @@
                     <MudSelectItem Class="@(selected ? "mud-secondary-text" : "")" Value="@solution">@solution.Name</MudSelectItem>
                 }
             </MudSelect>
-            <MudMenu ActivationEvent="@MouseEvent.RightClick" Dense="true" Class="d-flex" ListClass="mw-160">
+                <ApolloIconButton Size="Size.Small" Tooltip="Edit Solution Properties" Icon="@ApolloIcons.Edit" OnClick="@PromptSolutionProperties" Disabled="@(!(State?.HasActiveSolution ?? false))" />
+            <MudMenu Dense="true" ListClass="mw-160">
                 <ActivatorContent>
-                    <MudIconButton Icon="@ApolloIcons.Add" OnClick="@AddFile">Add</MudIconButton>
+                    <ApolloIconButton Size="Size.Small" Icon="@Icons.Material.TwoTone.MoreVert" />
                 </ActivatorContent>
                 <ChildContent>
                     <FileMenuItem Name="Add Solution" 
                                   Icon="@ApolloIcons.Solution" 
                                   OnClick="@PromptAddSolution" />
+                    
+                        <FileMenuItem Name="Edit Properties" 
+                                      Icon="@ApolloIcons.Edit" 
+                                      OnClick="@PromptSolutionProperties"
+                                      Disabled="@(!(State?.HasActiveSolution ?? false))"/>
+                    
                     <MudDivider />
                     <FileMenuItem Name="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@PromptAddFile"/>
                     <FileMenuItem Name="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@AddFolder"/>
@@ -197,6 +204,26 @@
         };
         
         var dialog = await DialogService.ShowAsync<NewSolutionDialog>("Create New Solution", options);
+        var result = await dialog.Result;
+    }
+    
+    private async Task PromptSolutionProperties()
+    {
+        if (!State.HasActiveSolution)
+            return;
+            
+        var parameters = new DialogParameters
+        {
+            {"Solution", State.Project}
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<SolutionPropertiesDialog>("Solution Properties", parameters, options);
         var result = await dialog.Result;
     }
 }
