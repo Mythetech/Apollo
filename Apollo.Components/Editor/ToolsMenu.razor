@@ -1,4 +1,5 @@
 @using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Infrastructure.Environment
 @using Apollo.Components.NuGet.Commands
 @using Apollo.Components.Tools.Commands
 @using Apollo.Components.Theme
@@ -11,6 +12,12 @@
     <MudMenuItem Icon="@ApolloIcons.Search" OnClick="@(async () => await Bus.PublishAsync(new OpenRegexTesterDialog()))">
         Regex Tester
     </MudMenuItem>
+    @if (Environment.IsDevelopment())
+    {
+        <MudMenuItem Icon="@ApolloIcons.Events" OnClick="@(async () => await Bus.PublishAsync(new OpenEventViewerDialog()))">
+            Event Viewer
+        </MudMenuItem>
+    }
     <MudMenu StartIcon="@ApolloIcons.Guid" Label="Generate GUID">
         <MudMenuItem Icon="@ApolloIcons.Guid" OnClick="@(async () => await Bus.PublishAsync(new GenerateGuid()))">
             GUID
@@ -23,5 +30,6 @@
 
 @code {
     [Inject] public IMessageBus Bus { get; set; } = default!;
+    [Inject] public IRuntimeEnvironment Environment { get; set; } = default!;
 }
 

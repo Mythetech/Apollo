@@ -1,4 +1,5 @@
 using Apollo.Components.Infrastructure.MessageBus;
+using Apollo.Components.Infrastructure.Environment;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,16 @@ public class MessageBusTests : TestContext
     public MessageBusTests()
     {
         Services.AddSingleton<TestConsumer>();
-        _bus = new InMemoryMessageBus(this.Services, Substitute.For<ILogger<InMemoryMessageBus>>());
+        var env = Substitute.For<IRuntimeEnvironment>();
+        env.Name.Returns("development");
+        env.Version.Returns(new Version(0, 0));
+        env.BaseAddress.Returns(string.Empty);
+
+        _bus = new InMemoryMessageBus(
+            this.Services,
+            Substitute.For<ILogger<InMemoryMessageBus>>(),
+            new CapturedEventState(),
+            env);
         Services.AddSingleton<IMessageBus>(_bus);
     }
 

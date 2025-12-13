@@ -1,5 +1,6 @@
 namespace Apollo.Components.Infrastructure.MessageBus;
 using Microsoft.Extensions.Logging;
+using Apollo.Components.Infrastructure.Environment;
 
 public class InMemoryMessageBus : IMessageBus
 {
@@ -9,15 +10,36 @@ public class InMemoryMessageBus : IMessageBus
 
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InMemoryMessageBus> _logger;
+    private readonly CapturedEventState _capturedEventState;
 
-    public InMemoryMessageBus(IServiceProvider serviceProvider, ILogger<InMemoryMessageBus> logger)
+    internal bool CaptureDebugInformation { get; }
+
+    public InMemoryMessageBus(
+        IServiceProvider serviceProvider,
+        ILogger<InMemoryMessageBus> logger,
+        CapturedEventState capturedEventState,
+        IRuntimeEnvironment runtimeEnvironment)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _capturedEventState = capturedEventState;
+        CaptureDebugInformation = runtimeEnvironment.IsDevelopment();
     }
 
     public async Task PublishAsync<TMessage>(TMessage message) where TMessage : class
     {
+        if (CaptureDebugInformation)
+        {
+            try
+            {
+                _capturedEventState.Add(typeof(TMessage), message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error capturing message {MessageType}", typeof(TMessage).Name);
+            }
+        }
+
         var registeredConsumers = GetOrResolveConsumers<TMessage>();
 
         var manualSubscribers = _subscribers.TryGetValue(typeof(TMessage), out var subscribers)
