@@ -1,0 +1,280 @@
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Theme
+@using Mythetech.Components.Components.SimpleTabs
+@using MudBlazor
+@using MudBlazor.Charts
+@implements IDisposable
+
+<MudDialog Class="pa-4" Style="width: 85vw; max-width: 1600px; height: 85vh;">
+    <DialogContent>
+        <MudGrid Style="height: 100%;">
+            <MudItem xs="12">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Class="app-header-font" Typo="Typo.h5">Event Viewer</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            Captured message bus events (Development only)
+                        </MudText>
+                    </MudStack>
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Delete" OnClick="Clear">
+                            Clear
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Close" OnClick="Close">
+                            Close
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                <SimpleTabs Color="Color.Secondary">
+                    <Tab Name="Events" Icon="@ApolloIcons.Events">
+                        <MudStack Spacing="2" Class="pa-3" Style="height: 100%;">
+                            <MudDataGrid T="CapturedEvent"
+                                         Items="@_events"
+                                         Dense="true"
+                                         Hover="true"
+                                         Bordered="true"
+                                         Filterable="true"
+                                         RowsPerPage="15"
+                                         Style="height: 100%;">
+                                <Columns>
+                                    <PropertyColumn T="CapturedEvent" TProperty="DateTimeOffset" Property="@(x => x.Timestamp)" Title="Timestamp">
+                                        <CellTemplate>
+                                            @(context.Item.Timestamp.ToString("G"))
+                                        </CellTemplate>
+                                    </PropertyColumn>
+                                    <PropertyColumn T="CapturedEvent" TProperty="string" Property="x => x.EventType" Title="Event Type" />
+                                    <PropertyColumn T="CapturedEvent" TProperty="string" Property="x => x.Payload" Title="Payload">
+                                        <CellTemplate>
+                                            <span class="text-truncate d-block" style="max-width: 31vw;">@context.Item.Payload</span>
+                                        </CellTemplate>
+                                    </PropertyColumn>
+                                </Columns>
+                                <PagerContent>
+                                    <MudDataGridPager T="CapturedEvent" />
+                                </PagerContent>
+                            </MudDataGrid>
+                        </MudStack>
+                    </Tab>
+
+                    <Tab Name="Aggregate" Icon="@ApolloIcons.Filter">
+                        <MudStack Spacing="2" Class="pa-3" Style="height: 100%;">
+                            <MudDataGrid T="CapturedEventAggregate"
+                                         Items="@_aggregate"
+                                         Dense="true"
+                                         Hover="true"
+                                         Bordered="true"
+                                         Filterable="true"
+                                         RowsPerPage="15"
+                                         Style="height: 100%;">
+                                <Columns>
+                                    <PropertyColumn T="CapturedEventAggregate" TProperty="string" Property="x => x.EventType" Title="Event Type" />
+                                    <PropertyColumn T="CapturedEventAggregate" TProperty="int" Property="x => x.Count" Title="Count" />
+                                </Columns>
+                            </MudDataGrid>
+                        </MudStack>
+                    </Tab>
+                </SimpleTabs>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudPaper Elevation="0" Class="pa-3" Style="background: var(--mud-palette-surface);">
+                    <MudStack Spacing="2">
+                        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.subtitle1">Timeline</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                @(_timelineSeries.Count == 0 ? "No events captured yet" : $"{_events.Count} events (top {_timelineTopTypesCount} types)")
+                            </MudText>
+                        </MudStack>
+
+                        <MudTimeSeriesChart ChartSeries="@_timelineSeries"
+                                            @bind-SelectedIndex="_timelineSelectedIndex"
+                                            Width="@_timelineWidth"
+                                            Height="@_timelineHeight"
+                                            ChartOptions="@_timelineOptions"
+                                            AxisChartOptions="@_timelineAxisOptions"
+                                            CanHideSeries="true"
+                                            TimeLabelSpacing="@_timelineLabelSpacing"
+                                            DataMarkerTooltipTimeLabelFormat="yyyy MMM dd HH:mm:ss" />
+
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            Selected: @(_timelineSelectedIndex < 0 || _timelineSelectedIndex >= _timelineSeries.Count ? "None" : _timelineSeries[_timelineSelectedIndex].Name)
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] public CapturedEventState CapturedEventState { get; set; } = default!;
+
+    private IReadOnlyList<CapturedEvent> _events = Array.Empty<CapturedEvent>();
+    private IReadOnlyList<CapturedEventAggregate> _aggregate = Array.Empty<CapturedEventAggregate>();
+
+    private readonly ChartOptions _timelineOptions = new()
+    {
+        YAxisLines = false,
+        XAxisLines = false,
+        YAxisRequireZeroPoint = true,
+        LineStrokeWidth = 2,
+        MaxNumYAxisTicks = 6,
+    };
+
+    private readonly AxisChartOptions _timelineAxisOptions = new()
+    {
+        MatchBoundsToSize = true,
+        XAxisLabelRotation = 0,
+    };
+
+    private readonly List<TimeSeriesChartSeries> _timelineSeries = new();
+    private int _timelineSelectedIndex = -1;
+    private readonly string _timelineWidth = "100%";
+    private readonly string _timelineHeight = "220px";
+    private TimeSpan _timelineLabelSpacing = TimeSpan.FromMinutes(1);
+    private const int _timelineTopTypesCount = 5;
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+        CapturedEventState.Changed += OnCapturedStateChanged;
+    }
+
+    private void OnCapturedStateChanged()
+    {
+        Refresh();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void Refresh()
+    {
+        _events = CapturedEventState.GetEventsSnapshot();
+        _aggregate = CapturedEventState.GetAggregateSnapshot();
+        RebuildTimeline();
+    }
+
+    private void Clear() => CapturedEventState.Clear();
+
+    private void Close() => MudDialog.Close();
+
+    private void RebuildTimeline()
+    {
+        _timelineSeries.Clear();
+        _timelineSelectedIndex = -1;
+
+        if (_events.Count == 0)
+            return;
+
+        var min = _events.Min(x => x.Timestamp.UtcDateTime);
+        var max = _events.Max(x => x.Timestamp.UtcDateTime);
+
+        var bucketSize = ChooseBucketSize(max - min);
+        _timelineLabelSpacing = bucketSize >= TimeSpan.FromMinutes(5) ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
+
+        var topTypes = _aggregate
+            .Take(_timelineTopTypesCount)
+            .Select(x => x.EventType)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var buckets = new SortedSet<DateTime>();
+        var totalByBucket = new Dictionary<DateTime, int>();
+        var byTypeByBucket = new Dictionary<string, Dictionary<DateTime, int>>(StringComparer.Ordinal);
+
+        foreach (var ev in _events)
+        {
+            var bucket = RoundDown(ev.Timestamp.UtcDateTime, bucketSize);
+            buckets.Add(bucket);
+
+            totalByBucket[bucket] = totalByBucket.TryGetValue(bucket, out var existingTotal) ? existingTotal + 1 : 1;
+
+            if (!topTypes.Contains(ev.EventType))
+                continue;
+
+            if (!byTypeByBucket.TryGetValue(ev.EventType, out var typeBuckets))
+            {
+                typeBuckets = new Dictionary<DateTime, int>();
+                byTypeByBucket[ev.EventType] = typeBuckets;
+            }
+
+            typeBuckets[bucket] = typeBuckets.TryGetValue(bucket, out var existing) ? existing + 1 : 1;
+        }
+
+        var orderedBuckets = buckets.ToList();
+        orderedBuckets.Sort();
+
+        var index = 0;
+        _timelineSeries.Add(new TimeSeriesChartSeries
+        {
+            Index = index++,
+            Name = "All",
+            Data = orderedBuckets
+                .Select(b => new TimeSeriesChartSeries.TimeValue(b, totalByBucket.TryGetValue(b, out var c) ? c : 0))
+                .ToList(),
+            IsVisible = true,
+            LineDisplayType = LineDisplayType.Line,
+            DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
+            DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
+        });
+
+        foreach (var type in _aggregate.Take(_timelineTopTypesCount).Select(x => x.EventType))
+        {
+            if (!byTypeByBucket.TryGetValue(type, out var typeBuckets))
+                typeBuckets = new Dictionary<DateTime, int>();
+
+            _timelineSeries.Add(new TimeSeriesChartSeries
+            {
+                Index = index++,
+                Name = ShortTypeName(type),
+                Data = orderedBuckets
+                    .Select(b => new TimeSeriesChartSeries.TimeValue(b, typeBuckets.TryGetValue(b, out var c) ? c : 0))
+                    .ToList(),
+                IsVisible = true,
+                LineDisplayType = LineDisplayType.Area,
+                DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
+                DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
+            });
+        }
+    }
+
+    private static TimeSpan ChooseBucketSize(TimeSpan range)
+    {
+        if (range > TimeSpan.FromHours(6))
+            return TimeSpan.FromMinutes(10);
+        if (range > TimeSpan.FromHours(2))
+            return TimeSpan.FromMinutes(5);
+        if (range > TimeSpan.FromMinutes(30))
+            return TimeSpan.FromMinutes(1);
+        if (range > TimeSpan.FromMinutes(10))
+            return TimeSpan.FromSeconds(30);
+        return TimeSpan.FromSeconds(10);
+    }
+
+    private static DateTime RoundDown(DateTime value, TimeSpan bucket)
+    {
+        if (bucket <= TimeSpan.Zero)
+            return value;
+
+        var ticks = value.Ticks - (value.Ticks % bucket.Ticks);
+        return new DateTime(ticks, DateTimeKind.Utc);
+    }
+
+    private static string ShortTypeName(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "Unknown";
+
+        var lastDot = fullName.LastIndexOf('.');
+        return lastDot >= 0 && lastDot < fullName.Length - 1 ? fullName[(lastDot + 1)..] : fullName;
+    }
+
+    public void Dispose()
+    {
+        CapturedEventState.Changed -= OnCapturedStateChanged;
+    }
+}
+
+

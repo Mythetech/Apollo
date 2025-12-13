@@ -121,4 +121,6 @@ public static class ApolloIcons
     public const string Guid = Icons.Material.TwoTone.Fingerprint;
     
     public const string GuidV7 = Icons.Material.TwoTone.Schedule;
+
+    public const string Events = Icons.Material.TwoTone.EventNote;
 }

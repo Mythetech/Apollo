@@ -1,5 +1,6 @@
 using System.Reflection;
 using Apollo.Components.Code;
+using Apollo.Components.Infrastructure.Environment;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Events;
@@ -16,6 +17,8 @@ public class ActiveTypeStateTests : ApolloBaseTestContext
     
     public ActiveTypeStateTests()
     {
+        Services.AddSingleton<IRuntimeEnvironment>(new TestRuntimeEnvironment());
+        Services.AddSingleton<CapturedEventState>();
         Services.AddSingleton<IMessageBus, InMemoryMessageBus>();
         _state = new ActiveTypeState();
     }
@@ -36,5 +39,12 @@ public class ActiveTypeStateTests : ApolloBaseTestContext
         // Assert
         _state.Types.ShouldNotBeNull();
         _state.Types.Length.ShouldBeGreaterThan(0);
+    }
+
+    private sealed class TestRuntimeEnvironment : IRuntimeEnvironment
+    {
+        public string Name => "production";
+        public Version Version => new(0, 0);
+        public string BaseAddress => string.Empty;
     }
 }

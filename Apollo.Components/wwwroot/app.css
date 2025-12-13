@@ -60,6 +60,12 @@ body {
     text-wrap: nowrap!important;
 }
 
+.text-truncate {
+    text-wrap: nowrap;
+    text-overflow: ellipsis;
+    overflow: clip;
+}
+
 apollo-active-tab::after {
      content: "";
      width: 100%;

@@ -50,6 +50,7 @@ public static class BusRegistrationExtensions
 
     public static IServiceCollection AddMessageBus(this IServiceCollection services)
     {
+        services.AddSingleton<CapturedEventState>();
         services.AddSingleton<IMessageBus, InMemoryMessageBus>();
         
         services.RegisterConsumers(Assembly.GetExecutingAssembly());
@@ -59,6 +60,7 @@ public static class BusRegistrationExtensions
     
     public static IServiceCollection AddMessageBus(this IServiceCollection services,  params Assembly[] assemblies)
     {
+        services.AddSingleton<CapturedEventState>();
         services.AddSingleton<IMessageBus, InMemoryMessageBus>();
         
         foreach (var assembly in assemblies)
