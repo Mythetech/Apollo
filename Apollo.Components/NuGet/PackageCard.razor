@@ -24,7 +24,7 @@
                 <MudSelect T="string"
                            @bind-Value="_selectedVersion"
                            Dense
-                           Variant="Variant.Outlined"
+                           Variant="Variant.Text"
                            Style="min-width: 120px;"
                            AnchorOrigin="Origin.BottomCenter">
                     @foreach (var version in Package.Versions.Take(10))
@@ -32,6 +32,8 @@
                         <MudSelectItem Value="@version">@version</MudSelectItem>
                     }
                 </MudSelect>
+                
+                <MudDivider Vertical="true" />
 
                 @if (IsInstalling)
                 {

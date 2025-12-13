@@ -8,6 +8,9 @@
     <MudMenuItem Icon="@ApolloIcons.NuGet" OnClick="@(async () => await Bus.PublishAsync(new OpenNuGetDialog()))">
         NuGet Packages
     </MudMenuItem>
+    <MudMenuItem Icon="@ApolloIcons.Search" OnClick="@(async () => await Bus.PublishAsync(new OpenRegexTesterDialog()))">
+        Regex Tester
+    </MudMenuItem>
     <MudMenu StartIcon="@ApolloIcons.Guid" Label="Generate GUID">
         <MudMenuItem Icon="@ApolloIcons.Guid" OnClick="@(async () => await Bus.PublishAsync(new GenerateGuid()))">
             GUID

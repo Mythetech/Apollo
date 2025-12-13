@@ -1,0 +1,478 @@
+@using System.Net
+@using System.Text
+@using System.Text.RegularExpressions
+@using Apollo.Components.Shared.ApolloNotificationBar
+@using Apollo.Components.Theme
+@using MudBlazor
+
+<MudDialog Class="pa-4 glassmorphic" Style="width: 85vw; max-width: 1400px; height: 85vh;">
+    <DialogContent>
+        <MudGrid Style="height: 100%;">
+            <MudItem xs="12">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Class="app-header-font" Typo="Typo.h5">Regex Tester</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Uses .NET regex engine (`System.Text.RegularExpressions`)</MudText>
+                    </MudStack>
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Copy" OnClick="CopyPatternAsync" Disabled="@string.IsNullOrWhiteSpace(_pattern)">
+                            Copy pattern
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Copy" OnClick="CopyMatchesAsync" Disabled="@(_matches.Count == 0)">
+                            Copy matches
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudStack Spacing="2">
+                    <MudTextField @bind-Value="_pattern"
+                                  Label="Pattern"
+                                  Variant="Variant.Outlined"
+                                  Immediate
+                                  DebounceInterval="250"
+                                  OnDebounceIntervalElapsed="Recompute"
+                                  Placeholder="@("e.g. ^(?<user>[^@]+)@(?<host>.+)$")"
+                                  Lines="2"
+                                  InputType="InputType.Text"
+                                  Class="regex-mono" />
+
+                    @if (_patternIssue is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" Dense Variant="Variant.Outlined">
+                            <MudText Typo="Typo.body2">@_patternIssue.Message</MudText>
+                            @if (!string.IsNullOrEmpty(_patternIssue.HighlightHtml))
+                            {
+                                <div class="regex-pattern-preview">@((MarkupString)_patternIssue.HighlightHtml)</div>
+                            }
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success" Dense Variant="Variant.Outlined">
+                            <MudText Typo="Typo.body2">Valid pattern</MudText>
+                        </MudAlert>
+                    }
+
+                    <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-dark);">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Options</MudText>
+                            <MudGrid>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_ignoreCase" Color="Color.Secondary" Label="IgnoreCase (i)" OnChanged="Recompute" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_multiline" Color="Color.Secondary" Label="Multiline (m)" OnChanged="Recompute" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_singleline" Color="Color.Secondary" Label="Singleline (s)" OnChanged="Recompute" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_ignoreWhitespace" Color="Color.Secondary" Label="IgnorePatternWhitespace (x)" OnChanged="Recompute" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_explicitCapture" Color="Color.Secondary" Label="ExplicitCapture" OnChanged="Recompute" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudSwitch @bind-Value="_rightToLeft" Color="Color.Secondary" Label="RightToLeft" OnChanged="Recompute" />
+                                </MudItem>
+                            </MudGrid>
+
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+                                <MudNumericField T="int"
+                                                 Label="Timeout (ms)"
+                                                 Variant="Variant.Outlined"
+                                                 Min="1"
+                                                 Max="5000"
+                                                 Immediate
+                                                 DebounceInterval="250"
+                                                 OnDebounceIntervalElapsed="Recompute"
+                                                 @bind-Value="_timeoutMs"
+                                                 Style="width: 170px;" />
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Helps avoid catastrophic backtracking</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-dark);">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.subtitle2">Templates</MudText>
+                            <MudStack Row Spacing="1" Class="flex-wrap">
+                                @foreach (var t in _templates)
+                                {
+                                    <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => ApplyTemplate(t))">
+                                        @t.Name
+                                    </MudChip>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudTextField @bind-Value="_input"
+                                  Label="Input"
+                                  Variant="Variant.Outlined"
+                                  Immediate
+                                  DebounceInterval="250"
+                                  OnDebounceIntervalElapsed="Recompute"
+                                  Lines="10"
+                                  Class="regex-mono"
+                                  Placeholder="Paste the text you want to match against..." />
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudStack Spacing="2" Style="height: 100%;">
+                    <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-dark);">
+                        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.subtitle2">Result</MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">@_matches.Count matches</MudChip>
+                        </MudStack>
+
+                        @if (_runtimeIssue is not null)
+                        {
+                            <MudAlert Severity="Severity.Error" Dense Variant="Variant.Outlined" Class="mt-2">
+                                @_runtimeIssue
+                            </MudAlert>
+                        }
+
+                        <div class="regex-highlight mt-2">
+                            @if (string.IsNullOrEmpty(_input))
+                            {
+                                <div class="mud-text-secondary">Input is empty</div>
+                            }
+                            else if (_patternIssue is not null)
+                            {
+                                <div class="mud-text-secondary">Fix the pattern to see matches</div>
+                            }
+                            else
+                            {
+                                @((MarkupString)_highlightedInputHtml)
+                            }
+                        </div>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-3" Elevation="0" Style="background: var(--mud-palette-dark); overflow: auto;">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Matches</MudText>
+                        @if (_matches.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">No matches</MudText>
+                        }
+                        else
+                        {
+                            <MudTable Items="_matches" Dense Hover>
+                                <HeaderContent>
+                                    <MudTh>#</MudTh>
+                                    <MudTh>Index</MudTh>
+                                    <MudTh>Length</MudTh>
+                                    <MudTh>Value</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd DataLabel="#">@context.Number</MudTd>
+                                    <MudTd DataLabel="Index">@context.Index</MudTd>
+                                    <MudTd DataLabel="Length">@context.Length</MudTd>
+                                    <MudTd DataLabel="Value">
+                                        <span class="regex-mono">@context.ValuePreview</span>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+
+                            @if (_matches.Any(m => m.Groups.Count > 1))
+                            {
+                                <MudDivider Class="my-3" />
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">Groups (first match)</MudText>
+                                <MudTable Items="_matches[0].Groups" Dense Hover>
+                                    <HeaderContent>
+                                        <MudTh>Name</MudTh>
+                                        <MudTh>Index</MudTh>
+                                        <MudTh>Length</MudTh>
+                                        <MudTh>Value</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Name">@context.Name</MudTd>
+                                        <MudTd DataLabel="Index">@context.Index</MudTd>
+                                        <MudTd DataLabel="Length">@context.Length</MudTd>
+                                        <MudTd DataLabel="Value">
+                                            <span class="regex-mono">@context.ValuePreview</span>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            }
+                        }
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+
+    <DialogActions>
+        <MudStack Row Class="mud-width-full" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Options: <span class="regex-mono">@GetOptionsSummary()</span>
+            </MudText>
+            <MudSpacer />
+            <MudButton Class="rounded" OnClick="Close">Close</MudButton>
+        </MudStack>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Inject] private IJsApiService JsApiService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _pattern = "";
+    private string _input = "";
+
+    private bool _ignoreCase;
+    private bool _multiline;
+    private bool _singleline;
+    private bool _ignoreWhitespace;
+    private bool _explicitCapture;
+    private bool _rightToLeft;
+
+    private int _timeoutMs = 250;
+
+    private PatternIssue? _patternIssue;
+    private string? _runtimeIssue;
+    private List<RegexMatchVm> _matches = [];
+    private string _highlightedInputHtml = "";
+
+    private readonly List<RegexTemplate> _templates =
+    [
+        new("Email (simple)", @"^[^@\s]+@[^@\s]+\.[^@\s]+$"),
+        new("URL (http/https)", @"^https?://[^\s/$.?#].[^\s]*$"),
+        new("GUID", @"^[{(]?[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}[)}]?$"),
+        new("IPv4", @"^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$"),
+        new("US Phone (simple)", @"^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$"),
+    ];
+
+    protected override void OnInitialized()
+    {
+        _pattern = @"^(?<user>[^@]+)@(?<host>.+)$";
+        _input = "alice@example.com\nbob@contoso.net\nnot-an-email";
+        Recompute();
+    }
+
+    private void ApplyTemplate(RegexTemplate template)
+    {
+        _pattern = template.Pattern;
+        Recompute();
+    }
+
+    private void Recompute()
+    {
+        _matches = [];
+        _patternIssue = null;
+        _runtimeIssue = null;
+        _highlightedInputHtml = "";
+
+        if (string.IsNullOrEmpty(_pattern))
+        {
+            _patternIssue = new PatternIssue("Pattern is empty", null);
+            return;
+        }
+
+        Regex regex;
+        try
+        {
+            regex = new Regex(_pattern, BuildOptions(), TimeSpan.FromMilliseconds(Math.Clamp(_timeoutMs, 1, 5000)));
+        }
+        catch (RegexParseException ex)
+        {
+            _patternIssue = new PatternIssue(ex.Message, BuildPatternHighlight(_pattern, (int)ex.Error));
+            return;
+        }
+        catch (ArgumentException ex)
+        {
+            _patternIssue = new PatternIssue(ex.Message, null);
+            return;
+        }
+        catch (Exception ex)
+        {
+            _patternIssue = new PatternIssue(ex.Message, null);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_input))
+        {
+            _highlightedInputHtml = WebUtility.HtmlEncode(_input);
+            return;
+        }
+
+        try
+        {
+            var matches = regex.Matches(_input);
+            _matches = matches.Select((m, idx) => RegexMatchVm.FromMatch(idx + 1, m)).ToList();
+            _highlightedInputHtml = BuildInputHighlight(_input, _matches);
+        }
+        catch (RegexMatchTimeoutException ex)
+        {
+            _runtimeIssue = $"Match timeout: {ex.Message}";
+            _highlightedInputHtml = WebUtility.HtmlEncode(_input);
+        }
+        catch (Exception ex)
+        {
+            _runtimeIssue = ex.Message;
+            _highlightedInputHtml = WebUtility.HtmlEncode(_input);
+        }
+    }
+
+    private RegexOptions BuildOptions()
+    {
+        var options = RegexOptions.None;
+        if (_ignoreCase) options |= RegexOptions.IgnoreCase;
+        if (_multiline) options |= RegexOptions.Multiline;
+        if (_singleline) options |= RegexOptions.Singleline;
+        if (_ignoreWhitespace) options |= RegexOptions.IgnorePatternWhitespace;
+        if (_explicitCapture) options |= RegexOptions.ExplicitCapture;
+        if (_rightToLeft) options |= RegexOptions.RightToLeft;
+        return options;
+    }
+
+    private string GetOptionsSummary()
+    {
+        var options = BuildOptions();
+        return options == RegexOptions.None ? "None" : options.ToString();
+    }
+
+    private static string BuildPatternHighlight(string pattern, int errorOffset)
+    {
+        if (errorOffset < 0 || errorOffset >= pattern.Length)
+            return "";
+
+        var encoded = WebUtility.HtmlEncode(pattern);
+        var sb = new StringBuilder(encoded.Length + 64);
+
+        var rawPrefix = pattern[..errorOffset];
+        var rawChar = pattern[errorOffset].ToString();
+        var rawSuffix = pattern[(errorOffset + 1)..];
+
+        sb.Append("<span class=\"regex-mono\">");
+        sb.Append(WebUtility.HtmlEncode(rawPrefix));
+        sb.Append("<span class=\"regex-error-char\" title=\"Error offset\">");
+        sb.Append(WebUtility.HtmlEncode(rawChar));
+        sb.Append("</span>");
+        sb.Append(WebUtility.HtmlEncode(rawSuffix));
+        sb.Append("</span>");
+
+        return sb.ToString();
+    }
+
+    private static string BuildInputHighlight(string input, List<RegexMatchVm> matches)
+    {
+        if (matches.Count == 0)
+            return $"<pre class=\"regex-pre\">{WebUtility.HtmlEncode(input)}</pre>";
+
+        var ordered = matches
+            .Select(m => new { m.Index, m.Length, m.Number })
+            .OrderBy(m => m.Index)
+            .ToList();
+
+        var sb = new StringBuilder(input.Length + matches.Count * 32);
+        sb.Append("<pre class=\"regex-pre\">");
+
+        var cursor = 0;
+        foreach (var m in ordered)
+        {
+            var start = Math.Clamp(m.Index, 0, input.Length);
+            if (start < cursor)
+                continue;
+
+            sb.Append(WebUtility.HtmlEncode(input[cursor..start]));
+
+            if (m.Length == 0)
+            {
+                sb.Append($"<span class=\"regex-zero-width\" title=\"Zero-length match #{m.Number} at {m.Index}\"></span>");
+                cursor = start;
+                continue;
+            }
+
+            var end = Math.Clamp(start + m.Length, 0, input.Length);
+            var cls = $"regex-match regex-match-{(m.Number - 1) % 6}";
+            sb.Append($"<span class=\"{cls}\" title=\"Match #{m.Number} @ {m.Index}\">");
+            sb.Append(WebUtility.HtmlEncode(input[start..end]));
+            sb.Append("</span>");
+            cursor = end;
+        }
+
+        if (cursor < input.Length)
+            sb.Append(WebUtility.HtmlEncode(input[cursor..]));
+
+        sb.Append("</pre>");
+        return sb.ToString();
+    }
+
+    private async Task CopyPatternAsync()
+    {
+        await JsApiService.CopyToClipboardAsync(_pattern);
+        Snackbar.AddApolloNotification("Copied pattern to clipboard!", Severity.Success);
+    }
+
+    private async Task CopyMatchesAsync()
+    {
+        var text = _matches.Count == 0
+            ? ""
+            : string.Join(System.Environment.NewLine, _matches.Select(m => m.Value));
+
+        await JsApiService.CopyToClipboardAsync(text);
+        Snackbar.AddApolloNotification("Copied matches to clipboard!", Severity.Success);
+    }
+
+    private void Close() => MudDialog.Close();
+
+    private sealed record RegexTemplate(string Name, string Pattern);
+
+    private sealed record PatternIssue(string Message, string? HighlightHtml);
+
+    private sealed record RegexMatchVm(int Number, int Index, int Length, string Value, string ValuePreview, List<RegexGroupVm> Groups)
+    {
+        public static RegexMatchVm FromMatch(int number, Match match)
+        {
+            var groups = match.Groups
+                .Cast<Group>()
+                .Select((g, i) =>
+                {
+                    var name = i < match.Groups.Count
+                        ? match.Groups[i].Name
+                        : i.ToString();
+
+                    return RegexGroupVm.FromGroup(name, g);
+                })
+                .ToList();
+
+            return new RegexMatchVm(
+                Number: number,
+                Index: match.Index,
+                Length: match.Length,
+                Value: match.Value,
+                ValuePreview: Truncate(match.Value, 140),
+                Groups: groups
+            );
+        }
+    }
+
+    private sealed record RegexGroupVm(string Name, int Index, int Length, string ValuePreview)
+    {
+        public static RegexGroupVm FromGroup(string name, Group group)
+        {
+            return new RegexGroupVm(
+                Name: name,
+                Index: group.Index,
+                Length: group.Length,
+                ValuePreview: Truncate(group.Value, 140)
+            );
+        }
+    }
+
+    private static string Truncate(string value, int max)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= max)
+            return value;
+
+        return value[..max] + "…";
+    }
+}
+
+
