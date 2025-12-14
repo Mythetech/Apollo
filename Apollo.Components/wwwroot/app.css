@@ -78,7 +78,7 @@ apollo-active-tab::after {
  }
 
 .glassmorphic {
-    background-color: color-mix(in srgb, var(--mud-palette-surface), transparent 90%)!important;
+    background-color: rgba(var(--mud-palette-surface-rgb), 0.9)!important;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--mud-palette-secondary);

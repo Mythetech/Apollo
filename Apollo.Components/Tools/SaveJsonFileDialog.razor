@@ -1,0 +1,37 @@
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_fileName" 
+                      Label="File Name" 
+                      Variant="Variant.Outlined" 
+                      Immediate />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string DefaultFileName { get; set; } = "file.json";
+
+    private string _fileName = "";
+
+    protected override void OnInitialized()
+    {
+        _fileName = DefaultFileName;
+    }
+
+    private void Save()
+    {
+        MudDialog.Close(DialogResult.Ok(_fileName));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
+

@@ -26,6 +26,14 @@
             GUID v7 (Timestamp)
         </MudMenuItem>
     </MudMenu>
+    <MudMenu StartIcon="@ApolloIcons.Json" Label="JSON">
+        <MudMenuItem Icon="@ApolloIcons.JsonFormat" OnClick="@(async () => await Bus.PublishAsync(new OpenJsonFormatterDialog()))">
+            Formatting
+        </MudMenuItem>
+        <MudMenuItem Icon="@ApolloIcons.JsonToCSharp" OnClick="@(async () => await Bus.PublishAsync(new OpenJsonToCSharpDialog()))">
+            C# Converter
+        </MudMenuItem>
+    </MudMenu>
 </MudMenu>
 
 @code {

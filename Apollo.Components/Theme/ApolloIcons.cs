@@ -123,4 +123,8 @@ public static class ApolloIcons
     public const string GuidV7 = Icons.Material.TwoTone.Schedule;
 
     public const string Events = Icons.Material.TwoTone.EventNote;
+    
+    public const string JsonFormat = Icons.Material.TwoTone.FormatIndentIncrease;
+    
+    public const string JsonToCSharp = Icons.Material.TwoTone.Code;
 }
