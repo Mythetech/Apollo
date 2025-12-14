@@ -1,0 +1,227 @@
+@using Apollo.Components.Theme
+@using Apollo.Components.Solutions
+@using Apollo.Components.Shared
+@using Apollo.Components.Shared.ApolloNotificationBar
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using MudBlazor
+@implements IDisposable
+
+<MudDialog Class="pa-4 glassmorphic" Style="width: 85vw; max-width: 1400px; height: 85vh;">
+    <DialogContent>
+        <MudGrid Style="height: 100%;">
+            <MudItem xs="12">
+                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Class="app-header-font" Typo="Typo.h5">JSON Formatter</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Format and beautify JSON</MudText>
+                    </MudStack>
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.FormatDocument" OnClick="FormatJson" Disabled="@string.IsNullOrWhiteSpace(_jsonInput)">
+                            Format
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Copy" OnClick="CopyFormatted" Disabled="@string.IsNullOrWhiteSpace(_formattedJson)">
+                            Copy
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Save" OnClick="SaveToSolution" Disabled="@string.IsNullOrWhiteSpace(_formattedJson)">
+                            Save to Solution
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@ApolloIcons.Close" OnClick="Close">
+                            Close
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudItem>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Error" Dense Variant="Variant.Outlined">
+                        <MudText Typo="Typo.body2">@_error</MudText>
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <MudItem xs="12" md="6" Style="height: calc(85vh - 150px);">
+                <MudStack Spacing="2" Style="height: 100%;">
+                    <MudText Typo="Typo.subtitle2">Input JSON</MudText>
+                    <MudPaper Elevation="0" Style="height: calc(100% - 40px); background: var(--mud-palette-dark);">
+                        <StandaloneCodeEditor @ref="_inputEditor" 
+                                               Id="json-formatter-input" 
+                                               ConstructionOptions="@GetInputEditorOptions" 
+                                               OnDidInit="OnInputEditorInit"
+                                               OnDidChangeModelContent="OnInputEditorContentChanged" />
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="6" Style="height: calc(85vh - 150px);">
+                <MudStack Spacing="2" Style="height: 100%;">
+                    <MudText Typo="Typo.subtitle2">Formatted JSON</MudText>
+                    <MudPaper Elevation="0" Style="height: calc(100% - 40px); background: var(--mud-palette-dark);">
+                        <StandaloneCodeEditor @ref="_outputEditor" 
+                                               Id="json-formatter-output" 
+                                               ConstructionOptions="@GetOutputEditorOptions" 
+                                               OnDidInit="OnOutputEditorInit" />
+                    </MudPaper>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private IJsApiService JsApiService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private SolutionsState SolutionsState { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private StandaloneCodeEditor? _inputEditor;
+    private StandaloneCodeEditor? _outputEditor;
+    private bool _inputEditorReady;
+    private bool _outputEditorReady;
+
+    private string _jsonInput = "";
+    private string _formattedJson = "";
+    private string? _error;
+
+    private StandaloneEditorConstructionOptions GetInputEditorOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = _jsonInput,
+            FontSize = 14,
+            LineHeight = 20,
+            TabSize = 2,
+            InsertSpaces = true,
+            WordWrap = "off",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+        };
+    }
+
+    private StandaloneEditorConstructionOptions GetOutputEditorOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "json",
+            Value = _formattedJson,
+            FontSize = 14,
+            LineHeight = 20,
+            TabSize = 2,
+            InsertSpaces = true,
+            WordWrap = "off",
+            Minimap = new EditorMinimapOptions { Enabled = false },
+            ReadOnly = true,
+        };
+    }
+
+    private async Task OnInputEditorInit()
+    {
+        _inputEditorReady = true;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnOutputEditorInit()
+    {
+        _outputEditorReady = true;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnInputEditorContentChanged(ModelContentChangedEvent evt)
+    {
+        if (!_inputEditorReady || _inputEditor == null)
+            return;
+
+        _jsonInput = await _inputEditor.GetValue();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task FormatJson()
+    {
+        _error = null;
+        _formattedJson = "";
+
+        if (!_inputEditorReady || _inputEditor == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_jsonInput))
+        {
+            _jsonInput = await _inputEditor.GetValue();
+        }
+
+        if (string.IsNullOrWhiteSpace(_jsonInput))
+        {
+            _error = "Input is empty";
+            return;
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(_jsonInput);
+            _formattedJson = System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            if (_outputEditorReady && _outputEditor != null)
+            {
+                await _outputEditor.SetValue(_formattedJson);
+            }
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _error = $"Invalid JSON: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error formatting JSON: {ex.Message}";
+        }
+    }
+
+    private async Task CopyFormatted()
+    {
+        if (string.IsNullOrWhiteSpace(_formattedJson))
+            return;
+
+        await JsApiService.CopyToClipboardAsync(_formattedJson);
+        Snackbar.AddApolloNotification("Copied formatted JSON to clipboard!", Severity.Success);
+    }
+
+    private async Task SaveToSolution()
+    {
+        if (string.IsNullOrWhiteSpace(_formattedJson))
+            return;
+
+        var parameters = new DialogParameters
+        {
+            { "DefaultFileName", "formatted.json" }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseOnEscapeKey = true
+        };
+
+        var dialog = await DialogService.ShowAsync<SaveJsonFileDialog>("Save JSON File", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string fileName && !string.IsNullOrWhiteSpace(fileName))
+        {
+            var jsonFileName = fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) ? fileName : $"{fileName}.json";
+            SolutionsState.AddFile(jsonFileName, _formattedJson);
+            Snackbar.AddApolloNotification($"Saved {jsonFileName} to solution!", Severity.Success);
+        }
+    }
+
+    private void Close() => MudDialog.Close();
+
+    public void Dispose()
+    {
+    }
+}
+

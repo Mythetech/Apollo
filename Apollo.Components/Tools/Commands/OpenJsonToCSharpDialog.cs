@@ -1,0 +1,4 @@
+namespace Apollo.Components.Tools.Commands;
+
+public record OpenJsonToCSharpDialog();
+
