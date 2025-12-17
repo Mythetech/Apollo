@@ -17,7 +17,6 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
 
     private StatementSyntax InjectDebugCheckpoint(StatementSyntax node)
     {
-        // Skip if this is already a debug checkpoint
         if (IsDebugCheckpoint(node))
             return node;
 
@@ -26,16 +25,21 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
         var filePath = location.SourceTree?.FilePath ?? "unknown";
         var lineNumber = lineSpan.StartLinePosition.Line + 1;
 
-        // Only inject if this is a breakpoint location
-        if (!_breakpoints.Any(b => b.File == filePath && b.Line == lineNumber))
+        if (!HasBreakpointAt(filePath, lineNumber))
         {
             return node;
         }
+        
+        // Log that we're injecting a breakpoint (for debugging)
+        System.Diagnostics.Debug.WriteLine($"Injecting breakpoint at {filePath}:{lineNumber}");
 
-        // Create the debug checkpoint call with await
         var debugCall = SyntaxFactory.ExpressionStatement(
             SyntaxFactory.InvocationExpression(
-                SyntaxFactory.ParseName("DebugRuntime.CheckBreakpoint"),
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    SyntaxFactory.ParseName("DebugRuntime"),
+                    SyntaxFactory.IdentifierName("CheckBreakpointAsync")
+                ),
                 SyntaxFactory.ArgumentList(
                     SyntaxFactory.SeparatedList(new[]
                     {
@@ -58,6 +62,24 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
 
         return SyntaxFactory.Block(new[] { debugCall, node });
     }
+    
+    private bool HasBreakpointAt(string filePath, int lineNumber)
+    {
+        if (_breakpoints.Count == 0)
+            return false;
+            
+        var fileName = Path.GetFileName(filePath);
+        var normalizedFilePath = filePath.Replace('\\', '/');
+        
+        return _breakpoints.Any(b => 
+        {
+            var normalizedBreakpointFile = b.File.Replace('\\', '/');
+            return (normalizedBreakpointFile == normalizedFilePath || 
+                   normalizedBreakpointFile.EndsWith(fileName, StringComparison.OrdinalIgnoreCase) ||
+                   normalizedFilePath.EndsWith(normalizedBreakpointFile, StringComparison.OrdinalIgnoreCase)) && 
+                   b.Line == lineNumber;
+        });
+    }
 
     private bool IsDebugCheckpoint(StatementSyntax node)
     {
@@ -66,32 +88,21 @@ public class DebugSymbolRewritter : CSharpSyntaxRewriter
             if (expr.Expression is InvocationExpressionSyntax invoke)
             {
                 var name = invoke.Expression.ToString();
-                return name == "DebugRuntime.CheckBreakpoint";
+                return name == "DebugRuntime.CheckBreakpointAsync" || name == "DebugRuntime.CheckBreakpoint";
             }
         }
         return false;
     }
 
-    // Let's add some logging to see what's happening
-    public override SyntaxNode? Visit(SyntaxNode? node)
-    {
-        if (node != null)
-        {
-            Console.WriteLine($"Visiting node: {node.Kind()}");
-        }
-        return base.Visit(node);
-    }
 
     // Basic statements
     public override SyntaxNode? VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node)
     {
-        Console.WriteLine("Visiting local declaration");
         return InjectDebugCheckpoint(node);
     }
 
     public override SyntaxNode? VisitExpressionStatement(ExpressionStatementSyntax node)
     {
-        Console.WriteLine("Visiting expression statement");
         return InjectDebugCheckpoint(node);
     }
 

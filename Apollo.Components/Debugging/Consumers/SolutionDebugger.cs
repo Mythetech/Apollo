@@ -24,10 +24,13 @@ public class SolutionDebugger : IConsumer<DebugSolution>
     public async Task Consume(DebugSolution message)
     {
         var solution = message.Solution ?? _solutions.Project.ToContract();
-        //var breakpoint = _editor.Breakpoints.FirstOrDefault();
-        //var bp = new Breakpoint(breakpoint.Key, breakpoint.Value.First());
+        
+        var breakpoints = _editor.Breakpoints
+            .SelectMany(kvp => kvp.Value.Select(line => new Breakpoint(kvp.Key, line)))
+            .ToList();
+        
         await _messageBus.PublishAsync(new FocusTab("Debugging Output"));
         await Task.Delay(50);
-        await _debugger.StartDebuggingAsync(solution, null);
+        await _debugger.StartDebuggingAsync(solution, breakpoints);
     }
 }

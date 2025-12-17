@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Apollo.Contracts.Debugging;
 using Apollo.Contracts.Workers;
 using Apollo.Debugging;
@@ -34,7 +34,23 @@ Imports.RegisterOnMessage(async e =>
 {
     var payload = e.GetPropertyAsString("data");
     
+    Imports.PostMessage(
+        WorkerLogWriter.Log($"Received message payload: {payload}", LogSeverity.Trace)
+    );
+    
     var message = JsonSerializer.Deserialize<WorkerMessage>(payload);
+    
+    if (message == null)
+    {
+        Imports.PostMessage(
+            WorkerLogWriter.WarningMessage("Failed to deserialize message")
+        );
+        return;
+    }
+    
+    Imports.PostMessage(
+        WorkerLogWriter.Log($"Processing message action: {message.Action}", LogSeverity.Trace)
+    );
     
     try
     {
@@ -45,6 +61,10 @@ Imports.RegisterOnMessage(async e =>
                 await HandleDebugMessage(message);
                 break;
             case WorkerActions.Continue:
+            case "continue":
+                Imports.PostMessage(
+                    WorkerLogWriter.Log("Received Continue message", LogSeverity.Information)
+                );
                 HandleContinue();
                 break;
             default:
@@ -102,7 +122,7 @@ async Task HandleDebugMessage(WorkerMessage message)
             WorkerLogWriter.Log("Starting debug process", LogSeverity.Trace)
         );
         
-        await service.DebugAsync(debugMsg.Solution, references, logAction: LogCallback, debugAction: DebugEventCallback);
+        await service.DebugAsync(debugMsg.Solution, references, debugMsg.Breakpoints, logAction: LogCallback, debugAction: DebugEventCallback);
     }
     catch (Exception ex)
     {
@@ -121,13 +141,13 @@ async Task HandleDebugMessage(WorkerMessage message)
 void HandleContinue()
 {
     Imports.PostMessage(
-        WorkerLogWriter.Log("Handling continue, debugger current state: " + DebugRuntime.State, LogSeverity.Trace)
+        WorkerLogWriter.Log("HandleContinue() called, debugger current state: " + DebugRuntime.State, LogSeverity.Information)
     );
     
     DebugRuntime.Continue();
     
     Imports.PostMessage(
-        WorkerLogWriter.Log("Handled continue, debugger current state: " + DebugRuntime.State, LogSeverity.Trace)
+        WorkerLogWriter.Log("HandleContinue() completed, debugger current state: " + DebugRuntime.State, LogSeverity.Information)
     );
 }
 

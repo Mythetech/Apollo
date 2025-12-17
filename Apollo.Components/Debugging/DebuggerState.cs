@@ -132,8 +132,8 @@ public class DebuggerState
         }
     }
 
-    public async Task StartDebuggingAsync(Solution solution, Breakpoint? breakpoint) => 
-        await _worker.DebugAsync(solution, breakpoint);
+    public async Task StartDebuggingAsync(Solution solution, ICollection<Breakpoint>? breakpoints = null) => 
+        await _worker.DebugAsync(solution, breakpoints ?? []);
     
     public async Task Continue() =>
         await _worker.Continue();

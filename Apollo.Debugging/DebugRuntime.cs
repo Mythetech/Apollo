@@ -23,36 +23,75 @@ public static class DebugRuntime
         _state = DebuggerState.Running;
     }
 
-    public static void CheckBreakpoint(string file, int line)
+    public static void CheckBreakpointAsync(string file, int line)
     {
         if (_state != DebuggerState.Running)
         {
             return;
         }
 
-
         _state = DebuggerState.Paused;
         _resumeTask = new TaskCompletionSource();
+        
         _onBreakpoint?.Invoke(file, line);
-
 
         LogCallback?.Invoke("Debugger paused, waiting for resume...", LogSeverity.Trace);
         
+        int iteration = 0;
+        var lastCheckTime = DateTime.UtcNow;
+        
         while (_state == DebuggerState.Paused)
         {
-            Task.Delay(1000).Wait();
+            iteration++;
+            
+            var now = DateTime.UtcNow;
+            var elapsed = (now - lastCheckTime).TotalMilliseconds;
+            
+            if (elapsed > 5)
+            {
+                try
+                {
+                    Task.Delay(5).GetAwaiter().GetResult();
+                }
+                catch
+                {
+                }
+                lastCheckTime = DateTime.UtcNow;
+            }
+            
+            if (iteration % 5000 == 0)
+            {
+                LogCallback?.Invoke($"Still waiting for resume... (iteration {iteration}, state: {_state})", LogSeverity.Trace);
+            }
         }
+        
+        LogCallback?.Invoke($"Resuming execution... (state changed to {_state})", LogSeverity.Trace);
     }
 
     public static void Continue()
     {
-        _state = DebuggerState.Running;
-        _resumeTask?.SetResult();
+        LogCallback?.Invoke($"Continue() called, current state: {_state}", LogSeverity.Trace);
+        if (_state == DebuggerState.Paused)
+        {
+            _state = DebuggerState.Running;
+            _resumeTask?.SetResult();
+            LogCallback?.Invoke("Debugger resumed - state set to Running", LogSeverity.Information);
+        }
+        else
+        {
+            LogCallback?.Invoke($"Continue() called but state is {_state}, not Paused", LogSeverity.Warning);
+        }
     }
 
     public static void Pause()
     {
-            _state = DebuggerState.Paused;
+        _state = DebuggerState.Paused;
+    }
+    
+    public static void Stop()
+    {
+        _state = DebuggerState.Running;
+        _resumeTask?.SetResult();
     }
 }
 

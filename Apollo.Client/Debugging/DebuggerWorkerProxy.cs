@@ -43,14 +43,22 @@ public class DebuggerWorkerProxy : IDebuggerWorker
 
                 switch (message.Action)
                 {
+                    case "Started":
                     case "Paused":
-                    case "1":
+                    case "Resumed":
+                    case "Terminated":
+                    case "Stepped":
+                    case "Error":
                         var evt = JsonSerializer.Deserialize<DebuggerEvent>(message.Payload);
                         if (evt != null)
                         {
                             NotifyDebugEvent(evt);
+                            UpdateDebugState(evt);
                         }
-
+                        break;
+                    case "debugging_completed":
+                        IsDebugging = false;
+                        IsPaused = false;
                         break;
                     case StandardWorkerActions.Log:
                         if (_callbacks.TryGetValue("log", out var logCallback) &&
@@ -92,22 +100,41 @@ public class DebuggerWorkerProxy : IDebuggerWorker
 
     public bool IsPaused { get; private set; }
 
-    public DebugLocation? CurrentLocation { get; }
+    public DebugLocation? CurrentLocation { get; private set; }
+    
+    private void UpdateDebugState(DebuggerEvent evt)
+    {
+        switch (evt.Type)
+        {
+            case DebugEventType.Started:
+                IsDebugging = true;
+                IsPaused = false;
+                break;
+            case DebugEventType.Paused:
+                IsPaused = true;
+                CurrentLocation = evt.Location;
+                break;
+            case DebugEventType.Resumed:
+                IsPaused = false;
+                break;
+            case DebugEventType.Terminated:
+                IsDebugging = false;
+                IsPaused = false;
+                CurrentLocation = null;
+                break;
+        }
+    }
 
     public event Action<DebuggerEvent>? OnDebugEvent;
 
     protected void NotifyDebugEvent(DebuggerEvent evt) => OnDebugEvent?.Invoke(evt);
 
-    public async Task DebugAsync(Solution solution, Breakpoint breakpoint)
+    public async Task DebugAsync(Solution solution, ICollection<Breakpoint> breakpoints)
     {
         await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage()
         {
             Action = WorkerActions.Debug,
-            Payload = JsonSerializer.Serialize(new
-            {
-                Solution = solution,
-                Breakpoint = breakpoint
-            })
+            Payload = JsonSerializer.Serialize(new StartDebuggingMessage(solution, breakpoints))
         }));
     }
 
@@ -131,11 +158,14 @@ public class DebuggerWorkerProxy : IDebuggerWorker
 
     public async Task Continue()
     {
-        await _worker.PostMessageAsync(new WorkerMessage()
+        var message = new WorkerMessage()
         {
             Action = WorkerActions.Continue,
             Payload = ""
-        }.ToSerialized());
+        };
+        
+        _console.AddLog($"Sending Continue message: {message.Action}", ConsoleSeverity.Debug);
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(message));
     }
 
     public async Task StepOver()

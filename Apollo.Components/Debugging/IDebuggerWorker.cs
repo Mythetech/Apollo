@@ -12,7 +12,7 @@ public interface IDebuggerWorker : IWorkerProxy
     
     event Action<DebuggerEvent> OnDebugEvent;
 
-    Task DebugAsync(Solution solution, Breakpoint breakpoint);
+    Task DebugAsync(Solution solution, ICollection<Breakpoint> breakpoints);
     
     Task SetBreakpoint(Breakpoint breakpoint);
     Task RemoveBreakpoint(Breakpoint breakpoint);

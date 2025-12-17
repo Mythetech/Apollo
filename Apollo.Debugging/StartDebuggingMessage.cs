@@ -3,4 +3,4 @@ using Apollo.Contracts.Solutions;
 
 namespace Apollo.Debugging;
 
-public record StartDebuggingMessage(Solution Solution, Breakpoint? Breakpoint);
+public record StartDebuggingMessage(Solution Solution, ICollection<Breakpoint> Breakpoints);
