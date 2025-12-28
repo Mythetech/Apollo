@@ -9,6 +9,7 @@ using Apollo.Components.Preview;
 using Apollo.Components.Solutions;
 using Apollo.Components.Terminal;
 using Apollo.Components.Testing;
+using Apollo.Components.DynamicClient;
 
 namespace Apollo.Components.Editor;
 
@@ -213,6 +214,16 @@ public class TabViewState
             {
                 AreaIdentifier = DropZones.Right
             },
+            new ClientPreviewTab()
+            {
+                AreaIdentifier = DropZones.None,
+                IsActive = false
+            },
+            new NetworkInspectorTab()
+            {
+                AreaIdentifier = DropZones.None,
+                IsActive = false
+            },
             new TerminalTab()
             {
                 AreaIdentifier = DropZones.Docked
@@ -229,7 +240,7 @@ public class TabViewState
             defaultTabs.Add(new SystemLogViewer());
             defaultTabs.Add(new PreviewTab()
             {
-                AreaIdentifier = DropZones.Right,
+                AreaIdentifier = DropZones.None,
                 IsActive = false
             });
         }

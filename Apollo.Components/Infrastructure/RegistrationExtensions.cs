@@ -16,6 +16,7 @@ using Apollo.Components.Terminal;
 using Apollo.Components.Terminal.CommandServices;
 using Apollo.Components.Testing;
 using Apollo.Components.Theme;
+using Apollo.Components.DynamicClient;
 using Blazored.LocalStorage;
 using KristofferStrube.Blazor.FileSystemAccess;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,7 @@ public static class RegistrationExtensions
 
         services.AddFluentUIComponents();
         services.AddSingleton<IHostingService, HostingService>();
+        services.AddSingleton<IDynamicClientService, DynamicClientService>();
         services.AddSingleton<ConsoleOutputService>();
         services.AddSingleton<TestConsoleOutputService>();
         services.AddSingleton<AppState>();

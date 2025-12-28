@@ -1,0 +1,250 @@
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.DynamicTabs.Commands
+@using Apollo.Components.DynamicClient.Commands
+@using Apollo.Components.Hosting
+@using Apollo.Components.Hosting.Commands
+@using Apollo.Components.Infrastructure.MessageBus
+@using Apollo.Components.Shared
+@using Apollo.Components.Solutions
+@using Apollo.Components.Solutions.Commands
+@using Apollo.Components.Theme
+@using Apollo.Contracts.Solutions
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+
+<div class="d-flex flex-column mud-height-full" style="background: var(--mud-palette-background);">
+    <div class="client-toolbar d-flex align-center gap-2 pa-2"
+        style="background: var(--mud-palette-surface); border-bottom: 1px solid var(--mud-palette-lines-default);">
+        <ApolloIconButton Icon="@(_isLoading? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.Refresh)"
+            Tooltip="Refresh" Size="Size.Small" Disabled="@_isLoading" OnClick="RefreshPreview" />
+
+        <div class="url-bar flex-grow-1 d-flex align-center px-2 py-1 rounded"
+            style="background: var(--mud-palette-background); border: 1px solid var(--mud-palette-lines-inputs);">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-2"
+                Style="color: var(--mud-palette-success);" />
+            <MudText Typo="Typo.body2" Class="flex-grow-1">localhost (virtual)</MudText>
+        </div>
+
+        <MudTooltip Text="Open in floating window">
+            <ApolloIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small"
+                OnClick="@(async () => await Bus.PublishAsync(new UpdateTabLocationByName(Name, DropZones.Floating)))" />
+        </MudTooltip>
+    </div>
+
+    <div class="preview-container flex-grow-1 position-relative" style="overflow: hidden;">
+        @if (!HostingService.Hosting)
+        {
+            <div class="d-flex flex-column align-center justify-center mud-height-full gap-4 pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Large"
+                    Style="color: var(--mud-palette-text-secondary);" />
+                <MudText Typo="Typo.h6">API Server Not Running</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary text-center" Style="max-width: 300px;">
+                    Start your Web API project first, then the client preview will connect automatically.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@ApolloIcons.Run"
+                    Disabled="@(State.Project?.ProjectType != ProjectType.WebApi)" OnClick="StartApiAndClient">
+                    Run Full-Stack
+                </MudButton>
+            </div>
+        }
+        else if (string.IsNullOrEmpty(_documentContent))
+        {
+            <div class="d-flex flex-column align-center justify-center mud-height-full gap-4 pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.WebAsset" Size="Size.Large"
+                    Style="color: var(--mud-palette-text-secondary);" />
+                <MudText Typo="Typo.h6">No Client Found</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary text-center" Style="max-width: 300px;">
+                    Add an <code>index.html</code> file to your solution to enable client preview.
+                </MudText>
+            </div>
+        }
+        else
+        {
+            <iframe @ref="_iframeRef" class="client-iframe" sandbox="allow-scripts allow-forms allow-modals"
+                style="width: 100%; height: 100%; border: none; background: white;">
+            </iframe>
+        }
+    </div>
+
+    @if (_requestCount > 0)
+    {
+        <div class="status-bar d-flex align-center justify-space-between px-2 py-1"
+            style="background: var(--mud-palette-surface); border-top: 1px solid var(--mud-palette-lines-default); font-size: 0.75rem;">
+            <MudText Typo="Typo.caption">@_requestCount requests</MudText>
+            <MudLink Typo="Typo.caption" OnClick="@(() => Bus.PublishAsync(new FocusTab("Network")))">
+                View Network Log
+            </MudLink>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] private IDynamicClientService ClientService { get; set; } = default!;
+    [Inject] private IHostingService HostingService { get; set; } = default!;
+    [Inject] private SolutionsState State { get; set; } = default!;
+    [Inject] private IMessageBus Bus { get; set; } = default!;
+    [Inject] private IJSRuntime JsRuntime { get; set; } = default!;
+
+    private ElementReference _iframeRef;
+    private DotNetObjectReference<ClientPreviewTab>? _dotNetRef;
+    private string? _documentContent;
+    private bool _isLoading;
+    private int _requestCount;
+    private bool _jsInitialized;
+
+    public override string Name { get; set; } = "Client Preview";
+    public override Type ComponentType { get; set; } = typeof(ClientPreviewTab);
+    public override string DefaultArea => DropZones.None;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        HostingService.OnHostingStateChanged += HandleHostingStateChanged;
+        HostingService.OnRoutesChanged += HandleRoutesChanged;
+        ClientService.OnRequestLogged += HandleRequestLogged;
+        State.SolutionFilesChanged += HandleFilesChanged;
+
+        if (HostingService.Hosting && HostingService.Routes?.Count > 0)
+        {
+            await LoadClientDocument();
+        }
+    }
+
+    private async Task HandleRoutesChanged()
+    {
+        if (HostingService.Routes?.Count > 0)
+        {
+            await LoadClientDocument();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+        }
+
+        if (!string.IsNullOrEmpty(_documentContent) && !_jsInitialized)
+        {
+            await InitializeIframe();
+        }
+    }
+
+    private async Task InitializeIframe()
+    {
+        if (_dotNetRef == null) return;
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("apolloClientPreview.initialize", _iframeRef, _dotNetRef, _documentContent);
+            _jsInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to initialize iframe: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public async Task<object> HandleApiRequest(int id, string method, string url, string? body)
+    {
+        var response = await ClientService.HandleRequestAsync(method, url, body);
+        _requestCount++;
+        await InvokeAsync(StateHasChanged);
+
+        return new
+        {
+            id,
+            status = response.StatusCode,
+            body = response.Body,
+            headers = response.Headers ?? new Dictionary<string, string> { { "Content-Type", "application/json" } }
+        };
+    }
+
+    private async Task HandleHostingStateChanged()
+    {
+        if (!HostingService.Hosting)
+        {
+            _documentContent = null;
+            _jsInitialized = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleRequestLogged(NetworkRequest request)
+    {
+        _requestCount = ClientService.RequestLog.Count;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleFilesChanged()
+    {
+        if (HostingService.Hosting && State.Project != null)
+        {
+            _ = RefreshPreview();
+        }
+    }
+
+    private async Task LoadClientDocument()
+    {
+        if (State.Project == null) return;
+
+        _documentContent = ClientService.BuildClientDocument(State.Project);
+        _jsInitialized = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshPreview()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _jsInitialized = false;
+            await LoadClientDocument();
+
+            if (!string.IsNullOrEmpty(_documentContent))
+            {
+                await Task.Delay(50);
+                await InitializeIframe();
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartApiAndClient()
+    {
+        if (State.Project == null) return;
+
+        await Bus.PublishAsync(new StartRunning());
+        await ClientService.StartAsync(State.Project);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        HostingService.OnHostingStateChanged -= HandleHostingStateChanged;
+        HostingService.OnRoutesChanged -= HandleRoutesChanged;
+        ClientService.OnRequestLogged -= HandleRequestLogged;
+        State.SolutionFilesChanged -= HandleFilesChanged;
+
+        _dotNetRef?.Dispose();
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("apolloClientPreview.dispose");
+        }
+        catch
+        {
+        }
+    }
+}

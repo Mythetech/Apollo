@@ -1,3 +1,4 @@
+using Apollo.Components.DynamicTabs;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.Solutions;
@@ -27,6 +28,7 @@ public class WebApiProjectBuilder : IConsumer<BuildSolution>
             return;
 
         await _bus.PublishAsync(new FocusTab("Web Host"));
+        
         await _hostingService.RunAsync(solution);
     }
 } 

@@ -1,0 +1,219 @@
+@inherits Apollo.Components.DynamicTabs.DynamicTabView
+@using Apollo.Components.DynamicTabs
+@using Apollo.Components.Shared
+@using Apollo.Components.Theme
+@using Apollo.Components.Hosting
+@implements IDisposable
+
+<div class="d-flex flex-column mud-height-full" style="background: var(--mud-palette-background);">
+    <div class="toolbar d-flex align-center gap-2 pa-2" style="background: var(--mud-palette-surface); border-bottom: 1px solid var(--mud-palette-lines-default);">
+        <ApolloIconButton 
+            Icon="@Icons.Material.Filled.DeleteSweep" 
+            Tooltip="Clear Log" 
+            Size="Size.Small"
+            OnClick="ClearLog" />
+        
+        <MudSpacer />
+        
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            @ClientService.RequestLog.Count requests
+        </MudText>
+    </div>
+    
+    <div class="request-list flex-grow-1 overflow-y-auto">
+        @if (!ClientService.RequestLog.Any())
+        {
+            <div class="d-flex flex-column align-center justify-center mud-height-full gap-2 pa-4">
+                <MudIcon Icon="@Icons.Material.Filled.Http" Size="Size.Large" Style="color: var(--mud-palette-text-secondary);" />
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">No network requests yet</MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Requests from the client preview will appear here
+                </MudText>
+            </div>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Hover="true" Class="network-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Status</th>
+                        <th style="width: 70px;">Method</th>
+                        <th>Path</th>
+                        <th style="width: 80px;">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var request in ClientService.RequestLog.OrderByDescending(r => r.Timestamp))
+                    {
+                        <tr @onclick="() => SelectRequest(request)" 
+                            class="@(request == _selectedRequest ? "selected" : "")"
+                            style="cursor: pointer;">
+                            <td>
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Color="@GetStatusColor(request.StatusCode)"
+                                         Variant="Variant.Filled">
+                                    @request.StatusCode
+                                </MudChip>
+                            </td>
+                            <td>
+                                <HttpMethodChip HttpMethod="@ParseMethod(request.Method)" />
+                            </td>
+                            <td class="text-truncate" style="max-width: 200px;" title="@request.Path">
+                                @request.Path
+                            </td>
+                            <td>
+                                @if (request.IsComplete)
+                                {
+                                    <span>@request.DurationMs.ToString("F0")ms</span>
+                                }
+                                else
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
+    </div>
+    
+    @if (_selectedRequest != null)
+    {
+        <div class="request-detail pa-2" style="height: 40%; border-top: 1px solid var(--mud-palette-lines-default); overflow-y: auto;">
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" Class="compact-tabs">
+                <MudTabPanel Text="Request">
+                    <div class="pa-2">
+                        <MudText Typo="Typo.subtitle2">@_selectedRequest.Method @_selectedRequest.Path</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @_selectedRequest.Timestamp.ToString("HH:mm:ss.fff")
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(_selectedRequest.RequestBody))
+                        {
+                            <MudText Typo="Typo.overline" Class="mt-2">Body</MudText>
+                            <pre class="request-body">@FormatJson(_selectedRequest.RequestBody)</pre>
+                        }
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Response">
+                    <div class="pa-2">
+                        <MudText Typo="Typo.subtitle2">
+                            Status: @_selectedRequest.StatusCode
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary ml-2">
+                                (@_selectedRequest.DurationMs.ToString("F0")ms)
+                            </MudText>
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(_selectedRequest.ResponseBody))
+                        {
+                            <MudText Typo="Typo.overline" Class="mt-2">Body</MudText>
+                            <pre class="response-body">@FormatJson(_selectedRequest.ResponseBody)</pre>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
+</div>
+
+<style>
+    .network-table th {
+        background: var(--mud-palette-surface) !important;
+        font-weight: 600;
+        font-size: 0.75rem;
+    }
+    
+    .network-table tr.selected {
+        background: var(--mud-palette-action-default-hover) !important;
+    }
+    
+    .request-body, .response-body {
+        background: var(--mud-palette-background-grey);
+        padding: 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 150px;
+        margin: 0.25rem 0;
+    }
+    
+    .compact-tabs .mud-tab {
+        min-width: 80px;
+        font-size: 0.75rem;
+    }
+</style>
+
+@code {
+    [Inject] private IDynamicClientService ClientService { get; set; } = default!;
+    
+    private NetworkRequest? _selectedRequest;
+    
+    public override string Name { get; set; } = "Network";
+    public override Type ComponentType { get; set; } = typeof(NetworkInspectorTab);
+    public override string DefaultArea => DropZones.None;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        ClientService.OnRequestLogged += HandleRequestLogged;
+    }
+
+    public void Dispose()
+    {
+        ClientService.OnRequestLogged -= HandleRequestLogged;
+    }
+
+    private void HandleRequestLogged(NetworkRequest request)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectRequest(NetworkRequest request)
+    {
+        _selectedRequest = _selectedRequest == request ? null : request;
+    }
+
+    private void ClearLog()
+    {
+        ClientService.ClearRequestLog();
+        _selectedRequest = null;
+        StateHasChanged();
+    }
+
+    private Color GetStatusColor(int statusCode) => statusCode switch
+    {
+        >= 200 and < 300 => Color.Success,
+        >= 400 and < 500 => Color.Warning,
+        >= 500 => Color.Error,
+        _ => Color.Default
+    };
+
+    private Apollo.Contracts.Hosting.HttpMethodType ParseMethod(string method) => method.ToUpperInvariant() switch
+    {
+        "GET" => Apollo.Contracts.Hosting.HttpMethodType.Get,
+        "POST" => Apollo.Contracts.Hosting.HttpMethodType.Post,
+        "PUT" => Apollo.Contracts.Hosting.HttpMethodType.Put,
+        "DELETE" => Apollo.Contracts.Hosting.HttpMethodType.Delete,
+        "PATCH" => Apollo.Contracts.Hosting.HttpMethodType.Patch,
+        _ => Apollo.Contracts.Hosting.HttpMethodType.Get
+    };
+
+    private string FormatJson(string json)
+    {
+        try
+        {
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<object>(json);
+            return System.Text.Json.JsonSerializer.Serialize(parsed, new System.Text.Json.JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+        }
+        catch
+        {
+            return json;
+        }
+    }
+}
+
