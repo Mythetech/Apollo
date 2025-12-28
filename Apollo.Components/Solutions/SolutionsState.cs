@@ -33,6 +33,7 @@ public class SolutionsState
         var fizzBuzzProject = FizzBuzzProject.Create();
         var minimalApiProject = MinimalApiProject.Create();
         var simpleLibraryProject = SimpleLibraryProject.Create();
+        var fullStackProject = FullStackProject.Create();
 
         Project = untitledProject;
         Solutions =
@@ -40,7 +41,8 @@ public class SolutionsState
             untitledProject,
             fizzBuzzProject,
             minimalApiProject,
-            simpleLibraryProject
+            simpleLibraryProject,
+            fullStackProject
         ];
 
         ActiveFile = Project.Files.FirstOrDefault();

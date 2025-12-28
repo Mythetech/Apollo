@@ -8,6 +8,9 @@ public static class SolutionFileExtensions
     public static bool IsHtml(this SolutionFile file)
         => file.Extension.Equals(".html", StringComparison.OrdinalIgnoreCase);
     
+    public static bool IsRazor(this SolutionFile file)
+    => file.Extension.Equals(".razor", StringComparison.OrdinalIgnoreCase);
+    
     public static string GetMonacoLanguage(this SolutionFile file) 
         => file.Extension.ToLowerInvariant() switch
         {

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.DynamicTabs.Commands;
+using Apollo.Components.Hosting.Events;
 using Apollo.Components.Infrastructure.MessageBus;
 using Apollo.Components.NuGet;
 using Apollo.Components.Solutions;
@@ -92,6 +93,8 @@ public class HostingService : IHostingService
         contract.NuGetReferences = await LoadNuGetReferencesAsync();
         
         await _hostingWorker.RunAsync(JsonSerializer.Serialize(contract));
+        
+        await _bus.PublishAsync(new HostWorkerSolutionRunRequested(contract));  
     }
 
     private async Task<List<NuGetReference>> LoadNuGetReferencesAsync()
@@ -181,6 +184,8 @@ public class HostingService : IHostingService
         _console.AddInfo($"Discovered {routes.Count} routes");
         _routes = routes.Select(x => x.ToViewModel()).ToList();
         await NotifyRoutesChangedAsync();
+
+        await _bus.PublishAsync(new WebHostReady());
     }
 
     public async Task<string> SendAsync(HttpMethodType method, string path, string? content = default)
@@ -195,9 +200,9 @@ public class HostingService : IHostingService
         
         try 
         {
-            await _hostingWorker.SendAsync(method, path, content);
-            _console.AddSuccess($"Request sent to {path}");
-            return "Request sent successfully";
+            var response = await _hostingWorker.SendAsync(method, path, content);
+            _console.AddSuccess($"Response from {path}: {response.Length} chars");
+            return response;
         }
         catch (Exception ex)
         {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.Hosting;
@@ -16,8 +17,10 @@ public class HostingWorkerProxy : IHostingWorker
 {
     private readonly SlimWorker _worker;
     private readonly Dictionary<string, Delegate> _callbacks = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _pendingRequests = new();
     private readonly IJSRuntime _jsRuntime;
     private readonly WebHostConsoleService _console;
+    private int _requestCounter;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -39,7 +42,6 @@ public class HostingWorkerProxy : IHostingWorker
             object? data = await e.Data.GetValueAsync();
             if (data is string json)
             {
-                //_console.AddDebug($"Raw message received: {json}");
                 var message = JsonSerializer.Deserialize<WorkerMessage>(json);
                 if (message == null)
                 {
@@ -106,10 +108,9 @@ public class HostingWorkerProxy : IHostingWorker
                         }
                         break;
                     case WorkerActions.RouteResponse:
-                        _console.AddInfo($"Response received: {message.Payload}");
+                        HandleRouteResponse(message.Payload);
                         break;
                     case "":
-
                         break;
 
                     default:
@@ -122,6 +123,34 @@ public class HostingWorkerProxy : IHostingWorker
         });
 
         await _worker.AddOnMessageEventListenerAsync(eventListener);
+    }
+
+    private void HandleRouteResponse(string payload)
+    {
+        try
+        {
+            var response = JsonSerializer.Deserialize<RouteResponse>(payload, SerializerOptions);
+            if (response == null)
+            {
+                _console.AddWarning($"Failed to deserialize route response: {payload}");
+                return;
+            }
+
+            _console.AddInfo($"Response received for {response.RequestId}: {response.StatusCode}");
+
+            if (_pendingRequests.TryRemove(response.RequestId, out var tcs))
+            {
+                tcs.TrySetResult(response.Body);
+            }
+            else
+            {
+                _console.AddWarning($"No pending request found for {response.RequestId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _console.AddError($"Error handling route response: {ex.Message}");
+        }
     }
 
     public void OnLog(Func<LogMessage, Task> callback)
@@ -156,9 +185,14 @@ public class HostingWorkerProxy : IHostingWorker
         await _worker.PostMessageAsync(msg.ToSerialized());
     }
 
-    public async Task SendAsync(HttpMethodType method, string path, string? body = default)
+    public async Task<string> SendAsync(HttpMethodType method, string path, string? body = default)
     {
-        var request = new RouteRequest(method, path, body);
+        var requestId = $"req_{Interlocked.Increment(ref _requestCounter)}_{DateTimeOffset.UtcNow.Ticks}";
+        var tcs = new TaskCompletionSource<string>();
+        
+        _pendingRequests[requestId] = tcs;
+        
+        var request = new RouteRequest(method, path, body, requestId);
         var msg = new WorkerMessage()
         {
             Action = WorkerActions.Send,
@@ -166,6 +200,17 @@ public class HostingWorkerProxy : IHostingWorker
         };
         
         await _worker.PostMessageAsync(msg.ToSerialized());
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        cts.Token.Register(() =>
+        {
+            if (_pendingRequests.TryRemove(requestId, out var pendingTcs))
+            {
+                pendingTcs.TrySetException(new TimeoutException($"Request {requestId} timed out"));
+            }
+        });
+
+        return await tcs.Task;
     }
 
     public async Task StopAsync()

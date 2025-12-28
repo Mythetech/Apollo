@@ -7,7 +7,7 @@ public interface IHostingWorker : IWorkerProxy
 {
     public Task RunAsync(string code);
 
-    public Task SendAsync(HttpMethodType method, string path, string body = default);
+    public Task<string> SendAsync(HttpMethodType method, string path, string? body = default);
     
     public Task StopAsync();
 

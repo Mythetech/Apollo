@@ -122,6 +122,9 @@ async Task HandleRunMessage(WorkerMessage message)
         await resolver.GetMetadataReferenceAsync("System.Private.CoreLib.wasm"),
         await resolver.GetMetadataReferenceAsync("System.Runtime.wasm"),
         await resolver.GetMetadataReferenceAsync("System.Console.wasm"),
+        await resolver.GetMetadataReferenceAsync("System.Linq.wasm"),
+        await resolver.GetMetadataReferenceAsync("System.Collections.wasm"),
+        await resolver.GetMetadataReferenceAsync("System.Text.Json.wasm"),
         await resolver.GetMetadataReferenceAsync("xunit.assert.wasm"),
         await resolver.GetMetadataReferenceAsync("xunit.core.wasm"),
         await resolver.GetMetadataReferenceAsync("Apollo.Hosting.wasm"),
@@ -203,8 +206,23 @@ async Task HandleRouteMessage(WorkerMessage message)
     var request = JsonSerializer.Deserialize<RouteRequest>(message.Payload);
     if (request != null)
     {
-        var response = WebApplication.Current.HandleRequest(request.Route, request.Content, request.Method);
-        await SendResponse(response);
+        try
+        {
+            if (WebApplication.Current == null)
+            {
+                loggerBridge.LogError("WebApplication.Current is null - API not running");
+                await SendResponse(request.RequestId ?? "", "API not running", 503);
+                return;
+            }
+            
+            var response = WebApplication.Current.HandleRequest(request.Route, request.Content, request.Method);
+            await SendResponse(request.RequestId ?? "", response, 200);
+        }
+        catch (Exception ex)
+        {
+            loggerBridge.LogError($"Error handling route: {ex.Message}");
+            await SendResponse(request.RequestId ?? "", ex.Message, 500);
+        }
     }
 }
 
@@ -218,12 +236,13 @@ async Task SendError(string errorMessage)
     Imports.PostMessage(msg.ToSerialized());
 }
 
-async Task SendResponse(string response)
+async Task SendResponse(string requestId, string body, int statusCode)
 {
+    var response = new RouteResponse(requestId, body, statusCode);
     var msg = new WorkerMessage
     {
         Action = WorkerActions.RouteResponse,
-        Payload = response
+        Payload = JsonSerializer.Serialize(response)
     };
     Imports.PostMessage(msg.ToSerialized());
 }
