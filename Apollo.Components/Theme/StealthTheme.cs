@@ -7,7 +7,7 @@ namespace Apollo.Components.Theme;
 /// </summary>
 public class StealthTheme : EditorThemeDefinition
 {
-    public override string Name => "Dark";
+    public override string Name => "Stealth";
 
     public override bool HideAppIcon => true;
 
