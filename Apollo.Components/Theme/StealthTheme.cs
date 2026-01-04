@@ -2,15 +2,18 @@ using MudBlazor;
 
 namespace Apollo.Components.Theme;
 
+/// <summary>
+/// Dark theme - modern Material 3 inspired design
+/// </summary>
 public class StealthTheme : EditorThemeDefinition
 {
-    public override string Name => "Stealth";
-    
+    public override string Name => "Dark";
+
     public override bool HideAppIcon => true;
 
-    public override string AppBarStyle => AppState?.IsDarkMode ?? true
-        ? base.AppBarStyle
-        : base.AppBarStyle; //"background:linear-gradient(90deg, black 0%, whitesmoke 12%);";
+    public override string AppBarStyle => (AppState?.IsDarkMode ?? true)
+        ? "background: linear-gradient(to right, var(--mud-palette-appbar-background) 0%, var(--mud-palette-primary-lighten) 50%, var(--mud-palette-appbar-background) 100%);"
+        : "background: linear-gradient(to right, var(--mud-palette-primary) 0%, var(--mud-palette-primary-lighten) 20%, var(--mud-palette-background) 100%);";
 
     public StealthTheme()
     {
@@ -18,27 +21,39 @@ public class StealthTheme : EditorThemeDefinition
         {
             PaletteLight = new PaletteLight()
             {
-                Primary = "#ecf0f1",
-                Secondary = "#2c3e50",
-                Success = "#10b981",
-                Tertiary = "#999",
-                Background = "#FAFAFA",
+                Primary = "#666666",
+                PrimaryLighten = "#8C8C8C",
+                Secondary = "#808080",
+                Tertiary = "#737373",
                 Surface = "#FFFFFF",
-                AppbarBackground = "#697677", //"#7b8a8b",
-                Dark = "#DDD",
-                GrayDarker = "#666"
+                Background = "#FAFAFA",
+                AppbarBackground = "#404040",
+                AppbarText = "#FFFFFF",
+                Dark = "#fdfafaee",
+                Divider = "#737373",
+                GrayDarker = "#fafafaeb",
+                Success = "#4CAF50",
+                Warning = "#FF9800",
+                Error = "#F44336",
+                Info = "#2196F3"
             },
 
             PaletteDark = new PaletteDark()
             {
-                Secondary = "#2c3e50",
-                Primary = "#1e2121",
-                Tertiary = "#666",
-                Success = "#10b981",
-                Background = "#121212",
-                Surface = "#1E1E1E",
-                AppbarBackground = "#1E1E1E",
-                GrayDarker = "#111"
+                Primary = "#262626",
+                PrimaryLighten = "#4C4C4C",
+                Secondary = "#8C8C8C",
+                Tertiary = "#666666",
+                Surface = "#0D0D0D",
+                Background = "#141414",
+                AppbarBackground = "#080808",
+                Dark = "#2f2f2fff",
+                Divider = "#808080",
+                GrayDarker = "#1F1F1F",
+                Success = "#66BB6A",
+                Warning = "#FFA726",
+                Error = "#EF5350",
+                Info = "#42A5F5"
             },
 
             Typography = new Typography()
@@ -47,9 +62,6 @@ public class StealthTheme : EditorThemeDefinition
                 {
                     FontFamily = new[] { "Tahoma", "Geneva", "Verdana", },
                     FontSize = "0.875rem",
-                    FontWeight = "400",
-                    LineHeight = "1.43",
-                    LetterSpacing = ".01071em",
                 },
                 Button = new ButtonTypography()
                 {
@@ -74,4 +86,4 @@ public class StealthTheme : EditorThemeDefinition
     {
         public static StealthTheme Theme { get; set; } = new StealthTheme();
     }
-} 
+}

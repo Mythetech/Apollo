@@ -3,55 +3,56 @@ using MudBlazor;
 namespace Apollo.Components.Theme
 {
     /// <summary>
-    /// Copied from Siren
+    /// Siren M3 theme - modern Material 3 inspired design
     /// </summary>
     public class SirenTheme : EditorThemeDefinition
     {
         public override string Name => "Siren";
 
-        public override bool HideAppIcon => false;
+        public override bool HideAppIcon => true;
 
         public override string AppIconClass => "siren-app-icon";
-        
-        public override string AppBarStyle => (AppState?.IsDarkMode ?? true) ? 
-            "box-shadow:1px 1px 4px 0px var(--mud-palette-primary); background:linear-gradient(90deg,var(--mud-palette-appbar-background) 30%, rgba(0,0,0,0.25) 100%);" :
-            "box-shadow:1px 1px 8px 1px var(--mud-palette-primary);background:linear-gradient(90deg, var(--mud-palette-primary) 20%, var(--mud-palette-tertiary) 70%, rgba(255,255,255,0.25) 100%);";
-        
+
+        public override string AppBarStyle => (AppState?.IsDarkMode ?? true) ?
+            "background: linear-gradient(190deg, var(--mud-palette-primary) 70%, var(--mud-palette-primary-lighten));" :
+            "background: linear-gradient(190deg, var(--mud-palette-primary) 70%, var(--mud-palette-primary-lighten));";
+
         public SirenTheme()
         {
             BaseTheme = new() {
             PaletteLight = new PaletteLight()
             {
-                Primary = SirenColors.Primary,
-                Secondary = SirenColors.Darken,
-                Tertiary = SirenColors.Tertiary,
-                HoverOpacity = 0.5,
-                Background = SirenColors.Light,
-                AppbarBackground = "#8fd8ff",
-                Black = SirenColors.Black,
+                Primary = "#0085CC",
+                PrimaryLighten = "#1AB0FF",
+                Secondary = "#598BA6",
+                Tertiary = "#5A22C3",
                 Surface = "#FFFFFF",
-                ActionDefault = SirenColors.Primary,
-                ActionDisabled = SirenColors.ActionDisabled,
-                TableHover = SirenColors.Tertiary,
-                Dark = "#016a94",
-                Divider = SirenColors.Primary,
-                GrayDarker = "#666666"
+                Background = "#FAFAFA",
+                AppbarBackground = "#005380",
+                Dark = "#E9EBED",
+                Divider = "#0096E6",
+                GrayDarker = "#666666",
+                Success = "#4CAF50",
+                Warning = "#FF9800",
+                Error = "#F44336",
+                Info = "#2196F3"
             },
             PaletteDark = new PaletteDark()
             {
-                Primary = SirenColors.Primary,
-                Secondary = SirenColors.Light,
-                Tertiary = SirenColors.Primary,
-                HoverOpacity = 0.5,
-                TableHover = SirenColors.Dark.AppBarBackground,
-                AppbarBackground = SirenColors.Dark.AppBarBackground,
-                Background = SirenColors.Black,
-                Black = SirenColors.Black,
-                Surface = SirenColors.Black,
-                ActionDefault = SirenColors.Primary,
-                Dark = SirenColors.Darken,
-                Divider = SirenColors.Primary,
-                GrayDarker = "#222",
+                Primary = "#00324D",
+                PrimaryLighten = "#006499",
+                Secondary = "#1AB0FF",
+                Tertiary = "#4D14B8",
+                Surface = "#0B0D0E",
+                Background = "#121516",
+                AppbarBackground = "#050505ff",
+                Dark = "#273035",
+                Divider = "#00A7FF",
+                GrayDarker = "#1C2022",
+                Success = "#66BB6A",
+                Warning = "#FFA726",
+                Error = "#EF5350",
+                Info = "#42A5F5"
             },
             Typography = new Typography()
             {
@@ -59,7 +60,7 @@ namespace Apollo.Components.Theme
                 {
                     FontFamily = new[] { "Tahoma", "Geneva", "Verdana", },
                     TextTransform = "none",
-                    FontSize = "0.75",
+                    FontSize = "2",
                 },
 
                 Button = new ButtonTypography()
@@ -71,11 +72,11 @@ namespace Apollo.Components.Theme
             },
             LayoutProperties = new LayoutProperties()
             {
-                DefaultBorderRadius = "0.5em",
-                AppbarHeight = "3rem",
+                DefaultBorderRadius = "1.25em",
+                AppbarHeight = "2rem",
                 DrawerWidthLeft = "3.25em",
             },
-            
+
             };
         }
         public static class Instance
@@ -83,46 +84,4 @@ namespace Apollo.Components.Theme
             public static SirenTheme Theme { get; set; } = new();
         }
     }
-    
-    internal static class SirenColors
-    {
-        public static class Dark
-        {
-            //public static string Primary => "03045e";
-            public static string Primary => "00001A";
-
-            public static string Secondary => "640ADB";
-
-            public static string Tertiary => "002538";
-
-            public static string AppBarBackground => "00162E";
-
-            //public static string AppBarBackground => "001520";
-
-        }
-
-        public static string Primary => "0077B6";
-
-        public static string Secondary => "170035";
-
-        public static string Tertiary => "AED2E5";
-
-        public static string Light => "caf0f8";
-
-        public static string Darken => "003449";
-
-        public static string Black => "000000";
-
-        public static string Action => "";
-
-        public static string ActionDisabled => "AED2E5";
-
-        public static string Hash(string s)
-        {
-            return $"#{s}";
-        }
-    }
-    
-    
 }
-
