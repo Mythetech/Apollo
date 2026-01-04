@@ -12,14 +12,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="KristofferStrube.Blazor.WebWorkers" Version="0.1.0-alpha.7" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0" />
-        <PackageReference Include="Mythetech.Components.WebAssembly" Version="0.0.8" />
-        <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
-        <PackageReference Include="System.Security.Permissions" Version="10.0.0" />
-        <PackageReference Include="xunit" Version="2.9.2" />
+        <PackageReference Include="KristofferStrube.Blazor.WebWorkers" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" />
+        <PackageReference Include="Mythetech.Components.WebAssembly" />
+        <PackageReference Include="System.Reflection.MetadataLoadContext" />
+        <PackageReference Include="System.Security.Permissions" />
+        <PackageReference Include="xunit" />
     </ItemGroup>
 
     <ItemGroup>

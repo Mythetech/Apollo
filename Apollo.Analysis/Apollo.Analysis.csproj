@@ -16,19 +16,19 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.AspNetCore" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.OmniSharp" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.OmniSharp.CSharp" Version="4.13.0-3.25056.7"/>
-        <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="3.3.3-beta1.21417.2" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.DiaSymReader" Version="2.2.0-beta.24622.1" />
-        <PackageReference Include="OmniSharp.Roslyn" Version="1.39.13"/>
-        <PackageReference Include="OmniSharp.Roslyn.CSharp" Version="1.39.13"/>
+        <PackageReference Include="Microsoft.CodeAnalysis" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" />
+        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.AspNetCore" />
+        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.OmniSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.ExternalAccess.OmniSharp.CSharp" />
+        <PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+        <PackageReference Include="Microsoft.DiaSymReader" />
+        <PackageReference Include="OmniSharp.Roslyn" />
+        <PackageReference Include="OmniSharp.Roslyn.CSharp" />
     </ItemGroup>
 
 </Project>
