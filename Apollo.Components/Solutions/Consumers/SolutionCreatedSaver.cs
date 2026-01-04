@@ -1,5 +1,5 @@
 using Apollo.Components.Infrastructure;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Events;
 using Apollo.Components.Solutions.Services;
 

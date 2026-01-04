@@ -2,7 +2,7 @@ using Apollo.Components.Code;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Commands;
 using Apollo.Components.Solutions.Events;

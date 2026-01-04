@@ -6,7 +6,7 @@ using Apollo.Components.Testing;
 using Apollo.Compilation;
 using Apollo.Components.Analysis;
 using Apollo.Components.Hosting;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.NuGet;
 using Apollo.Components.Solutions.Services;
 using Microsoft.CodeAnalysis;

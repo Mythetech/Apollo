@@ -6,7 +6,7 @@ using Apollo.Components.Editor;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure.Keyboard;
 using Apollo.Components.Infrastructure.Logging;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Library;
 using Apollo.Components.NuGet;
 using Apollo.Components.Settings;
@@ -17,6 +17,7 @@ using Apollo.Components.Terminal.CommandServices;
 using Apollo.Components.Testing;
 using Apollo.Components.Theme;
 using Apollo.Components.DynamicClient;
+using Apollo.Components.Tools.EventCapture;
 using Blazored.LocalStorage;
 using KristofferStrube.Blazor.FileSystemAccess;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,6 +77,10 @@ public static class RegistrationExtensions
         services.AddSingleton<INuGetService, NuGetService>();
         services.AddSingleton<INuGetStorageService, NuGetStorageService>();
         services.AddSingleton<NuGetState>();
+
+        // Event capture for Event Viewer (development debugging)
+        services.AddSingleton<CapturedEventState>();
+        services.AddSingleton<IMessagePipe, CapturedEventPipe>();
 
         services.AddTerminalCommands();
 

@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Apollo.Components.Editor;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Settings.Events;
 
 namespace Apollo.Components.Settings;

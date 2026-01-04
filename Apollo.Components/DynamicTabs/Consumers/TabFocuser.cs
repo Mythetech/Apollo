@@ -1,6 +1,6 @@
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Editor;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 
 namespace Apollo.Components.DynamicTabs.Consumers;
 

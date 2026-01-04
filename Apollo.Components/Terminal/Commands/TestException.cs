@@ -1,4 +1,4 @@
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Microsoft.Extensions.Logging;
 
 namespace Apollo.Components.Terminal.Commands;

@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Commands;
 
 namespace Apollo.Components.Solutions.Consumers

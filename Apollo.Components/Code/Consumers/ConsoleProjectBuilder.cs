@@ -1,5 +1,5 @@
 using Apollo.Components.DynamicTabs.Commands;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Solutions;
 using Apollo.Components.Solutions.Commands;
 using Apollo.Contracts.Solutions;

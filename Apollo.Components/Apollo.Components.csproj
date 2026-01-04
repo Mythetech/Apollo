@@ -22,7 +22,7 @@
         <PackageReference Include="KristofferStrube.Blazor.FileSystemAccess" />
         <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" />
         <PackageReference Include="Microsoft.TestPlatform.ObjectModel" />
-        <PackageReference Include="Mythetech.Components" />
+        <PackageReference Include="Mythetech.Framework" />
         <PackageReference Include="NUnit" />
         <PackageReference Include="OmniSharp.Abstractions" />
         <PackageReference Include="xunit.extensibility.execution" />

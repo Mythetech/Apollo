@@ -8,8 +8,8 @@
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
-    <PackageVersion Include="Mythetech.Components" Version="0.0.8" />
-    <PackageVersion Include="Mythetech.Components.WebAssembly" Version="0.0.8" />
+    <PackageVersion Include="Mythetech.Framework" Version="0.2.5" />
+    <PackageVersion Include="Mythetech.Framework.WebAssembly" Version="0.2.3" />
 
     <!-- Blazor WebAssembly -->
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />

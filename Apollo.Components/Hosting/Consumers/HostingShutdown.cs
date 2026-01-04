@@ -1,5 +1,5 @@
 using Apollo.Components.Hosting.Commands;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 
 namespace Apollo.Components.Hosting.Consumers;
 

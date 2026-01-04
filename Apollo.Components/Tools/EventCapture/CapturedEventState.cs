@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Apollo.Components.Infrastructure.MessageBus;
+namespace Apollo.Components.Tools.EventCapture;
 
 public sealed class CapturedEventState
 {
@@ -77,15 +77,3 @@ public sealed class CapturedEventState
         _events.RemoveRange(0, overflow);
     }
 }
-
-public sealed record CapturedEvent(
-    Guid Id,
-    DateTimeOffset Timestamp,
-    string EventType,
-    string Payload);
-
-public sealed record CapturedEventAggregate(
-    string EventType,
-    int Count);
-
-
