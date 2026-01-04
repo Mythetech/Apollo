@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="KristofferStrube.Blazor.WebWorkers" Version="0.1.0-alpha.7" />
+        <PackageReference Include="KristofferStrube.Blazor.WebWorkers" />
     </ItemGroup>
 
     <ItemGroup>
