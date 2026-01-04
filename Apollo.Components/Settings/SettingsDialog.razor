@@ -69,14 +69,14 @@
                 </SettingsSectionDisplay>
                 
                 <SettingsSectionDisplay Id="section-themes" Title="Built-in Themes">
-                    <MudToggleGroup T="string" 
+                    <MudToggleGroup T="string"
                                     Value="@GetCurrentThemeValue()"
                                     ValueChanged="@OnThemeSelected"
-                                    Class="mud-width-full" 
+                                    Class="mud-width-full"
                                     SelectedClass="box-shadow-primary"
-                                    Style="border:none!important;">
+                                    Style="border:none!important; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
                         <MudToggleItem Value="@("Apollo")" Class="rounded">
-                            <ThemeCard 
+                            <ThemeCard
                                 Title="Apollo"
                                 Description="Solar-inspired with golden accents"
                                 ChipText="Default"
@@ -84,7 +84,7 @@
                                 CardTheme="@ApolloTheme.Instance.Theme.BaseTheme"/>
                         </MudToggleItem>
                         <MudToggleItem Value="@("Stealth")" Class="rounded">
-                            <ThemeCard 
+                            <ThemeCard
                                 Title="Stealth"
                                 Description="Minimalist flat design"
                                 ChipText="Stealth"
@@ -130,12 +130,12 @@
                     }
                     else
                     {
-                        <MudToggleGroup T="string" 
+                        <MudToggleGroup T="string"
                                         Value="@GetCurrentThemeValue()"
                                         ValueChanged="@OnThemeSelected"
-                                        Class="mud-width-full" 
+                                        Class="mud-width-full"
                                         SelectedClass="box-shadow-primary"
-                                        Style="border:none!important;">
+                                        Style="border:none!important; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
                             @foreach (var customTheme in Settings.CustomThemes.Themes.Values)
                             {
                                 <MudToggleItem Value="@($"custom:{customTheme.Data.Id}")" Class="rounded">
