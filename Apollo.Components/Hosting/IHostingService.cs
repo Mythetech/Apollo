@@ -2,7 +2,7 @@ using System.Text.Json;
 using Apollo.Components.Console;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Hosting.Events;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.NuGet;
 using Apollo.Components.Solutions;
 using Apollo.Contracts.Hosting;

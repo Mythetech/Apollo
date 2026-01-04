@@ -1,5 +1,5 @@
 using Apollo.Components.Editor;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Settings.Commands;
 using MudBlazor;
 

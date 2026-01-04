@@ -22,7 +22,7 @@
 @using Command = BlazorMonaco.Languages.Command
 @using InsertTextRule = BlazorMonaco.Languages
 @implements IDisposable
-@inherits Apollo.Components.Infrastructure.MessageBus.ComponentConsumer<Apollo.Components.Settings.Events.SettingsModelChanged<EditorSettings>>
+@inherits Mythetech.Framework.Infrastructure.MessageBus.ComponentConsumer<Apollo.Components.Settings.Events.SettingsModelChanged<EditorSettings>>
 
 <StandaloneCodeEditor @ref="_editor" Id="apollo-editor" ConstructionOptions="@DefaultOptions" OnDidInit="Initialize" OnDidChangeModelContent="OnModelDidChangeHandler" />
 

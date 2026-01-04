@@ -1,11 +1,13 @@
 using System.Reflection;
 using Apollo.Components.Code;
 using Apollo.Components.Infrastructure.Environment;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Events;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
 using Shouldly;
 using Xunit;
 
@@ -14,12 +16,17 @@ namespace Apollo.Test.Components.Code;
 public class ActiveTypeStateTests : ApolloBaseTestContext
 {
     private ActiveTypeState _state;
-    
+    private IMessageBus _bus;
+
     public ActiveTypeStateTests()
     {
         Services.AddSingleton<IRuntimeEnvironment>(new TestRuntimeEnvironment());
-        Services.AddSingleton<CapturedEventState>();
-        Services.AddSingleton<IMessageBus, InMemoryMessageBus>();
+        _bus = new InMemoryMessageBus(
+            Services,
+            Substitute.For<ILogger<InMemoryMessageBus>>(),
+            Enumerable.Empty<IMessagePipe>(),
+            Enumerable.Empty<IConsumerFilter>());
+        Services.AddSingleton<IMessageBus>(_bus);
         _state = new ActiveTypeState();
     }
 
@@ -28,13 +35,12 @@ public class ActiveTypeStateTests : ApolloBaseTestContext
     {
         // Arrange
         var project = SimpleLibraryProject.Create();
-        var bus = Services.GetRequiredService<IMessageBus>();
-        bus.Subscribe(_state);
+        _bus.Subscribe(_state);
 
         // Act
         var result = TestCompiler.Compile(project);
         var asm = Assembly.Load(result.Assembly);
-        await bus.PublishAsync(new BuildCompleted(new CompilationResult(result.Success, asm)));
+        await _bus.PublishAsync(new BuildCompleted(new CompilationResult(result.Success, asm)));
 
         // Assert
         _state.Types.ShouldNotBeNull();

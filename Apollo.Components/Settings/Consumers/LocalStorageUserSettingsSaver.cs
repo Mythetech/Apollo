@@ -1,4 +1,4 @@
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Settings.Events;
 using Blazored.LocalStorage;
 

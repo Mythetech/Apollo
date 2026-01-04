@@ -1,5 +1,6 @@
 @using Apollo.Components.DynamicTabs
-@using Apollo.Components.Infrastructure.MessageBus
+@using Mythetech.Framework.Infrastructure.MessageBus
+@using Mythetech.Framework.Components.HoverStack
 @using MouseEvent = MudBlazor.MouseEvent
 @using Apollo.Components.Shared
 @using Apollo.Components.Solutions.Commands
@@ -43,13 +44,16 @@
             <MudTreeView T="ISolutionItem" Hover="true" Dense="true" ExpandOnClick="true">
                 <MudTreeViewItem T="ISolutionItem" Text="@_rootFolder?.Name" Expanded="true" OnClick="() => { }" OnDoubleClick="() => { }">
                     <BodyContent>
-                        <MudStack AlignItems="AlignItems.Center" Row="true" Class="mud-width-full">
+                        <HoverStack AlignItems="AlignItems.Center" Row="true" Class="mud-width-full" Context="hover">
                             <MudText>@_rootFolder?.Name</MudText>
                             <MudSpacer/>
-                            <ApolloIconButton Tooltip="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@(async () => await PromptAddFile())"/>
-                            <ApolloIconButton Tooltip="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@(() => AddFolder())"/>
-                            <ApolloIconButton Tooltip="Rename" Icon="@ApolloIcons.Edit" OnClick="@(async () => await PromptRenameFolder(_rootFolder))"/>
-                        </MudStack>
+                            @if (hover.IsHovering)
+                            {
+                                <ApolloIconButton Size="Size.Small" Tooltip="Add File" Icon="@ApolloIcons.FileAdd" OnClick="@(async () => await PromptAddFile())"/>
+                                <ApolloIconButton Size="Size.Small" Tooltip="Add Folder" Icon="@ApolloIcons.CreateFolder" OnClick="@(() => AddFolder())"/>
+                                <ApolloIconButton Size="Size.Small" Tooltip="Rename" Icon="@ApolloIcons.Edit" OnClick="@(async () => await PromptRenameFolder(_rootFolder))"/>
+                            }
+                        </HoverStack>
                     </BodyContent>
                     <ChildContent>
                         <SolutionTree Items="@_rootFolder?.Items" ParentName="@_rootFolder?.Name" OnFileSelected="OnFileSelected" OnRenameFile="PromptFileRename" OnMoveFile="PromptMoveFile"/>

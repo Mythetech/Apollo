@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Shared;
 using Apollo.Components.Solutions.Commands;
 using Microsoft.JSInterop;

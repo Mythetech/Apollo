@@ -1,4 +1,4 @@
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Solutions.Events;
 
 namespace Apollo.Components.Testing.Consumers;

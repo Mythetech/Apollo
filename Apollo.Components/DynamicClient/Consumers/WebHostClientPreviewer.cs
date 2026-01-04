@@ -1,7 +1,7 @@
 using Apollo.Components.DynamicTabs;
 using Apollo.Components.DynamicTabs.Commands;
 using Apollo.Components.Hosting.Events;
-using Apollo.Components.Infrastructure.MessageBus;
+using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Solutions;
 
 namespace Apollo.Components.DynamicClient.Consumers;
