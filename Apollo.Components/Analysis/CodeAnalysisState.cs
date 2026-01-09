@@ -58,8 +58,7 @@ public class CodeAnalysisState
 
     private async Task NotifyCodeAnalysisStatusChanged()
     {
-        if (OnCodeAnalysisStateChanged?.GetInvocationList()?.Length > 0)
-            await OnCodeAnalysisStateChanged?.Invoke()!;
+        await (OnCodeAnalysisStateChanged?.Invoke() ?? Task.CompletedTask);
     }
 
     private ICodeAnalysisWorker? _workerProxy;
@@ -257,6 +256,57 @@ public class CodeAnalysisState
         catch (Exception ex)
         {
             _console.AddError($"Error updating user assembly: {ex.Message}");
+        }
+    }
+
+    public bool IsReady => _workerReady && !Disabled && _workerProxy != null;
+
+    public async Task<SemanticTokensResult> RequestSemanticTokensAsync(
+        string documentUri,
+        string? razorContent = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (Disabled || !_workerReady || _workerProxy == null)
+        {
+            _console.AddTrace("Code analysis not ready for semantic tokens");
+            return SemanticTokensResult.Empty;
+        }
+
+        var request = new SemanticTokensRequest
+        {
+            DocumentUri = documentUri,
+            RazorContent = razorContent
+        };
+
+        try
+        {
+            var bytes = await _workerProxy.GetSemanticTokensAsync(JsonSerializer.Serialize(request, JsonOptions));
+            if (bytes == null || bytes.Length == 0)
+            {
+                return SemanticTokensResult.Empty;
+            }
+
+            var response = JsonSerializer.Deserialize<ResponsePayload>(
+                System.Text.Encoding.UTF8.GetString(bytes),
+                JsonOptions
+            );
+
+            if (response?.Payload == null)
+            {
+                return SemanticTokensResult.Empty;
+            }
+
+            var result = JsonSerializer.Deserialize<SemanticTokensResult>(
+                response.Payload.ToString()!,
+                JsonOptions
+            );
+
+            return result ?? SemanticTokensResult.Empty;
+        }
+        catch (Exception ex)
+        {
+            _console.AddError($"Error requesting semantic tokens: {ex.Message}");
+            return SemanticTokensResult.Empty;
         }
     }
 

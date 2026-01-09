@@ -40,12 +40,12 @@ public class CustomThemeService
             
             OnThemesChanged?.Invoke();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Console.WriteLine($"Failed to load custom themes: {ex.Message}");
+            // Silently fail on load - themes will just be empty
         }
     }
-    
+
     public async Task SaveToStorageAsync()
     {
         try
@@ -54,9 +54,9 @@ public class CustomThemeService
             var json = CustomThemeSerializer.SerializeMany(dataList);
             await _localStorage.SetItemAsStringAsync(StorageKey, json);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Console.WriteLine($"Failed to save custom themes: {ex.Message}");
+            _snackbar.Add("Failed to save custom themes", Severity.Error);
         }
     }
     

@@ -25,11 +25,14 @@ public class MonacoService
     private readonly IMetadataReferenceResolver _resolver;
     private readonly ILoggerProxy _workerLogger;
     private readonly RoslynProjectService _projectService;
-    
+
     private RoslynProject? _legacyCompletionProject;
     private OmniSharpCompletionService? _legacyCompletionService;
     private OmniSharpSignatureHelpService? _signatureService;
     private OmniSharpQuickInfoProvider? _quickInfoProvider;
+
+    private RazorCodeExtractor? _razorExtractor;
+    private RazorSemanticTokenService? _razorSemanticTokenService;
 
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -76,7 +79,11 @@ class Program
 
         _signatureService = new OmniSharpSignatureHelpService(_projectService.Workspace);
         _quickInfoProvider = new OmniSharpQuickInfoProvider(_projectService.Workspace, formattingOptions, loggerFactory);
-        
+
+        // Initialize Razor services
+        _razorExtractor = new RazorCodeExtractor(_workerLogger);
+        _razorSemanticTokenService = new RazorSemanticTokenService(_razorExtractor, _projectService, _workerLogger);
+
         _workerLogger.Trace("RoslynProjectService initialized successfully");
     }
 
@@ -362,6 +369,67 @@ class Program
         {
             _workerLogger.LogError($"Error updating user assembly: {ex.Message}");
             return CreateErrorResponse(ex.Message);
+        }
+    }
+
+    public async Task<byte[]> GetSemanticTokensAsync(string requestJson)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<SemanticTokensRequest>(requestJson, _jsonOptions);
+            if (request == null)
+            {
+                _workerLogger.LogError("Failed to deserialize semantic tokens request");
+                return [];
+            }
+
+            _workerLogger.LogTrace($"Semantic tokens request for {request.DocumentUri}");
+
+            // Check if this is a Razor file
+            var isRazorFile = request.DocumentUri.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) ||
+                              request.DocumentUri.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase);
+
+            if (!isRazorFile)
+            {
+                _workerLogger.LogTrace($"Not a Razor file: {request.DocumentUri}");
+                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
+                    _jsonOptions));
+            }
+
+            if (_razorSemanticTokenService == null)
+            {
+                _workerLogger.LogError("Razor semantic token service not initialized");
+                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
+                    _jsonOptions));
+            }
+
+            if (string.IsNullOrEmpty(request.RazorContent))
+            {
+                _workerLogger.LogTrace("No Razor content provided");
+                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
+                    _jsonOptions));
+            }
+
+            var result = await _razorSemanticTokenService.GetSemanticTokensAsync(
+                request.RazorContent,
+                request.DocumentUri);
+
+            _workerLogger.LogTrace($"Returning {result.Data.Length / 5} semantic tokens");
+
+            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+                new ResponsePayload(result, "GetSemanticTokensAsync"),
+                _jsonOptions));
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error getting semantic tokens: {ex.Message}");
+            _workerLogger.LogTrace(ex.StackTrace ?? string.Empty);
+            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+                new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
+                _jsonOptions));
         }
     }
 

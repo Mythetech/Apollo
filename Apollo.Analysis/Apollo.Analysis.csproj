@@ -29,6 +29,7 @@
         <PackageReference Include="Microsoft.DiaSymReader" />
         <PackageReference Include="OmniSharp.Roslyn" />
         <PackageReference Include="OmniSharp.Roslyn.CSharp" />
+        <PackageReference Include="Microsoft.AspNetCore.Razor.Language" />
     </ItemGroup>
 
 </Project>

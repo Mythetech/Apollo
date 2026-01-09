@@ -13,6 +13,7 @@ using Apollo.Components.Infrastructure;
 using Apollo.Components.Infrastructure.Environment;
 using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Infrastructure.Resources;
+using Mythetech.Framework.Infrastructure.Mcp;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -25,6 +26,7 @@ builder.Services.AddMessageBus(typeof(Program).Assembly, typeof(AppState).Assemb
 builder.Services.AddSingleton<IRuntimeEnvironment, WebAssemblyRuntimeEnvironment>();
 
 builder.Services.AddComponentsAndServices();
+builder.Services.AddMcp(); //ToDO - fix in framework, shouldn't be required
 
 builder.Services.AddSingleton<IResourceResolver, ResourceResolver>();
 

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Apollo.Analysis;
 using Apollo.Compilation;
@@ -88,9 +87,12 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
                     case "user_assembly_update_response":
                         _userAssemblyUpdateResponse = Convert.FromBase64String(message.Payload);
                         break;
+                    case "semantic_tokens_response":
+                        _semanticTokensResponse = Convert.FromBase64String(message.Payload);
+                        break;
                     default:
-                        Console.WriteLine($"Unknown event: {message.Action}", LogSeverity.Debug);
-                        Console.WriteLine(JsonSerializer.Serialize(message.Payload));
+                        _console.AddDebug($"Unknown event: {message.Action}");
+                        _console.AddDebug(JsonSerializer.Serialize(message.Payload));
                         break;
                 }
             }
@@ -187,6 +189,7 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
     private byte[]? _documentUpdateResponse;
     private byte[]? _setCurrentDocumentResponse;
     private byte[]? _userAssemblyUpdateResponse;
+    private byte[]? _semanticTokensResponse;
 
     public async Task<byte[]> UpdateDocumentAsync(string documentUpdateRequest)
     {
@@ -264,5 +267,31 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
         }
 
         return _userAssemblyUpdateResponse ?? [];
+    }
+
+    public async Task<byte[]> GetSemanticTokensAsync(string semanticTokensRequest)
+    {
+        _semanticTokensResponse = null;
+
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage
+        {
+            Action = "get_semantic_tokens",
+            Payload = semanticTokensRequest
+        }));
+
+        for (int i = 0; i < 50; i++)
+        {
+            if (_semanticTokensResponse == null)
+            {
+                await Task.Delay(50);
+                await Task.Yield();
+            }
+            else
+            {
+                return _semanticTokensResponse;
+            }
+        }
+
+        return _semanticTokensResponse ?? [];
     }
 }

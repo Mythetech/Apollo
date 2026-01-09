@@ -206,6 +206,25 @@ Imports.RegisterOnMessage(async e =>
                     loggerBridge.LogTrace($"Error updating user assembly: {ex.Message}");
                 }
                 break;
+
+            case "get_semantic_tokens":
+                try
+                {
+                    loggerBridge.LogDebug("Received semantic tokens request");
+                    var semanticTokensResult = await monacoService.GetSemanticTokensAsync(message.Payload);
+                    var semanticTokensResponse = new WorkerMessage
+                    {
+                        Action = "semantic_tokens_response",
+                        Payload = Convert.ToBase64String(semanticTokensResult)
+                    };
+                    Imports.PostMessage(semanticTokensResponse.ToSerialized());
+                    loggerBridge.LogDebug("Semantic tokens response sent");
+                }
+                catch (Exception ex)
+                {
+                    loggerBridge.LogTrace($"Error getting semantic tokens: {ex.Message}");
+                }
+                break;
         }
     }
     catch (Exception ex)

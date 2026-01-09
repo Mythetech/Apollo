@@ -21,66 +21,59 @@
 </MudLayout>
 
 <MudThemeProvider Theme="@GetCurrentTheme()" IsDarkMode="@State.IsDarkMode" />
-<MudPopoverProvider/>
-<MudDialogProvider/>
-<MudSnackbarProvider/>
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 <FluentKeyCodeProvider />
 @code {
-[Inject] public IJSRuntime JsRuntime { get; set; }
+    [Inject] public IJSRuntime JsRuntime { get; set; }
 
-[Inject] public AppState State { get; set; } = default!;
+    [Inject] public AppState State { get; set; } = default!;
 
-[Inject] public SettingsState Settings { get; set; } = default!;
+    [Inject] public SettingsState Settings { get; set; } = default!;
 
-[Inject] public KeyBindingsState KeyBindings { get; set; } = default!;
+    [Inject] public KeyBindingsState KeyBindings { get; set; } = default!;
 
-[Inject] public NuGetState NuGetState { get; set; } = default!;
+    [Inject] public NuGetState NuGetState { get; set; } = default!;
 
-bool _drawerOpen = true;
+    bool _drawerOpen = true;
 
-void DrawerToggle()
-{
-    _drawerOpen = !_drawerOpen;
-}
-
-protected override void OnInitialized()
-{
-    State.AppStateChanged += HandleAppStateChanged;
-}
-
-public void Dispose()
-{
-    State.AppStateChanged -= HandleAppStateChanged;
-}
-
-protected void HandleAppStateChanged()
-{
-    BlazorMonaco.Editor.Global.SetTheme(JsRuntime, State.IsDarkMode ? "vs-dark" : "vs");
-    StateHasChanged();
-}
-
-protected override void OnAfterRender(bool firstRender)
-{
-    if (firstRender)
+    void DrawerToggle()
     {
-        BlazorMonaco.Editor.Global.SetTheme(JsRuntime, "vs-dark");
+        _drawerOpen = !_drawerOpen;
     }
-}
 
-protected override async Task OnAfterRenderAsync(bool firstRender)
-{
-    if (firstRender)
+    protected override void OnInitialized()
     {
-        await Settings.TryLoadSettingsFromStorageAsync();
-        await Settings.TrySetSystemThemeAsync();
-        await KeyBindings.LoadFromStorageAsync();
-        await NuGetState.InitializeAsync();
+        State.AppStateChanged += HandleAppStateChanged;
     }
-}
 
-private MudTheme GetCurrentTheme()
-{
-    return Settings.CurrentTheme.BaseTheme;
-}
+    public void Dispose()
+    {
+        State.AppStateChanged -= HandleAppStateChanged;
+    }
+
+    protected async void HandleAppStateChanged()
+    {
+        await JsRuntime.InvokeVoidAsync("apolloEditor.setTheme", State.IsDarkMode);
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JsRuntime.InvokeVoidAsync("apolloEditor.setTheme", State.IsDarkMode);
+            await Settings.TryLoadSettingsFromStorageAsync();
+            await Settings.TrySetSystemThemeAsync();
+            await KeyBindings.LoadFromStorageAsync();
+            await NuGetState.InitializeAsync();
+        }
+    }
+
+    private MudTheme GetCurrentTheme()
+    {
+        return Settings.CurrentTheme.BaseTheme;
+    }
 
 }
