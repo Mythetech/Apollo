@@ -2,23 +2,21 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- Blazor / UI -->
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
-    <PackageVersion Include="Mythetech.Framework" Version="0.2.5" />
-    <PackageVersion Include="Mythetech.Framework.WebAssembly" Version="0.2.3" />
-
+    <PackageVersion Include="Mythetech.Framework" Version="0.3.3" />
+    <PackageVersion Include="Mythetech.Framework.WebAssembly" Version="0.3.0" />
     <!-- Blazor WebAssembly -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" />
     <PackageVersion Include="KristofferStrube.Blazor.FileSystem" Version="0.3.1" />
     <PackageVersion Include="KristofferStrube.Blazor.FileSystemAccess" Version="3.2.2" />
     <PackageVersion Include="KristofferStrube.Blazor.WebWorkers" Version="0.1.0-alpha.7" />
-
     <!-- Code Analysis / Roslyn -->
+    <PackageVersion Include="Microsoft.AspNetCore.Razor.Language" Version="6.0.36" />
     <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.13.0-3.25056.7" />
     <PackageVersion Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="3.3.3-beta1.21417.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.13.0-3.25056.7" />
@@ -30,27 +28,22 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.ExternalAccess.OmniSharp.CSharp" Version="4.13.0-3.25056.7" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.13.0-3.25056.7" />
     <PackageVersion Include="Microsoft.DiaSymReader" Version="2.2.0-beta.24622.1" />
-
     <!-- OmniSharp -->
     <PackageVersion Include="OmniSharp.Abstractions" Version="1.39.13" />
     <PackageVersion Include="OmniSharp.Roslyn" Version="1.39.13" />
     <PackageVersion Include="OmniSharp.Roslyn.CSharp" Version="1.39.13" />
-
     <!-- Microsoft Extensions -->
-    <PackageVersion Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-
     <!-- System -->
     <PackageVersion Include="System.Console" Version="4.3.1" />
     <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
     <PackageVersion Include="System.Security.Permissions" Version="10.0.0" />
-
     <!-- Tools -->
     <PackageVersion Include="CSharpier.Core" Version="0.30.6" />
-
     <!-- Testing -->
     <PackageVersion Include="bunit" Version="1.38.5" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />

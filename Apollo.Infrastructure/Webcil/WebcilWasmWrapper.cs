@@ -161,7 +161,7 @@ namespace Apollo.Infrastructure.Webcil
             byte[] ulebSectionSize = ULEB128Encode(dataSectionSize);
 
             if (putativeULEBDataSectionSize.Length != ulebSectionSize.Length)
-                throw new InvalidOperationException  ("adding padding would cause data section's encoded length to chane"); // TODO: fixme: there's upto one extra byte to encode the section length - take away a padding byte.
+                throw new InvalidOperationException("adding padding would cause data section's encoded length to change"); // TODO: fixme: there's up to one extra byte to encode the section length - take away a padding byte.
             writer.Write((byte)11); // section Data
             writer.Write(ulebSectionSize, 0, ulebSectionSize.Length);
 

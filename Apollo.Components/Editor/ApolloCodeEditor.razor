@@ -38,6 +38,7 @@
 
     private bool _editorReady = false;
     private string? _lastKnownContent;
+    private DotNetObjectReference<ApolloCodeEditor>? _dotNetRef;
 
     private StandaloneEditorConstructionOptions DefaultOptions(StandaloneCodeEditor editor)
     {
@@ -282,10 +283,10 @@
         await Global.RegisterDocumentFormattingEditProvider(JsRuntime, "csharp", async (uri, options) =>
         {
             Logger.LogInformation("Formatting document...");
-            
+
             var current = SolutionsState.ActiveFile?.Data;
             var formatted = await CSharpier.CodeFormatter.FormatAsync(current);
-            
+
             var model = await _editor.GetModel();
             var lineCount = await model.GetLineCount();
             var lastLineLength = (await model.GetLineContent(lineCount)).Length;
@@ -308,6 +309,79 @@
             return edits;
         });
 
+        // Initialize semantic tokens for Razor syntax highlighting
+        await InitializeSemanticTokensAsync();
+    }
+
+    private async Task InitializeSemanticTokensAsync()
+    {
+        try
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+
+            // Initialize semantic tokens support for Razor files
+            await JsRuntime.InvokeVoidAsync(
+                "apolloEditor.initializeSemanticTokens",
+                "apollo-editor",
+                _dotNetRef,
+                Settings.IsDarkMode);
+
+            Logger.LogInformation("Semantic tokens initialized for Razor files");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to initialize semantic tokens - Razor highlighting may be limited");
+        }
+    }
+
+    [JSInvokable]
+    public async Task<object?> ProvideSemanticTokens(string modelUri)
+    {
+        try
+        {
+            if (!CodeAnalysisState.IsReady)
+            {
+                return null;
+            }
+
+            var activeFile = SolutionsState.ActiveFile;
+            if (activeFile == null)
+            {
+                return null;
+            }
+
+            // Only provide semantic tokens for Razor files
+            if (!activeFile.Name.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) &&
+                !activeFile.Name.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            Logger.LogDebug("Semantic tokens requested for {Uri}", activeFile.Uri);
+
+            var result = await CodeAnalysisState.RequestSemanticTokensAsync(
+                activeFile.Uri,
+                activeFile.Data);
+
+            if (result.Data.Length == 0)
+            {
+                Logger.LogDebug("No semantic tokens found for {Uri}", activeFile.Uri);
+                return null;
+            }
+
+            Logger.LogDebug("Found {Count} semantic tokens for {Uri}", result.Data.Length / 5, activeFile.Uri);
+
+            return new
+            {
+                data = result.Data,
+                resultId = result.ResultId
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Semantic tokens error");
+            return null;
+        }
     }
 
     private CompletionItemKind MapCompletionKind(OmniSharp.Models.v1.Completion.CompletionItemKind kind)
@@ -513,6 +587,7 @@
     {
         _editor?.Dispose();
         _diagnosticsCancellation?.Dispose();
+        _dotNetRef?.Dispose();
         SolutionsState.BuildRequested -= HandleBuildRequested;
         SolutionsState.ActiveFileChanged -= async (file) => await HandleFileChanged(file);
         SolutionsState.ActiveFileChangeRequested -= async (file) => await HandleBeforeFileChanged(file);

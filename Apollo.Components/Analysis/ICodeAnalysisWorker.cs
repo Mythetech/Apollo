@@ -19,4 +19,6 @@ public interface ICodeAnalysisWorker : IWorkerProxy
     Task<byte[]> SetCurrentDocumentAsync(string setCurrentDocumentRequest);
     
     Task<byte[]> UpdateUserAssemblyAsync(string userAssemblyUpdateRequest);
+
+    Task<byte[]> GetSemanticTokensAsync(string semanticTokensRequest);
 }

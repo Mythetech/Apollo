@@ -70,7 +70,7 @@ public class SolutionsState
 
     public async Task SaveProjectFilesAsync()
     {
-        await SaveProjectRequested.Invoke();
+        await (SaveProjectRequested?.Invoke() ?? Task.CompletedTask);
     }
 
     public void SwitchFile(SolutionFile file)
