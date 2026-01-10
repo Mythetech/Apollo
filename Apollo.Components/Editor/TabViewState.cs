@@ -232,17 +232,17 @@ public class TabViewState
             {
                 AreaIdentifier = DropZones.Right,
                 IsActive = false
-            }
-        ];
-        
-        if(_environment.IsDevelopment())
-        {
-            defaultTabs.Add(new SystemLogViewer());
-            defaultTabs.Add(new PreviewTab()
+            },
+            new PreviewTab()
             {
                 AreaIdentifier = DropZones.None,
                 IsActive = false
-            });
+            }
+        ];
+
+        if(_environment.IsDevelopment())
+        {
+            defaultTabs.Add(new SystemLogViewer());
         }
 
         return defaultTabs;

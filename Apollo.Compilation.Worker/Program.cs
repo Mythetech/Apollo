@@ -1,4 +1,4 @@
-﻿using System.Buffers.Text;
+using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -64,9 +64,41 @@ Imports.RegisterOnMessage(async e =>
                     await resolver.GetMetadataReferenceAsync("xunit.assert.wasm"),
                     await resolver.GetMetadataReferenceAsync("xunit.core.wasm")
                 };
-                
+
+                var isRazorProject = solution.Type == ProjectType.RazorClassLibrary ||
+                                     solution.Items.Any(i => i.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase));
+
+                if (isRazorProject)
+                {
+                    try
+                    {
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.Threading.Tasks.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.Collections.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.Linq.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.ObjectModel.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.ComponentModel.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("System.ComponentModel.Primitives.wasm"));
+                        LogMessageWriter.Log("Added system references for Razor project", LogSeverity.Debug);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessageWriter.Log($"Warning: Could not load system references: {ex.Message}", LogSeverity.Warning);
+                    }
+
+                    try
+                    {
+                        references.Add(await resolver.GetMetadataReferenceAsync("Microsoft.AspNetCore.Components.wasm"));
+                        references.Add(await resolver.GetMetadataReferenceAsync("Microsoft.AspNetCore.Components.Web.wasm"));
+                        LogMessageWriter.Log("Added Blazor component references for Razor project", LogSeverity.Debug);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogMessageWriter.Log($"Warning: Could not load Blazor references: {ex.Message}", LogSeverity.Warning);
+                    }
+                }
+
                 nugetAssemblyCache = solution.NuGetReferences ?? [];
-                
+
                 foreach (var nugetRef in nugetAssemblyCache)
                 {
                     if (nugetRef.AssemblyData?.Length > 0)
@@ -76,8 +108,10 @@ Imports.RegisterOnMessage(async e =>
                         LogMessageWriter.Log($"Added NuGet reference: {nugetRef.AssemblyName}", LogSeverity.Debug);
                     }
                 }
-                
-                var result = new CompilationService().Compile(solution, references);
+
+                var result = isRazorProject
+                    ? new RazorCompilationService().Compile(solution, references)
+                    : new CompilationService().Compile(solution, references);
 
                 asmCache = result.Assembly;
 

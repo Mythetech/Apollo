@@ -1,0 +1,144 @@
+@using System.Reflection
+
+<MudPaper Class="pa-3 mt-2" Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Component Parameters</MudText>
+
+    @if (_parameterInfos.Any())
+    {
+        <MudStack Spacing="2">
+            @foreach (var param in _parameterInfos)
+            {
+                <div class="d-flex align-center gap-2">
+                    <MudText Typo="Typo.body2" Style="min-width: 100px;">@param.Name</MudText>
+                    @if (param.PropertyType == typeof(string))
+                    {
+                        <MudTextField T="string"
+                                      Value="@(GetParameterValue<string>(param.Name))"
+                                      ValueChanged="@(v => UpdateParameter(param.Name, v))"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Class="flex-grow-1" />
+                    }
+                    else if (param.PropertyType == typeof(bool))
+                    {
+                        <MudSwitch T="bool"
+                                   Value="@(GetParameterValue<bool>(param.Name))"
+                                   ValueChanged="@((bool v) => UpdateParameter(param.Name, v))"
+                                   Color="Color.Primary" />
+                    }
+                    else if (param.PropertyType == typeof(int))
+                    {
+                        <MudNumericField T="int"
+                                         Value="@(GetParameterValue<int>(param.Name))"
+                                         ValueChanged="@(v => UpdateParameter(param.Name, v))"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Class="flex-grow-1" />
+                    }
+                    else if (param.PropertyType == typeof(double))
+                    {
+                        <MudNumericField T="double"
+                                         Value="@(GetParameterValue<double>(param.Name))"
+                                         ValueChanged="@(v => UpdateParameter(param.Name, v))"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Class="flex-grow-1" />
+                    }
+                    else if (param.PropertyType.IsEnum)
+                    {
+                        <MudSelect T="object"
+                                   Value="@(Parameters.GetValueOrDefault(param.Name))"
+                                   ValueChanged="@(v => UpdateParameter(param.Name, v))"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Class="flex-grow-1">
+                            @foreach (var enumValue in Enum.GetValues(param.PropertyType))
+                            {
+                                <MudSelectItem Value="@enumValue">@enumValue.ToString()</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            (@param.PropertyType.Name - not editable)
+                        </MudText>
+                    }
+                </div>
+            }
+        </MudStack>
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            No editable parameters
+        </MudText>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public Type? ComponentType { get; set; }
+    [Parameter] public Dictionary<string, object?> Parameters { get; set; } = new();
+    [Parameter] public EventCallback<Dictionary<string, object?>> OnParametersChanged { get; set; }
+
+    private List<ComponentParameterInfo> _parameterInfos = new();
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        RefreshParameterInfos();
+    }
+
+    private void RefreshParameterInfos()
+    {
+        if (ComponentType == null)
+        {
+            _parameterInfos = new();
+            return;
+        }
+
+        _parameterInfos = ComponentType.GetProperties()
+            .Where(p => p.GetCustomAttribute<ParameterAttribute>() != null)
+            .Where(p => IsEditableType(p.PropertyType))
+            .Select(p => new ComponentParameterInfo
+            {
+                Name = p.Name,
+                PropertyType = p.PropertyType
+            })
+            .ToList();
+    }
+
+    private bool IsEditableType(Type type)
+    {
+        return type == typeof(string) ||
+               type == typeof(bool) ||
+               type == typeof(int) ||
+               type == typeof(double) ||
+               type.IsEnum;
+    }
+
+    private T GetParameterValue<T>(string name)
+    {
+        if (Parameters.TryGetValue(name, out var value) && value is T typedValue)
+        {
+            return typedValue;
+        }
+        return default!;
+    }
+
+    private async Task UpdateParameter(string name, object? value)
+    {
+        var newParams = new Dictionary<string, object?>(Parameters)
+        {
+            [name] = value
+        };
+        Parameters = newParams;
+        await OnParametersChanged.InvokeAsync(newParams);
+    }
+
+    private class ComponentParameterInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public Type PropertyType { get; set; } = typeof(object);
+    }
+}

@@ -1,46 +1,87 @@
 @using Apollo.Components.DynamicTabs
 @using Apollo.Components.Solutions
 @using Apollo.Components.Infrastructure
+@using Apollo.Components.Analysis
 @using Mythetech.Framework.Infrastructure.MessageBus
 @using Apollo.Components.Shared
 @using Microsoft.JSInterop
 @inherits DynamicTabView
 @implements IDisposable
 
-<div class="pa-4 mud-height-full">
-    <MudStack>
-        <MudSelect T="SolutionFile?" 
-                  Label="Preview Component" 
-                  AnchorOrigin="Origin.BottomCenter" 
-                  Value="@_selectedPreviewFile" 
-                  ValueChanged="HandlePreviewFileChange" 
-                  Class="flex-grow-1">
-            @if (_availableComponents != null)
-            {
-                @foreach (var component in _availableComponents)
+<div class="pa-4 mud-height-full d-flex flex-column">
+    <MudStack Class="flex-grow-1">
+        <div class="d-flex gap-2 align-center">
+            <MudSelect T="ComponentInfo?"
+                       Label="Select Component"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Value="@_selectedComponent"
+                       ValueChanged="HandleComponentSelected"
+                       Class="flex-grow-1"
+                       Disabled="@(!_hasCompiledComponents)">
+                @if (_availableComponents != null)
                 {
-                    <MudSelectItem T="SolutionFile" Value="@component">@component.Name</MudSelectItem>
+                    @foreach (var component in _availableComponents)
+                    {
+                        <MudSelectItem T="ComponentInfo" Value="@component">@component.Name</MudSelectItem>
+                    }
                 }
+            </MudSelect>
+            <MudTooltip Text="Refresh components from compiled assembly">
+                <ApolloIconButton Icon="@Icons.Material.Filled.Refresh"
+                                  Size="Size.Small"
+                                  OnClick="RefreshComponentList" />
+            </MudTooltip>
+        </div>
+
+        @if (!_hasCompiledComponents)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-2">
+                <MudText Typo="Typo.body2">
+                    Build your Razor project to preview components.
+                    Click the <strong>Build</strong> button or press <kbd>Ctrl+B</kbd>.
+                </MudText>
+            </MudAlert>
+        }
+
+        <div class="preview-container mud-border mud-border-primary mud-rounded-lg pa-4 flex-grow-1"
+             style="min-height: 200px; overflow: auto; background: var(--mud-palette-background);">
+            @if (_selectedComponent?.Type != null)
+            {
+                <ErrorBoundary @ref="_errorBoundary">
+                    <ChildContent>
+                        <DynamicComponent Type="@_selectedComponent.Type"
+                                          Parameters="@_componentParameters" />
+                    </ChildContent>
+                    <ErrorContent Context="ex">
+                        <MudAlert Severity="Severity.Error">
+                            <MudText Typo="Typo.subtitle2">Component Error</MudText>
+                            <MudText Typo="Typo.body2">@ex.Message</MudText>
+                        </MudAlert>
+                    </ErrorContent>
+                </ErrorBoundary>
             }
-        </MudSelect>
-        
-        <div class="preview-container mud-border mud-border-primary mud-rounded-lg pa-4 flex-grow-1">
-            @if (_selectedPreviewFile != null)
+            else if (_selectedPreviewFile != null && IsHtmlFile(_selectedPreviewFile))
             {
-                @if (IsComponentFile(_selectedPreviewFile))
-                {
-                    <DynamicComponent Type="@GetComponentType(_selectedPreviewFile)" />
-                }
-                else if (IsHtmlFile(_selectedPreviewFile))
-                {
-                    <div class="html-preview" @ref="_htmlPreviewContainer"></div>
-                }
+                <div class="html-preview" @ref="_htmlPreviewContainer"></div>
             }
             else
             {
-                <MudText>Select a component to preview</MudText>
+                <div class="d-flex flex-column align-center justify-center mud-height-full">
+                    <MudIcon Icon="@Icons.Material.Filled.Preview" Size="Size.Large"
+                             Style="color: var(--mud-palette-text-secondary);" />
+                    <MudText Typo="Typo.body1" Class="mt-2 mud-text-secondary">
+                        Select a component to preview
+                    </MudText>
+                </div>
             }
         </div>
+
+        @if (_selectedComponent != null && _selectedComponent.Parameters.Any())
+        {
+            <ComponentParameterEditor ComponentType="@_selectedComponent.Type"
+                                       Parameters="@_componentParameters"
+                                       OnParametersChanged="HandleParametersChanged" />
+        }
     </MudStack>
 </div>
 
@@ -48,10 +89,16 @@
     [Inject] public SolutionsState State { get; set; } = default!;
     [Inject] public IMessageBus Bus { get; set; } = default!;
     [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] public ComponentTypeResolver TypeResolver { get; set; } = default!;
+    [Inject] public UserAssemblyStore AssemblyStore { get; set; } = default!;
 
     private SolutionFile? _selectedPreviewFile;
-    private List<SolutionFile>? _availableComponents;
+    private ComponentInfo? _selectedComponent;
+    private List<ComponentInfo>? _availableComponents;
+    private Dictionary<string, object?> _componentParameters = new();
     private ElementReference _htmlPreviewContainer;
+    private ErrorBoundary? _errorBoundary;
+    private bool _hasCompiledComponents;
 
     public override string Name { get; set; } = "Preview";
     public override Type ComponentType { get; set; } = typeof(PreviewTab);
@@ -61,84 +108,129 @@
     {
         base.OnInitialized();
         State.ActiveFileChanged += HandleActiveFileChanged;
-        State.SolutionFilesChanged += RefreshAvailableComponents;
+        State.SolutionFilesChanged += HandleSolutionFilesChanged;
+        AssemblyStore.OnAssemblyUpdated += HandleAssemblyUpdated;
+        RefreshComponentList();
     }
 
     public void Dispose()
     {
         State.ActiveFileChanged -= HandleActiveFileChanged;
-        State.SolutionFilesChanged -= RefreshAvailableComponents;
+        State.SolutionFilesChanged -= HandleSolutionFilesChanged;
+        AssemblyStore.OnAssemblyUpdated -= HandleAssemblyUpdated;
+    }
+
+    private async Task HandleAssemblyUpdated(byte[] assembly)
+    {
+        await InvokeAsync(() =>
+        {
+            RefreshComponentList();
+            _errorBoundary?.Recover();
+            StateHasChanged();
+        });
     }
 
     private async void HandleActiveFileChanged(SolutionFile? file)
     {
-        if (file != null && (IsComponentFile(file) || IsHtmlFile(file)))
+        if (file == null) return;
+
+        if (IsComponentFile(file))
         {
             _selectedPreviewFile = file;
-            try
+            var componentName = Path.GetFileNameWithoutExtension(file.Name);
+            var component = _availableComponents?.FirstOrDefault(c =>
+                c.Name.Equals(componentName, StringComparison.OrdinalIgnoreCase));
+
+            if (component != null)
             {
-                await RefreshPreview();
-            }
-            catch(Exception ex)
-            {
-                Console.WriteLine(ex.Message);
+                await HandleComponentSelected(component);
             }
         }
-    }
-
-    private async Task HandlePreviewFileChange(SolutionFile? file)
-    {
-        _selectedPreviewFile = file;
-        await RefreshPreview();
-    }
-
-    private void RefreshAvailableComponents()
-    {
-        // TODO: Implement component discovery from compiled solution
-        _availableComponents = State.Project?.Files
-            .Where(f => IsComponentFile(f) || IsHtmlFile(f))
-            .ToList();
-        
-        StateHasChanged();
-    }
-
-    private async Task RefreshPreview()
-    {
-        if (_selectedPreviewFile == null) return;
-
-        if (IsHtmlFile(_selectedPreviewFile))
+        else if (IsHtmlFile(file))
         {
+            _selectedPreviewFile = file;
+            _selectedComponent = null;
             try
             {
-                await JsRuntime.InvokeVoidAsync("updateHtmlPreview",
-                    _htmlPreviewContainer,
-                    _selectedPreviewFile.Data);
+                await RefreshHtmlPreview();
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
         }
-        
+    }
+
+    private async Task HandleComponentSelected(ComponentInfo? component)
+    {
+        _selectedComponent = component;
+        _componentParameters = TypeResolver.GetDefaultParameters(component?.Type);
+        _errorBoundary?.Recover();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleSolutionFilesChanged()
+    {
+        StateHasChanged();
+    }
+
+    private void RefreshComponentList()
+    {
+        _availableComponents = TypeResolver.GetAllComponentTypes().ToList();
+        _hasCompiledComponents = _availableComponents.Count > 0;
+
+        // If we had a selected component, try to reselect it
+        if (_selectedComponent != null)
+        {
+            var refreshedComponent = _availableComponents
+                .FirstOrDefault(c => c.Name == _selectedComponent.Name);
+            if (refreshedComponent != null)
+            {
+                _selectedComponent = refreshedComponent;
+                _componentParameters = TypeResolver.GetDefaultParameters(refreshedComponent.Type);
+            }
+            else
+            {
+                _selectedComponent = null;
+                _componentParameters = new();
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task RefreshHtmlPreview()
+    {
+        if (_selectedPreviewFile == null || !IsHtmlFile(_selectedPreviewFile)) return;
+
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("updateHtmlPreview",
+                _htmlPreviewContainer,
+                _selectedPreviewFile.Data);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private void HandleParametersChanged(Dictionary<string, object?> parameters)
+    {
+        _componentParameters = parameters;
+        _errorBoundary?.Recover();
         StateHasChanged();
     }
 
     private bool IsComponentFile(SolutionFile file)
     {
-        // TODO: Implement proper component file detection
-        return file.Extension.Equals(".razor", StringComparison.OrdinalIgnoreCase);
+        return file.Extension.Equals(".razor", StringComparison.OrdinalIgnoreCase) &&
+               !file.Name.Equals("_Imports.razor", StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsHtmlFile(SolutionFile file)
     {
-        //TODO: Implement proper web file detection
         return file.Extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
                file.Extension.Equals(".htm", StringComparison.OrdinalIgnoreCase);
     }
-
-    private Type? GetComponentType(SolutionFile file)
-    {
-        // TODO: Implement component type resolution from compiled solution
-        return null;
-    }
-} 
+}

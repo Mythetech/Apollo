@@ -18,6 +18,7 @@ public class LibraryState
     public List<SolutionModel> Projects { get; set; } =
     [
         FullStackProject.Create(),
+        RazorComponentsProject.Create(),
         FizzBuzzProject.Create(),
         MinimalApiProject.Create(),
         UntitledProject.Create(),

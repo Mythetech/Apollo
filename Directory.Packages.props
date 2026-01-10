@@ -17,6 +17,7 @@
     <PackageVersion Include="KristofferStrube.Blazor.WebWorkers" Version="0.1.0-alpha.7" />
     <!-- Code Analysis / Roslyn -->
     <PackageVersion Include="Microsoft.AspNetCore.Razor.Language" Version="6.0.36" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Razor" Version="6.0.36" />
     <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.13.0-3.25056.7" />
     <PackageVersion Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="3.3.3-beta1.21417.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Common" Version="4.13.0-3.25056.7" />
