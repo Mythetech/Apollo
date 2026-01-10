@@ -89,7 +89,7 @@ public static class RazorComponentsProject
     private const string ButtonCode = """
 <button class="@ButtonClass"
         disabled="@Disabled"
-        @onclick="HandleClick"
+        @onclick="@(async () => await HandleClick())"
         style="@ButtonStyle">
     @Text
 </button>
@@ -210,7 +210,7 @@ public static class RazorComponentsProject
 
     private const string ToggleCode = """
 <label class="toggle" style="@ContainerStyle">
-    <div style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" @onclick="Toggle">
+    <div style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;" @onclick="@(async () => await Toggle())">
         <div style="@TrackStyle">
             <div style="@ThumbStyle"></div>
         </div>
@@ -264,7 +264,7 @@ public static class RazorComponentsProject
             </div>
             @if (Dismissible)
             {
-                <button style="@CloseButtonStyle" @onclick="Dismiss">&times;</button>
+                <button style="@CloseButtonStyle" @onclick="@(async () => await Dismiss())">&times;</button>
             }
         </div>
     </div>
