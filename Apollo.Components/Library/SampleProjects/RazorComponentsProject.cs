@@ -161,9 +161,9 @@ public static class RazorComponentsProject
         @currentCount
     </div>
     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-        <button style="@ButtonStyle" @onclick="Decrement">-</button>
-        <button style="@ButtonStyle" @onclick="Reset">Reset</button>
-        <button style="@ButtonStyle" @onclick="Increment">+</button>
+        <button style="@ButtonStyle" onclick="@(async () => await Decrement())">-</button>
+        <button style="@ButtonStyle" onclick="@(async () => await Reset())">Reset</button>
+        <button style="@ButtonStyle" onclick="@(async () => await Increment())">+</button>
     </div>
     @if (currentCount != StartValue)
     {

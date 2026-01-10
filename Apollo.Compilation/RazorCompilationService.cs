@@ -1,11 +1,14 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 using Apollo.Contracts.Compilation;
 using Microsoft.AspNetCore.Razor.Language;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Razor;
 using Solution = Apollo.Contracts.Solutions.Solution;
+using SolutionItem = Apollo.Contracts.Solutions.SolutionItem;
 
 namespace Apollo.Compilation;
 
@@ -42,7 +45,7 @@ public class RazorCompilationService
             {
                 diagnostics.Add($"Processing Razor file: {item.Path}");
 
-                var (generatedCode, genDiagnostics) = GenerateComponentCode(item.Path, item.Content, importSourceDocuments);
+                var (generatedCode, genDiagnostics) = GenerateComponentCode(item.Path, item.Content, importSourceDocuments, solution.Items);
                 diagnostics.AddRange(genDiagnostics);
 
                 if (!string.IsNullOrEmpty(generatedCode))
@@ -105,13 +108,17 @@ public class RazorCompilationService
     /// <summary>
     /// Generates C# code from a Razor component file.
     /// </summary>
-    private (string code, List<string> diagnostics) GenerateComponentCode(string filePath, string razorContent, ImmutableArray<RazorSourceDocument> importSources)
+    private (string code, List<string> diagnostics) GenerateComponentCode(
+        string filePath,
+        string razorContent,
+        ImmutableArray<RazorSourceDocument> importSources,
+        IEnumerable<SolutionItem> solutionItems)
     {
         var diagnostics = new List<string>();
 
         try
         {
-            var fileSystem = new VirtualRazorProjectFileSystem();
+            var fileSystem = new VirtualRazorProjectFileSystem(solutionItems);
 
             var projectEngine = RazorProjectEngine.Create(
                 RazorConfiguration.Default,
@@ -119,9 +126,13 @@ public class RazorCompilationService
                 builder =>
                 {
                     builder.SetRootNamespace("UserComponents");
+
+                    CompilerFeatures.Register(builder);
                 });
 
-            var sourceDocument = RazorSourceDocument.Create(razorContent, filePath);
+            var fileName = Path.GetFileName(filePath);
+            var properties = new RazorSourceDocumentProperties(filePath, fileName);
+            var sourceDocument = RazorSourceDocument.Create(razorContent, Encoding.UTF8, properties);
 
             var codeDocument = projectEngine.Process(
                 sourceDocument,
@@ -150,7 +161,9 @@ public class RazorCompilationService
                 return (GenerateSimpleComponentCode(filePath, razorContent), diagnostics);
             }
 
-            diagnostics.Add("Razor compiler succeeded");
+            var classMatch = System.Text.RegularExpressions.Regex.Match(generatedCode, @"public partial class (\w+)");
+            var className = classMatch.Success ? classMatch.Groups[1].Value : "unknown";
+            diagnostics.Add($"Razor compiler succeeded, generated class: {className}");
             return (generatedCode, diagnostics);
         }
         catch (Exception ex)
@@ -241,21 +254,56 @@ namespace UserComponents
 
 /// <summary>
 /// A virtual file system implementation for the Razor project engine.
+/// Provides in-memory file content to enable proper component name generation.
 /// </summary>
 internal class VirtualRazorProjectFileSystem : RazorProjectFileSystem
 {
+    private readonly Dictionary<string, (string content, string basePath)> _files = new();
+
+    public VirtualRazorProjectFileSystem()
+    {
+    }
+
+    public VirtualRazorProjectFileSystem(IEnumerable<SolutionItem> razorFiles)
+    {
+        foreach (var file in razorFiles.Where(f => f.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase)))
+        {
+            var normalizedPath = NormalizePath(file.Path);
+            _files[normalizedPath] = (file.Content, GetBasePath(file.Path));
+        }
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return "/" + path.Replace("\\", "/").TrimStart('/');
+    }
+
+    private static string GetBasePath(string path)
+    {
+        var normalized = path.Replace("\\", "/");
+        var lastSlash = normalized.LastIndexOf('/');
+        return lastSlash > 0 ? "/" + normalized.Substring(0, lastSlash) : "/";
+    }
+
     public override IEnumerable<RazorProjectItem> EnumerateItems(string basePath)
     {
-        return Enumerable.Empty<RazorProjectItem>();
+        return _files
+            .Where(kvp => kvp.Value.basePath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+            .Select(kvp => new VirtualProjectItem(kvp.Value.basePath, kvp.Key, kvp.Value.content, FileKinds.Component));
     }
 
     public override RazorProjectItem GetItem(string path)
     {
-        return new NotFoundProjectItem(string.Empty, path, FileKinds.Component);
+        return GetItem(path, FileKinds.Component);
     }
 
     public override RazorProjectItem GetItem(string path, string? fileKind)
     {
+        var normalizedPath = NormalizePath(path);
+        if (_files.TryGetValue(normalizedPath, out var file))
+        {
+            return new VirtualProjectItem(file.basePath, normalizedPath, file.content, fileKind ?? FileKinds.Component);
+        }
         return new NotFoundProjectItem(string.Empty, path, fileKind ?? FileKinds.Component);
     }
 }
@@ -282,4 +330,28 @@ internal class NotFoundProjectItem : RazorProjectItem
     {
         throw new InvalidOperationException("Item does not exist");
     }
+}
+
+/// <summary>
+/// Represents a virtual project item with in-memory content.
+/// </summary>
+internal class VirtualProjectItem : RazorProjectItem
+{
+    private readonly string _content;
+
+    public VirtualProjectItem(string basePath, string filePath, string content, string fileKind)
+    {
+        BasePath = basePath;
+        FilePath = filePath;
+        _content = content;
+        FileKind = fileKind;
+    }
+
+    public override string BasePath { get; }
+    public override string FilePath { get; }
+    public override string FileKind { get; }
+    public override bool Exists => true;
+    public override string PhysicalPath => FilePath;
+
+    public override Stream Read() => new MemoryStream(Encoding.UTF8.GetBytes(_content));
 }
