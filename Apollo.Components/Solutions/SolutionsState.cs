@@ -34,11 +34,13 @@ public class SolutionsState
         var minimalApiProject = MinimalApiProject.Create();
         var simpleLibraryProject = SimpleLibraryProject.Create();
         var fullStackProject = FullStackProject.Create();
+        var razorComponentsProject = RazorComponentsProject.Create();
 
         Project = untitledProject;
         Solutions =
         [
             untitledProject,
+            razorComponentsProject,
             fizzBuzzProject,
             minimalApiProject,
             simpleLibraryProject,

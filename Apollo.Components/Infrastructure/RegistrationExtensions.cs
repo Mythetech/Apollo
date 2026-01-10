@@ -1,6 +1,7 @@
 using System.Reflection;
 using Apollo.Components.Analysis;
 using Apollo.Components.Code;
+using Apollo.Components.Preview;
 using Apollo.Components.Console;
 using Apollo.Components.Editor;
 using Apollo.Components.Hosting;
@@ -58,6 +59,7 @@ public static class RegistrationExtensions
         services.AddSingleton<LibraryState>();
         services.AddSingleton<TestingState>();
         services.AddSingleton<UserAssemblyStore>();
+        services.AddSingleton<ComponentTypeResolver>();
         services.AddSingleton<CompilerState>();
         services.AddSingleton<ActiveTypeState>();
         services.AddSingleton<CodeAnalysisState>();
