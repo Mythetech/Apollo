@@ -681,6 +681,12 @@ public partial class RazorSemanticTokenService
     /// <summary>
     /// Check if a classification type represents a semantic token we want to highlight.
     /// </summary>
+    public static bool IsCSharpSemanticClassification(string classificationType)
+        => IsSemanticClassification(classificationType);
+
+    public static int MapCSharpClassificationToTokenType(string classificationType)
+        => MapClassificationToTokenType(classificationType);
+
     private static bool IsSemanticClassification(string classificationType)
     {
         return classificationType switch

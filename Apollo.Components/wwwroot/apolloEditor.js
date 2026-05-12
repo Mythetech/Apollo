@@ -215,6 +215,7 @@ window.apolloEditor.initializeSemanticTokens = async function (editorId, semanti
         };
 
         await window.apolloEditor.registerSemanticTokensProvider('razor', semanticTokensProviderRef, legend);
+        await window.apolloEditor.registerSemanticTokensProvider('csharp', semanticTokensProviderRef, legend);
 
         window.apolloEditor.applySemanticTheme(editorId, isDarkMode);
 
@@ -226,4 +227,36 @@ window.apolloEditor.initializeSemanticTokens = async function (editorId, semanti
         console.error('Failed to initialize semantic tokens:', error);
         return false;
     }
+};
+
+window.apolloEditor.registerHoverProvider = function (language, dotNetRef) {
+    monaco.languages.registerHoverProvider(language, {
+        provideHover: (model, position, cancellationToken) => {
+            return dotNetRef.invokeMethodAsync("ProvideHover", decodeURI(model.uri.toString()), position)
+                .catch(error => {
+                    console.warn('Hover error:', error);
+                    return null;
+                });
+        }
+    });
+    console.info('Registered hover provider for', language);
+};
+
+window.apolloEditor.registerSignatureHelpProvider = function (language, dotNetRef) {
+    monaco.languages.registerSignatureHelpProvider(language, {
+        signatureHelpTriggerCharacters: ['(', ','],
+        signatureHelpRetriggerCharacters: [')'],
+        provideSignatureHelp: (model, position, cancellationToken, context) => {
+            return dotNetRef.invokeMethodAsync("ProvideSignatureHelp", decodeURI(model.uri.toString()), position, context)
+                .then(result => {
+                    if (result == null) return null;
+                    return { value: result, dispose: () => { } };
+                })
+                .catch(error => {
+                    console.warn('Signature help error:', error);
+                    return null;
+                });
+        }
+    });
+    console.info('Registered signature help provider for', language);
 };

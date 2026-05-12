@@ -309,6 +309,12 @@
             return edits;
         });
 
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        await JsRuntime.InvokeVoidAsync("apolloEditor.registerHoverProvider", "csharp", _dotNetRef);
+
+        await JsRuntime.InvokeVoidAsync("apolloEditor.registerSignatureHelpProvider", "csharp", _dotNetRef);
+
         // Initialize semantic tokens for Razor syntax highlighting
         await InitializeSemanticTokensAsync();
     }
@@ -317,7 +323,6 @@
     {
         try
         {
-            _dotNetRef = DotNetObjectReference.Create(this);
 
             // Initialize semantic tokens support for Razor files
             await JsRuntime.InvokeVoidAsync(
@@ -350,18 +355,14 @@
                 return null;
             }
 
-            // Only provide semantic tokens for Razor files
-            if (!activeFile.Name.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) &&
-                !activeFile.Name.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
             Logger.LogDebug("Semantic tokens requested for {Uri}", activeFile.Uri);
+
+            var isRazor = activeFile.Name.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) ||
+                          activeFile.Name.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase);
 
             var result = await CodeAnalysisState.RequestSemanticTokensAsync(
                 activeFile.Uri,
-                activeFile.Data);
+                isRazor ? activeFile.Data : null);
 
             if (result.Data.Length == 0)
             {
@@ -380,6 +381,107 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Semantic tokens error");
+            return null;
+        }
+    }
+
+    [JSInvokable]
+    public async Task<object?> ProvideHover(string modelUri, object position)
+    {
+        try
+        {
+            if (!CodeAnalysisState.IsReady)
+                return null;
+
+            var documentUri = SolutionsState.ActiveFile?.Uri;
+            if (string.IsNullOrEmpty(documentUri))
+                return null;
+
+            var posJson = JsonSerializer.Serialize(position);
+            var pos = JsonSerializer.Deserialize<Position>(posJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (pos == null || pos.LineNumber < 1)
+                return null;
+
+            var code = await _editor.GetValue();
+
+            var quickInfo = await CodeAnalysisState.RequestQuickInfoAsync(
+                code,
+                documentUri,
+                (int)pos.LineNumber - 1,
+                (int)pos.Column - 1);
+
+            if (string.IsNullOrEmpty(quickInfo.Markdown))
+                return null;
+
+            return new
+            {
+                contents = new[]
+                {
+                    new { value = quickInfo.Markdown, isTrusted = true }
+                },
+                range = new
+                {
+                    startLineNumber = pos.LineNumber,
+                    startColumn = pos.Column,
+                    endLineNumber = pos.LineNumber,
+                    endColumn = pos.Column + 1
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Hover provider error");
+            return null;
+        }
+    }
+
+    [JSInvokable]
+    public async Task<object?> ProvideSignatureHelp(string modelUri, object position, object context)
+    {
+        try
+        {
+            if (!CodeAnalysisState.IsReady)
+                return null;
+
+            var documentUri = SolutionsState.ActiveFile?.Uri;
+            if (string.IsNullOrEmpty(documentUri))
+                return null;
+
+            var posJson = JsonSerializer.Serialize(position);
+            var pos = JsonSerializer.Deserialize<Position>(posJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (pos == null || pos.LineNumber < 1)
+                return null;
+
+            var code = await _editor.GetValue();
+
+            var result = await CodeAnalysisState.RequestSignatureHelpAsync(
+                code,
+                documentUri,
+                (int)pos.LineNumber - 1,
+                (int)pos.Column - 1);
+
+            if (result == null || result.Signatures.Count == 0)
+                return null;
+
+            return new
+            {
+                signatures = result.Signatures.Select(s => new
+                {
+                    label = s.Label,
+                    documentation = s.Documentation != null ? new { value = s.Documentation } : null,
+                    parameters = s.Parameters?.Select(p => new
+                    {
+                        label = p.Label,
+                        documentation = p.Documentation != null ? new { value = p.Documentation } : null
+                    }).ToList()
+                }).ToList(),
+                activeSignature = result.ActiveSignature,
+                activeParameter = result.ActiveParameter
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Signature help error");
             return null;
         }
     }

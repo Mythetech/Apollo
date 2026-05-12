@@ -90,6 +90,15 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
                     case "semantic_tokens_response":
                         _semanticTokensResponse = Convert.FromBase64String(message.Payload);
                         break;
+                    case "quick_hint_response":
+                        _quickInfoResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    case "signature_help_response":
+                        _signatureHelpResponse = Convert.FromBase64String(message.Payload);
+                        break;
+                    case "completion_resolve_response":
+                        _completionResolveResponse = Convert.FromBase64String(message.Payload);
+                        break;
                     default:
                         _console.AddDebug($"Unknown event: {message.Action}");
                         _console.AddDebug(JsonSerializer.Serialize(message.Payload));
@@ -146,17 +155,80 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
 
     public async Task<byte[]> GetCompletionResolveAsync(string completionResolveRequestString)
     {
-        throw new NotImplementedException();
+        _completionResolveResponse = null;
+
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage
+        {
+            Action = "get_completion_resolve",
+            Payload = completionResolveRequestString
+        }));
+
+        for (int i = 0; i < 50; i++)
+        {
+            if (_completionResolveResponse == null)
+            {
+                await Task.Delay(100);
+                await Task.Yield();
+            }
+            else
+            {
+                return _completionResolveResponse;
+            }
+        }
+
+        return _completionResolveResponse ?? [];
     }
 
     public async Task<byte[]> GetSignatureHelpAsync(string code, string signatureHelpRequestString)
     {
-        throw new NotImplementedException();
+        _signatureHelpResponse = null;
+
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage
+        {
+            Action = "get_signature_help",
+            Payload = JsonSerializer.Serialize(new CompletionRequestWrapper(code, signatureHelpRequestString))
+        }));
+
+        for (int i = 0; i < 50; i++)
+        {
+            if (_signatureHelpResponse == null)
+            {
+                await Task.Delay(100);
+                await Task.Yield();
+            }
+            else
+            {
+                return _signatureHelpResponse;
+            }
+        }
+
+        return _signatureHelpResponse ?? [];
     }
 
-    public async Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString)
+    public async Task<byte[]> GetQuickInfoAsync(string code, string quickInfoRequestString)
     {
-        throw new NotImplementedException();
+        _quickInfoResponse = null;
+
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage
+        {
+            Action = "get_quick_hint",
+            Payload = JsonSerializer.Serialize(new CompletionRequestWrapper(code, quickInfoRequestString))
+        }));
+
+        for (int i = 0; i < 50; i++)
+        {
+            if (_quickInfoResponse == null)
+            {
+                await Task.Delay(100);
+                await Task.Yield();
+            }
+            else
+            {
+                return _quickInfoResponse;
+            }
+        }
+
+        return _quickInfoResponse ?? [];
     }
 
     public async Task<byte[]> GetDiagnosticsAsync(string serializedSolution)
@@ -190,6 +262,9 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
     private byte[]? _setCurrentDocumentResponse;
     private byte[]? _userAssemblyUpdateResponse;
     private byte[]? _semanticTokensResponse;
+    private byte[]? _quickInfoResponse;
+    private byte[]? _signatureHelpResponse;
+    private byte[]? _completionResolveResponse;
 
     public async Task<byte[]> UpdateDocumentAsync(string documentUpdateRequest)
     {

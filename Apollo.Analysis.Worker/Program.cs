@@ -86,17 +86,35 @@ Imports.RegisterOnMessage(async e =>
                 break;
                 
             case "get_quick_hint":
-                var quickHint = await monacoService.GetQuickInfoAsync(message.Payload);
+                var qhWrapper = JsonSerializer.Deserialize<CompletionRequestWrapper>(message.Payload);
+                ArgumentException.ThrowIfNullOrWhiteSpace(qhWrapper?.Code);
+                ArgumentNullException.ThrowIfNull(qhWrapper?.Request);
+                var quickHint = await monacoService.GetQuickInfoAsync(qhWrapper.Code, qhWrapper.Request);
 
                 var quickHintResponse = new WorkerMessage()
                 {
                     Action = "quick_hint_response",
                     Payload = Convert.ToBase64String(quickHint),
                 };
-                
+
                 Imports.PostMessage(quickHintResponse.ToSerialized());
                 break;
-                
+
+            case "get_signature_help":
+                var sigWrapper = JsonSerializer.Deserialize<CompletionRequestWrapper>(message.Payload);
+                ArgumentException.ThrowIfNullOrWhiteSpace(sigWrapper?.Code);
+                ArgumentNullException.ThrowIfNull(sigWrapper?.Request);
+                var sigHelp = await monacoService.GetSignatureHelpAsync(sigWrapper.Code, sigWrapper.Request);
+
+                var sigHelpResponse = new WorkerMessage()
+                {
+                    Action = "signature_help_response",
+                    Payload = Convert.ToBase64String(sigHelp),
+                };
+
+                Imports.PostMessage(sigHelpResponse.ToSerialized());
+                break;
+
             case "get_diagnostics":
                 try 
                 {

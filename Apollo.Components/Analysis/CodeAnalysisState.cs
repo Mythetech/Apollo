@@ -261,6 +261,74 @@ public class CodeAnalysisState
 
     public bool IsReady => _workerReady && !Disabled && _workerProxy != null;
 
+    public async Task<QuickInfoResult> RequestQuickInfoAsync(string code, string documentUri, int line, int column)
+    {
+        if (Disabled || !_workerReady || _workerProxy == null)
+            return QuickInfoResult.Empty;
+
+        var request = new { FileName = documentUri, Line = line, Column = column };
+
+        try
+        {
+            var bytes = await _workerProxy.GetQuickInfoAsync(code, JsonSerializer.Serialize(request));
+            if (bytes == null || bytes.Length == 0)
+                return QuickInfoResult.Empty;
+
+            var response = JsonSerializer.Deserialize<ResponsePayload>(
+                System.Text.Encoding.UTF8.GetString(bytes),
+                JsonOptions
+            );
+
+            if (response?.Payload == null)
+                return QuickInfoResult.Empty;
+
+            var result = JsonSerializer.Deserialize<QuickInfoResult>(
+                response.Payload.ToString()!,
+                JsonOptions
+            );
+
+            return result ?? QuickInfoResult.Empty;
+        }
+        catch (Exception ex)
+        {
+            _console.AddError($"Error requesting quick info: {ex.Message}");
+            return QuickInfoResult.Empty;
+        }
+    }
+
+    public async Task<SignatureHelpResult?> RequestSignatureHelpAsync(string code, string documentUri, int line, int column)
+    {
+        if (Disabled || !_workerReady || _workerProxy == null)
+            return null;
+
+        var request = new { FileName = documentUri, Line = line, Column = column };
+
+        try
+        {
+            var bytes = await _workerProxy.GetSignatureHelpAsync(code, JsonSerializer.Serialize(request));
+            if (bytes == null || bytes.Length == 0)
+                return null;
+
+            var response = JsonSerializer.Deserialize<ResponsePayload>(
+                System.Text.Encoding.UTF8.GetString(bytes),
+                JsonOptions
+            );
+
+            if (response?.Payload == null)
+                return null;
+
+            return JsonSerializer.Deserialize<SignatureHelpResult>(
+                response.Payload.ToString()!,
+                JsonOptions
+            );
+        }
+        catch (Exception ex)
+        {
+            _console.AddError($"Error requesting signature help: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<SemanticTokensResult> RequestSemanticTokensAsync(
         string documentUri,
         string? razorContent = null,

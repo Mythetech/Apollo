@@ -10,7 +10,7 @@ public interface ICodeAnalysisWorker : IWorkerProxy
 
     Task<byte[]> GetSignatureHelpAsync(string code, string signatureHelpRequestString);
 
-    Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString);
+    Task<byte[]> GetQuickInfoAsync(string code, string quickInfoRequestString);
 
     Task<byte[]> GetDiagnosticsAsync(string serializedSolution);
     

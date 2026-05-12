@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Apollo.Contracts.Analysis;
 using Apollo.Infrastructure;
 using Apollo.Infrastructure.Workers;
+using Microsoft.CodeAnalysis.Classification;
 using Microsoft.CodeAnalysis.Completion;
 using Microsoft.CodeAnalysis.Tags;
 using Microsoft.Extensions.Logging;
@@ -231,23 +232,41 @@ class Program
         return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
     }
 
-    public async Task<byte[]> GetQuickInfoAsync(string quickInfoRequestString)
+    public async Task<byte[]> GetQuickInfoAsync(string code, string quickInfoRequestString)
     {
-        var quickInfoRequest = JsonSerializer.Deserialize<QuickInfoRequest>(quickInfoRequestString);
-        if (quickInfoRequest == null || _quickInfoProvider == null)
+        try
         {
+            using var doc = JsonDocument.Parse(quickInfoRequestString);
+            var root = doc.RootElement;
+            var path = root.GetProperty("FileName").GetString();
+            var line = root.GetProperty("Line").GetInt32();
+            var column = root.GetProperty("Column").GetInt32();
+
+            if (string.IsNullOrEmpty(path) || _quickInfoProvider == null)
+                return [];
+
+            _workerLogger.LogTrace($"QuickInfo request for {path} at {line}:{column}");
+            _projectService.UpdateDocument(path, code);
+            _projectService.SetCurrentDocument(path);
+
+            var document = _projectService.GetDocument(path);
+            if (document == null)
+                return [];
+
+            var sourceText = await document.GetTextAsync();
+            if (line < 0 || line >= sourceText.Lines.Count)
+                return [];
+
+            var quickInfoRequest = new QuickInfoRequest { FileName = path, Line = line, Column = column };
+            var quickInfoResponse = await _quickInfoProvider.Handle(quickInfoRequest, document);
+            var payload = new ResponsePayload(quickInfoResponse, "GetQuickInfoAsync");
+            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error getting quick info: {ex.Message}");
             return [];
         }
-
-        var document = _projectService.GetCurrentDocument();
-        if (document == null)
-        {
-            return [];
-        }
-
-        var quickInfoResponse = await _quickInfoProvider.Handle(quickInfoRequest, document);
-        var payload = new ResponsePayload(quickInfoResponse, "GetQuickInfoAsync");
-        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, _jsonOptions));
     }
 
     public async Task<byte[]> GetDiagnosticsAsync(string uri, Solution solution)
@@ -385,51 +404,121 @@ class Program
 
             _workerLogger.LogTrace($"Semantic tokens request for {request.DocumentUri}");
 
-            // Check if this is a Razor file
             var isRazorFile = request.DocumentUri.EndsWith(".razor", StringComparison.OrdinalIgnoreCase) ||
                               request.DocumentUri.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase);
 
-            if (!isRazorFile)
-            {
-                _workerLogger.LogTrace($"Not a Razor file: {request.DocumentUri}");
-                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
-                    _jsonOptions));
-            }
+            SemanticTokensResult result;
 
-            if (_razorSemanticTokenService == null)
+            if (isRazorFile)
             {
-                _workerLogger.LogError("Razor semantic token service not initialized");
-                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
-                    _jsonOptions));
-            }
+                if (_razorSemanticTokenService == null || string.IsNullOrEmpty(request.RazorContent))
+                {
+                    return SerializeTokensResponse(SemanticTokensResult.Empty);
+                }
 
-            if (string.IsNullOrEmpty(request.RazorContent))
+                result = await _razorSemanticTokenService.GetSemanticTokensAsync(
+                    request.RazorContent,
+                    request.DocumentUri);
+            }
+            else
             {
-                _workerLogger.LogTrace("No Razor content provided");
-                return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                    new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
-                    _jsonOptions));
+                result = await GetCSharpSemanticTokensAsync(request.DocumentUri);
             }
-
-            var result = await _razorSemanticTokenService.GetSemanticTokensAsync(
-                request.RazorContent,
-                request.DocumentUri);
 
             _workerLogger.LogTrace($"Returning {result.Data.Length / 5} semantic tokens");
-
-            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                new ResponsePayload(result, "GetSemanticTokensAsync"),
-                _jsonOptions));
+            return SerializeTokensResponse(result);
         }
         catch (Exception ex)
         {
             _workerLogger.LogError($"Error getting semantic tokens: {ex.Message}");
             _workerLogger.LogTrace(ex.StackTrace ?? string.Empty);
-            return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
-                new ResponsePayload(SemanticTokensResult.Empty, "GetSemanticTokensAsync"),
-                _jsonOptions));
+            return SerializeTokensResponse(SemanticTokensResult.Empty);
+        }
+    }
+
+    private byte[] SerializeTokensResponse(SemanticTokensResult result)
+    {
+        return Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+            new ResponsePayload(result, "GetSemanticTokensAsync"),
+            _jsonOptions));
+    }
+
+    private async Task<SemanticTokensResult> GetCSharpSemanticTokensAsync(string documentUri)
+    {
+        try
+        {
+        var document = _projectService.GetDocument(documentUri)
+                       ?? _projectService.GetCurrentDocument();
+
+        if (document == null)
+        {
+            _workerLogger.LogTrace($"No document found for C# semantic tokens: {documentUri}");
+            return SemanticTokensResult.Empty;
+        }
+
+        var text = await document.GetTextAsync();
+        var textSpan = TextSpan.FromBounds(0, text.Length);
+
+        var classifiedSpans = await Classifier.GetClassifiedSpansAsync(
+            document, textSpan);
+
+        var semanticSpans = classifiedSpans
+            .Where(s => RazorSemanticTokenService.IsCSharpSemanticClassification(s.ClassificationType))
+            .OrderBy(s => s.TextSpan.Start)
+            .ToList();
+
+        if (semanticSpans.Count == 0)
+            return SemanticTokensResult.Empty;
+
+        var tokens = new int[semanticSpans.Count * 5];
+        var tokenIndex = 0;
+        var previousLine = 0;
+        var previousStartChar = 0;
+        var previousSpanEnd = 0;
+
+        foreach (var span in semanticSpans)
+        {
+            if (previousSpanEnd > span.TextSpan.Start)
+                continue;
+
+            var tokenType = RazorSemanticTokenService.MapCSharpClassificationToTokenType(span.ClassificationType);
+            if (tokenType < 0)
+                continue;
+
+            var linePosition = text.Lines.GetLinePositionSpan(span.TextSpan);
+            var line = linePosition.Start.Line;
+            var startChar = linePosition.Start.Character;
+            var length = span.TextSpan.Length;
+
+            var deltaLine = line - previousLine;
+            var deltaStartChar = deltaLine == 0
+                ? startChar - previousStartChar
+                : startChar;
+
+            tokens[tokenIndex++] = deltaLine;
+            tokens[tokenIndex++] = deltaStartChar;
+            tokens[tokenIndex++] = length;
+            tokens[tokenIndex++] = tokenType;
+            tokens[tokenIndex++] = 0;
+
+            previousLine = line;
+            previousStartChar = startChar;
+            previousSpanEnd = span.TextSpan.End;
+        }
+
+        if (tokenIndex < tokens.Length)
+            tokens = tokens[..tokenIndex];
+
+        return new SemanticTokensResult
+        {
+            Data = tokens,
+            ResultId = Guid.NewGuid().ToString()
+        };
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error getting C# semantic tokens: {ex.Message}");
+            return SemanticTokensResult.Empty;
         }
     }
 
