@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "Mythetech.*"
+    groups:
+      mythetech:
+        patterns:
+          - "Mythetech.*"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore"
