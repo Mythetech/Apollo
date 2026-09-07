@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Services;
 using MudBlazor;
 

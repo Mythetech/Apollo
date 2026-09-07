@@ -9,7 +9,7 @@
 @using Apollo.Components.Settings.Events
 @using Apollo.Components.Shared
 @using Apollo.Components.Theme
-@using Apollo.Components.Shared.ApolloSwitch
+@using Mythetech.Framework.Components.Switch
 @using Microsoft.JSInterop
 @using Apollo.Components.Shared
 @implements IDisposable
@@ -152,16 +152,16 @@
                 </SettingsSectionDisplay>
 
                 <SettingsSectionDisplay Id="section-console" Title="Console">
-                    <ApolloSwitch LabelPlacement="Placement.Left" Color="Color.Secondary" Label="Autoscroll when console input received" @bind-Value="ConsoleOutputService.AutoScroll" />
+                    <MtSwitch Class="settings-switch" LabelPlacement="Placement.Left" Color="Color.Secondary" Label="Autoscroll when console input received" @bind-Value="ConsoleOutputService.AutoScroll" />
                 </SettingsSectionDisplay>
 
                 <SettingsSectionDisplay Id="section-code-analysis" Title="Code Analysis">
-                    <ApolloSwitch 
+                    <MtSwitch Class="settings-switch"
                         LabelPlacement="Placement.Left" 
                         Color="Color.Secondary" 
                         Label="Enable code analysis features (completions, diagnostics)" 
                         @bind-Value="@_codeAnalysisEnabled" />
-                    <ApolloSwitch
+                    <MtSwitch Class="settings-switch"
                         LabelPlacement="Placement.Left"
                         Color="Color.Secondary"
                         Label="Autoscroll when code analysis input received"
@@ -170,7 +170,7 @@
 
                 <SettingsSectionDisplay Id="section-web-application" Title="Web Application">
                     <MudStack>
-                        <ApolloSwitch 
+                        <MtSwitch Class="settings-switch"
                             LabelPlacement="Placement.Left" 
                             Color="Color.Secondary" 
                             Label="Autoscroll when web host output received" 
@@ -217,7 +217,7 @@
                                 
                                 if (property.PropertyType == typeof(bool))
                                 {
-                                    <ApolloSwitch
+                                    <MtSwitch Class="settings-switch"
                                         LabelPlacement="Placement.Left"
                                         Color="Color.Secondary"
                                         Label="@label"

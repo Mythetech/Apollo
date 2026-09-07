@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Commands;
 using KristofferStrube.Blazor.FileSystem;
 using KristofferStrube.Blazor.FileSystemAccess;
@@ -34,7 +34,7 @@ public class FolderOpener : IConsumer<PromptOpenFolder>
         }
         catch (JSException)
         {
-            _snackbar.AddApolloNotification("File system api not supported by current browser", Severity.Error);
+            _snackbar.AddMythetechNotification("File system api not supported by current browser", Severity.Error);
             return;
         }
 
@@ -56,12 +56,12 @@ public class FolderOpener : IConsumer<PromptOpenFolder>
             }
             else
             {
-                _snackbar.AddApolloNotification("No files found in the selected folder", Severity.Warning);
+                _snackbar.AddMythetechNotification("No files found in the selected folder", Severity.Warning);
             }
         }
         catch (Exception ex)
         {
-            _snackbar.AddApolloNotification($"Error reading folder: {ex.Message}", Severity.Error);
+            _snackbar.AddMythetechNotification($"Error reading folder: {ex.Message}", Severity.Error);
         }
     }
 
