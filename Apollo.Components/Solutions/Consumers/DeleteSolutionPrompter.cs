@@ -30,7 +30,7 @@ public class DeleteSolutionPrompter : IConsumer<PromptDeleteSolution>
         if (!_state.HasActiveSolution)
             return;
 
-        var result = await _dialogService.ShowMessageBox(
+        var result = await _dialogService.ShowMessageBoxAsync(
             "Delete Solution",
             $"Are you sure you want to delete solution '{_state.Project.Name}'? This cannot be undone.",
             yesText: "Delete",

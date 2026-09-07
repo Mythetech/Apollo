@@ -20,8 +20,8 @@ namespace Apollo.Components.Shared.ApolloSwitch
         new CssBuilder("mud-switch-m3")
             .AddClass($"mud-disabled", GetDisabledState())
             .AddClass($"mud-readonly", GetReadOnlyState())
-            .AddClass($"mud-switch-label-{Size.ToDescriptionString()}")
-            .AddClass($"mud-input-content-placement-{ConvertPlacement(LabelPlacement).ToDescriptionString()}")
+            .AddClass($"mud-switch-label-{Size.ToString().ToLowerInvariant()}")
+            .AddClass($"mud-input-content-placement-{ConvertPlacement(LabelPlacement).ToString().ToLowerInvariant()}")
             .AddClass("mud-width-full")
             .AddClass(Class)
         .Build();
@@ -40,8 +40,8 @@ namespace Apollo.Components.Shared.ApolloSwitch
         protected string? SwitchClassname =>
         new CssBuilder("mud-button-root mud-icon-button mud-switch-base-m3")
             .AddClass($"mud-ripple mud-ripple-switch", Ripple && !GetReadOnlyState() && !GetDisabledState())
-            .AddClass($"mud-{Color.ToDescriptionString()}-text hover:mud-{Color.ToDescriptionString()}-hover", BoolValue == true)
-            //.AddClass($"mud-{UnCheckedColor.ToDescriptionString()}-text hover:mud-{UnCheckedColor.ToDescriptionString()}-hover", BoolValue == false)
+            .AddClass($"mud-{Color.ToString().ToLowerInvariant()}-text hover:mud-{Color.ToString().ToLowerInvariant()}-hover", BoolValue == true)
+            //.AddClass($"mud-{UnCheckedColor.ToString().ToLowerInvariant()}-text hover:mud-{UnCheckedColor.ToString().ToLowerInvariant()}-hover", BoolValue == false)
             .AddClass($"mud-switch-disabled", GetDisabledState())
             .AddClass($"mud-readonly", GetReadOnlyState())
             .AddClass($"mud-checked", BoolValue)
@@ -53,8 +53,8 @@ namespace Apollo.Components.Shared.ApolloSwitch
         /// </summary>
         protected string? TrackClassname =>
         new CssBuilder("mud-switch-track-m3")
-            .AddClass($"mud-{Color.ToDescriptionString()}", BoolValue == true)
-            .AddClass($"mud-switch-track-{Color.ToDescriptionString()}-m3")
+            .AddClass($"mud-{Color.ToString().ToLowerInvariant()}", BoolValue == true)
+            .AddClass($"mud-switch-track-{Color.ToString().ToLowerInvariant()}-m3")
             .Build();
 
         /// <summary>

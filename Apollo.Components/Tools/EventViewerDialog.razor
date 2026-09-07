@@ -89,15 +89,15 @@
                             </MudText>
                         </MudStack>
 
-                        <MudTimeSeriesChart ChartSeries="@_timelineSeries"
-                                            @bind-SelectedIndex="_timelineSelectedIndex"
-                                            Width="@_timelineWidth"
-                                            Height="@_timelineHeight"
-                                            ChartOptions="@_timelineOptions"
-                                            AxisChartOptions="@_timelineAxisOptions"
-                                            CanHideSeries="true"
-                                            TimeLabelSpacing="@_timelineLabelSpacing"
-                                            DataMarkerTooltipTimeLabelFormat="yyyy MMM dd HH:mm:ss" />
+                        <MudChart T="int"
+                                  ChartType="ChartType.Timeseries"
+                                  ChartSeries="@_timelineSeries"
+                                  @bind-SelectedIndex="_timelineSelectedIndex"
+                                  Width="@_timelineWidth"
+                                  Height="@_timelineHeight"
+                                  ChartOptions="@_timelineOptions"
+                                  CanHideSeries="true"
+                                  MatchBoundsToSize="true" />
 
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">
                             Selected: @(_timelineSelectedIndex < 0 || _timelineSelectedIndex >= _timelineSeries.Count ? "None" : _timelineSeries[_timelineSelectedIndex].Name)
@@ -116,26 +116,23 @@
     private IReadOnlyList<CapturedEvent> _events = Array.Empty<CapturedEvent>();
     private IReadOnlyList<CapturedEventAggregate> _aggregate = Array.Empty<CapturedEventAggregate>();
 
-    private readonly ChartOptions _timelineOptions = new()
+    private readonly TimeSeriesChartOptions _timelineOptions = new()
     {
         YAxisLines = false,
         XAxisLines = false,
         YAxisRequireZeroPoint = true,
         LineStrokeWidth = 2,
         MaxNumYAxisTicks = 6,
-    };
-
-    private readonly AxisChartOptions _timelineAxisOptions = new()
-    {
-        MatchBoundsToSize = true,
         XAxisLabelRotation = 0,
+        LineDisplayType = LineDisplayType.Area,
+        TimeLabelSpacing = TimeSpan.FromMinutes(1),
+        TooltipTimeLabelFormat = "yyyy MMM dd HH:mm:ss",
     };
 
-    private readonly List<TimeSeriesChartSeries> _timelineSeries = new();
+    private readonly List<ChartSeries<int>> _timelineSeries = new();
     private int _timelineSelectedIndex = -1;
     private readonly string _timelineWidth = "100%";
     private readonly string _timelineHeight = "220px";
-    private TimeSpan _timelineLabelSpacing = TimeSpan.FromMinutes(1);
     private const int _timelineTopTypesCount = 5;
 
     protected override void OnInitialized()
@@ -164,6 +161,7 @@
     private void RebuildTimeline()
     {
         _timelineSeries.Clear();
+        _timelineOptions.SeriesDisplayOverrides.Clear();
         _timelineSelectedIndex = -1;
 
         if (_events.Count == 0)
@@ -173,7 +171,7 @@
         var max = _events.Max(x => x.Timestamp.UtcDateTime);
 
         var bucketSize = ChooseBucketSize(max - min);
-        _timelineLabelSpacing = bucketSize >= TimeSpan.FromMinutes(5) ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
+        _timelineOptions.TimeLabelSpacing = bucketSize >= TimeSpan.FromMinutes(5) ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
 
         var topTypes = _aggregate
             .Take(_timelineTopTypesCount)
@@ -206,36 +204,30 @@
         var orderedBuckets = buckets.ToList();
         orderedBuckets.Sort();
 
-        var index = 0;
-        _timelineSeries.Add(new TimeSeriesChartSeries
+        var totalSeries = new ChartSeries<int>
         {
-            Index = index++,
             Name = "All",
             Data = orderedBuckets
-                .Select(b => new TimeSeriesChartSeries.TimeValue(b, totalByBucket.TryGetValue(b, out var c) ? c : 0))
+                .Select(b => (b, totalByBucket.TryGetValue(b, out var c) ? c : 0))
                 .ToList(),
-            IsVisible = true,
-            LineDisplayType = LineDisplayType.Line,
-            DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
-            DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
-        });
+            Visible = true,
+        };
+
+        _timelineSeries.Add(totalSeries);
+        _timelineOptions.SeriesDisplayOverrides[totalSeries] = new SeriesDisplayOverride { LineDisplayType = LineDisplayType.Line };
 
         foreach (var type in _aggregate.Take(_timelineTopTypesCount).Select(x => x.EventType))
         {
             if (!byTypeByBucket.TryGetValue(type, out var typeBuckets))
                 typeBuckets = new Dictionary<DateTime, int>();
 
-            _timelineSeries.Add(new TimeSeriesChartSeries
+            _timelineSeries.Add(new ChartSeries<int>
             {
-                Index = index++,
                 Name = ShortTypeName(type),
                 Data = orderedBuckets
-                    .Select(b => new TimeSeriesChartSeries.TimeValue(b, typeBuckets.TryGetValue(b, out var c) ? c : 0))
+                    .Select(b => (b, typeBuckets.TryGetValue(b, out var c) ? c : 0))
                     .ToList(),
-                IsVisible = true,
-                LineDisplayType = LineDisplayType.Area,
-                DataMarkerTooltipTitleFormat = "{{X_VALUE}}",
-                DataMarkerTooltipSubtitleFormat = "{{Y_VALUE}}"
+                Visible = true,
             });
         }
     }
