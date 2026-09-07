@@ -166,7 +166,7 @@
         }
         catch (Exception ex)
         {
-            await DialogService.ShowMessageBox("Error", $"Failed to create instance: {ex.Message}");
+            await DialogService.ShowMessageBoxAsync("Error", $"Failed to create instance: {ex.Message}");
         }
     }
 

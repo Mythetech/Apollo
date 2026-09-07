@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Commands;
 using Apollo.Components.Solutions.Services;
 using MudBlazor;
@@ -28,6 +28,6 @@ public class Base64Exporter : IConsumer<ExportBase64String>
         
         var encoded = _base64Service.EncodeSolution(_state.Project);
         await _jsApiService.CopyToClipboardAsync(encoded);
-        _snackbar.AddApolloNotification("Base64 exported to clipboard");
+        _snackbar.AddMythetechNotification("Base64 exported to clipboard");
     }
 }

@@ -1,5 +1,5 @@
 @using Apollo.Components.Shared
-@using Apollo.Components.Shared.ApolloNotificationBar
+@using Mythetech.Framework.Components.Snackbar
 @using Apollo.Components.Solutions.Services
 @inject ISnackbar Snackbar
 @inject IGitHubService GitHubService
@@ -72,12 +72,12 @@
                 }
             }
             
-            Snackbar.AddApolloNotification($"Opened repository {repo}", Severity.Success);
+            Snackbar.AddMythetechNotification($"Opened repository {repo}", Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)
         {
-            Snackbar.AddApolloNotification($"Failed to open repository: {ex.Message}", Severity.Error);
+            Snackbar.AddMythetechNotification($"Failed to open repository: {ex.Message}", Severity.Error);
         }
         finally
         {

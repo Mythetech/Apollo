@@ -1,6 +1,6 @@
 using Apollo.Components.Infrastructure;
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Commands;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -58,7 +58,7 @@ public class DocumentFormatter : IConsumer<FormatActiveDocument>, IConsumer<Form
 
         if (reformattedFiles > 0)
         {
-            _snackbar.AddApolloNotification($"Reformated {reformattedFiles} files", Severity.Success);
+            _snackbar.AddMythetechNotification($"Reformated {reformattedFiles} files", Severity.Success);
         }
     }
     

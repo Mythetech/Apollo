@@ -1,6 +1,6 @@
 using System.Reflection;
 using Apollo.Components.Code;
-using Apollo.Components.Infrastructure.Environment;
+using Mythetech.Framework.Infrastructure.Environment;
 using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Components.Library.SampleProjects;
 using Apollo.Components.Solutions.Events;
@@ -52,5 +52,6 @@ public class ActiveTypeStateTests : ApolloBaseTestContext
         public string Name => "production";
         public Version Version => new(0, 0);
         public string BaseAddress => string.Empty;
+        public Mythetech.Framework.Infrastructure.Plugins.Platform Platform => Mythetech.Framework.Infrastructure.Plugins.Platform.WebAssembly;
     }
 }

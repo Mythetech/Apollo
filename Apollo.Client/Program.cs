@@ -4,13 +4,12 @@ using Apollo.Client;
 using Apollo.Client.Analysis;
 using Apollo.Client.Code;
 using Apollo.Client.Hosting;
-using Apollo.Client.Infrastructure;
 using Apollo.Components;
 using Apollo.Components.Analysis;
 using Apollo.Components.Code;
 using Apollo.Components.Hosting;
 using Apollo.Components.Infrastructure;
-using Apollo.Components.Infrastructure.Environment;
+using Mythetech.Framework.WebAssembly;
 using Mythetech.Framework.Infrastructure.MessageBus;
 using Apollo.Infrastructure.Resources;
 using Mythetech.Framework.Infrastructure.Mcp;
@@ -23,7 +22,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 builder.Services.AddMessageBus(typeof(Program).Assembly, typeof(AppState).Assembly, typeof(IConsumer<>).Assembly);
 
-builder.Services.AddSingleton<IRuntimeEnvironment, WebAssemblyRuntimeEnvironment>();
+builder.Services.AddRuntimeEnvironment();
 
 builder.Services.AddComponentsAndServices();
 builder.Services.AddMcp(); //ToDO - fix in framework, shouldn't be required

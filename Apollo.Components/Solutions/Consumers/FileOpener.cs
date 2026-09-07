@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Commands;
 using KristofferStrube.Blazor.FileSystem;
 using KristofferStrube.Blazor.FileSystemAccess;
@@ -36,7 +36,7 @@ public class FileOpener : IConsumer<PromptOpenFile>
         }
         catch (JSException ex)
         {
-            _snackbar.AddApolloNotification("File system api not supported by current browser", Severity.Error);
+            _snackbar.AddMythetechNotification("File system api not supported by current browser", Severity.Error);
         }
         finally
         {

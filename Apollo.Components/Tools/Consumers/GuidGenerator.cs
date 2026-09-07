@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Tools.Commands;
 using MudBlazor;
 
@@ -20,7 +20,7 @@ public class GuidGenerator : IConsumer<GenerateGuid>
     {
         var guid = Guid.NewGuid().ToString();
         await _jsApiService.CopyToClipboardAsync(guid);
-        _snackbar.AddApolloNotification($"Copied {guid} to clipboard!", Severity.Success);
+        _snackbar.AddMythetechNotification($"Copied {guid} to clipboard!", Severity.Success);
     }
 }
 

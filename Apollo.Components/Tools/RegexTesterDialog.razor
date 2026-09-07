@@ -1,7 +1,7 @@
 @using System.Net
 @using System.Text
 @using System.Text.RegularExpressions
-@using Apollo.Components.Shared.ApolloNotificationBar
+@using Mythetech.Framework.Components.Snackbar
 @using Apollo.Components.Theme
 @using MudBlazor
 
@@ -407,7 +407,7 @@
     private async Task CopyPatternAsync()
     {
         await JsApiService.CopyToClipboardAsync(_pattern);
-        Snackbar.AddApolloNotification("Copied pattern to clipboard!", Severity.Success);
+        Snackbar.AddMythetechNotification("Copied pattern to clipboard!", Severity.Success);
     }
 
     private async Task CopyMatchesAsync()
@@ -417,7 +417,7 @@
             : string.Join(System.Environment.NewLine, _matches.Select(m => m.Value));
 
         await JsApiService.CopyToClipboardAsync(text);
-        Snackbar.AddApolloNotification("Copied matches to clipboard!", Severity.Success);
+        Snackbar.AddMythetechNotification("Copied matches to clipboard!", Severity.Success);
     }
 
     private void Close() => MudDialog.Close();

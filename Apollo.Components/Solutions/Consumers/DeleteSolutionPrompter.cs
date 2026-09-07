@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Commands;
 using Apollo.Components.Solutions.Events;
 using MudBlazor;
@@ -30,7 +30,7 @@ public class DeleteSolutionPrompter : IConsumer<PromptDeleteSolution>
         if (!_state.HasActiveSolution)
             return;
 
-        var result = await _dialogService.ShowMessageBox(
+        var result = await _dialogService.ShowMessageBoxAsync(
             "Delete Solution",
             $"Are you sure you want to delete solution '{_state.Project.Name}'? This cannot be undone.",
             yesText: "Delete",
@@ -60,7 +60,7 @@ public class DeleteSolutionPrompter : IConsumer<PromptDeleteSolution>
             // Notify that solution was deleted
             await _bus.PublishAsync(new SolutionDeleted(solutionName));
             
-            _snackbar.AddApolloNotification($"Solution '{solutionName}' was deleted", Severity.Success);
+            _snackbar.AddMythetechNotification($"Solution '{solutionName}' was deleted", Severity.Success);
         }
     }
 }

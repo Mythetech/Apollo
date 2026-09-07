@@ -1,5 +1,5 @@
 using Mythetech.Framework.Infrastructure.MessageBus;
-using Apollo.Components.Shared.ApolloNotificationBar;
+using Mythetech.Framework.Components.Snackbar;
 using Apollo.Components.Solutions.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -34,7 +34,7 @@ public class ShareSolutionHandler : IConsumer<ShareSolution>
     {
         if (_state.Project == null)
         {
-            _snackbar.AddApolloNotification("No solution is currently open", Severity.Warning);
+            _snackbar.AddMythetechNotification("No solution is currently open", Severity.Warning);
             return;
         }
 
@@ -43,6 +43,6 @@ public class ShareSolutionHandler : IConsumer<ShareSolution>
         var url = $"{_navigationManager.BaseUri}?solution={base64}";
 
         await _jsApiService.CopyToClipboardAsync(url);
-        _snackbar.AddApolloNotification("Solution sharing link copied to clipboard!", Severity.Success);
+        _snackbar.AddMythetechNotification("Solution sharing link copied to clipboard!", Severity.Success);
     }
 }
