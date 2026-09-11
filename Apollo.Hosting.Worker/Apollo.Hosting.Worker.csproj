@@ -1,9 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
         <OutputType>Exe</OutputType>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <!-- .NET 11 RC1: the mono toolchain workload manifest no longer defaults these for
+             browser-wasm projects as the .NET 10 manifest did, and without them no runtime
+             pack resolves ("$(MicrosoftNetCoreAppRuntimePackDir)=''"). Setting them keeps the
+             exact .NET 10 configuration: the Mono runtime, self-contained. Remove at GA if the
+             manifest restores the defaults. -->
+        <SelfContained>true</SelfContained>
+        <UseMonoRuntime>true</UseMonoRuntime>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
     </PropertyGroup>
