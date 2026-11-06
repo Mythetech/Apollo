@@ -29,7 +29,7 @@
 | Semantic analysis | ✅ | |
 | Code completion | 🧪 | |
 | Reference highlighting | 🧪 | Basic implementation |
-| IntelliSense completion | 🧪 | Doesn't support user's types |
+| IntelliSense completion | 🧪 | Includes types from every C# file in the solution; Razor component types come from the last build |
 | Quick Info (hover) | 🧪 | |
 | Parameter info | 🧪 | Basic support implemented |
 | Code actions/quick fixes | 💭 | |
