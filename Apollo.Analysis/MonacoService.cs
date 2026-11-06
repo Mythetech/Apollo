@@ -363,6 +363,26 @@ class Program
         }
     }
 
+    public async Task<byte[]> HandleSolutionSyncAsync(string requestJson)
+    {
+        try
+        {
+            var request = JsonSerializer.Deserialize<SolutionSyncRequest>(requestJson, _jsonOptions);
+            if (request == null)
+            {
+                return CreateErrorResponse("Invalid solution sync request");
+            }
+
+            _projectService.UpdateSolution(request.Solution, request.ActiveDocumentPath);
+            return CreateSuccessResponse("Solution synced");
+        }
+        catch (Exception ex)
+        {
+            _workerLogger.LogError($"Error syncing solution: {ex.Message}");
+            return CreateErrorResponse(ex.Message);
+        }
+    }
+
     public async Task<byte[]> HandleUserAssemblyUpdateAsync(string requestJson)
     {
         try

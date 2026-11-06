@@ -24,6 +24,7 @@ public class CodeAnalysisState
     
     public event Func<Task>? OnCodeAnalysisStateChanged;
     private bool _workerReady = false;
+    private bool _solutionSyncPending = true;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -81,6 +82,37 @@ public class CodeAnalysisState
         _nuGetStorageService = nuGetStorageService;
         
         _userAssemblyStore.OnAssemblyUpdated += HandleUserAssemblyUpdated;
+        _solutionsState.SolutionFilesChanged += MarkSolutionSyncPending;
+        _solutionsState.ProjectChanged += MarkSolutionSyncPending;
+    }
+
+    private void MarkSolutionSyncPending() => _solutionSyncPending = true;
+
+    private async Task EnsureSolutionSyncedAsync()
+    {
+        if (!_solutionSyncPending || _workerProxy == null || !_solutionsState.HasActiveSolution)
+            return;
+
+        // Cleared before awaiting so a change during the send queues another sync.
+        _solutionSyncPending = false;
+
+        var activeFile = _solutionsState.ActiveFile;
+        var request = new SolutionSyncRequest
+        {
+            Solution = _solutionsState.Project.ToContract(),
+            ActiveDocumentPath = activeFile?.IsCSharp() == true ? activeFile.Uri : null
+        };
+
+        try
+        {
+            await _workerProxy.UpdateSolutionAsync(JsonSerializer.Serialize(request, JsonOptions));
+        }
+        catch (Exception ex)
+        {
+            _solutionSyncPending = true;
+            _console.AddError("Failed to sync the solution for IntelliSense");
+            _console.AddTrace(ex.Message);
+        }
     }
 
     private async Task HandleUserAssemblyUpdated(byte[] assemblyBytes)
@@ -103,7 +135,9 @@ public class CodeAnalysisState
     {
         if (Disabled || !_workerReady || string.IsNullOrWhiteSpace(code))
             return null;
-        
+
+        await EnsureSolutionSyncedAsync();
+
         var bytes = await _workerProxy!.GetCompletionAsync(code, completion);
         if (bytes == null || bytes.Length == 0)
             return null;
@@ -266,6 +300,8 @@ public class CodeAnalysisState
         if (Disabled || !_workerReady || _workerProxy == null)
             return QuickInfoResult.Empty;
 
+        await EnsureSolutionSyncedAsync();
+
         var request = new { FileName = documentUri, Line = line, Column = column };
 
         try
@@ -300,6 +336,8 @@ public class CodeAnalysisState
     {
         if (Disabled || !_workerReady || _workerProxy == null)
             return null;
+
+        await EnsureSolutionSyncedAsync();
 
         var request = new { FileName = documentUri, Line = line, Column = column };
 
@@ -339,6 +377,8 @@ public class CodeAnalysisState
             _console.AddTrace("Code analysis not ready for semantic tokens");
             return SemanticTokensResult.Empty;
         }
+
+        await EnsureSolutionSyncedAsync();
 
         var request = new SemanticTokensRequest
         {
@@ -384,6 +424,7 @@ public class CodeAnalysisState
             return;
         
         _workerProxy = await _workerFactory.CreateAsync();
+        _solutionSyncPending = true;
 
         _workerProxy.OnError(HandleError);
         _workerProxy.OnLog(HandleLog);

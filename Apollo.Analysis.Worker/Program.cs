@@ -189,6 +189,23 @@ Imports.RegisterOnMessage(async e =>
                 }
                 break;
                 
+            case "update_solution":
+                try
+                {
+                    var syncResult = await monacoService.HandleSolutionSyncAsync(message.Payload);
+                    var syncResponse = new WorkerMessage
+                    {
+                        Action = "solution_update_response",
+                        Payload = Convert.ToBase64String(syncResult)
+                    };
+                    Imports.PostMessage(syncResponse.ToSerialized());
+                }
+                catch (Exception ex)
+                {
+                    loggerBridge.LogTrace($"Error syncing solution: {ex.Message}");
+                }
+                break;
+
             case "set_current_document":
                 try
                 {

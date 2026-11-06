@@ -145,6 +145,10 @@ public class RoslynProjectService
 
         if (_documentIds.TryGetValue(path, out var existingDocumentId))
         {
+            var existing = _workspace.CurrentSolution.GetDocument(existingDocumentId);
+            if (existing != null && existing.TryGetText(out var currentText) && currentText.ContentEquals(sourceText))
+                return;
+
             var solution = _workspace.CurrentSolution.WithDocumentText(existingDocumentId, sourceText);
             _workspace.TryApplyChanges(solution);
             _logger.LogTrace($"Updated document: {path}");
@@ -204,20 +208,26 @@ public class RoslynProjectService
         _logger.LogTrace($"Removed document: {path}");
     }
 
-    public void UpdateSolution(Solution apolloSolution)
+    public void UpdateSolution(Solution apolloSolution, string? activeDocumentPath = null)
     {
         if (!_isInitialized) return;
 
-        var existingPaths = _documentIds.Keys.ToHashSet();
-        var newPaths = apolloSolution.Items.Select(i => i.Path).ToHashSet();
-        
-        foreach (var pathToRemove in existingPaths.Except(newPaths))
+        var csharpItems = apolloSolution.Items
+            .Where(i => i.Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var newPaths = csharpItems.Select(i => i.Path).ToHashSet();
+
+        foreach (var pathToRemove in _documentIds.Keys.Except(newPaths).ToList())
         {
             RemoveDocument(pathToRemove);
         }
-        
-        foreach (var item in apolloSolution.Items)
+
+        foreach (var item in csharpItems)
         {
+            // The editor streams the active document's text, so the snapshot's copy may be stale.
+            if (item.Path == activeDocumentPath && _documentIds.ContainsKey(item.Path))
+                continue;
+
             if (!string.IsNullOrWhiteSpace(item.Content))
             {
                 UpdateDocument(item.Path, item.Content);
