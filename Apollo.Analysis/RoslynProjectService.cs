@@ -27,6 +27,7 @@ public class RoslynProjectService
     private ProjectId _projectId;
     private string? _currentDocumentPath;
     private MetadataReference? _userAssemblyReference;
+    private bool _solutionHasRazorFiles;
     private readonly List<MetadataReference> _nugetReferences = [];
     private bool _isInitialized;
     private bool _isLoadingReferences;
@@ -235,6 +236,13 @@ public class RoslynProjectService
         }
         
         UpdateProjectType(apolloSolution.Type);
+
+        var hasRazorFiles = apolloSolution.Items.Any(i => i.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase));
+        if (hasRazorFiles != _solutionHasRazorFiles)
+        {
+            _solutionHasRazorFiles = hasRazorFiles;
+            ApplyProjectReferences();
+        }
     }
 
     public void UpdateProjectType(ProjectType projectType)
@@ -351,7 +359,8 @@ public class RoslynProjectService
     {
         var references = new List<MetadataReference>(_systemReferences);
         references.AddRange(_nugetReferences);
-        if (_userAssemblyReference != null)
+        // Only Razor component types need the last build; elsewhere its copies of source types make extension calls ambiguous.
+        if (_userAssemblyReference != null && _solutionHasRazorFiles)
         {
             references.Add(_userAssemblyReference);
         }

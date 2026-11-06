@@ -134,6 +134,47 @@ public class UserTypeCompletionTests
         items.ShouldNotContain(i => i.Label == "Inner");
     }
 
+    [Fact(DisplayName = "Extension methods in source are not ambiguous with the last build's user assembly")]
+    public async Task UserAssembly_DoesNotMakeExtensionMethodsAmbiguous()
+    {
+        const string extensions = "namespace Demo;\npublic static class Ext { public static int Twice(this int x) => x * 2; }\n";
+        const string program = "using Demo;\nclass Program\n{\n    static void Main()\n    {\n        System.Console.WriteLine(2.Twice());\n    }\n}\n";
+        var service = await CreateServiceAsync();
+        service.SetUserAssemblyReference(CompileAssembly("UserAssembly", extensions));
+
+        var diagnostics = await GetDiagnosticsAsync(service, new Solution
+        {
+            Name = "Demo",
+            Items =
+            [
+                new SolutionItem { Path = ProgramPath, Content = program },
+                new SolutionItem { Path = "virtual/Demo/Ext.cs", Content = extensions }
+            ]
+        });
+
+        diagnostics.ShouldNotContain(d => d.Message.Contains("The call is ambiguous"));
+    }
+
+    [Fact(DisplayName = "Solutions with Razor files still see component types from the last build")]
+    public async Task UserAssembly_ProvidesComponentTypesToRazorSolutions()
+    {
+        const string program = "using Demo;\nclass Program\n{\n    static void Main()\n    {\n        var counter = new Counter();\n    }\n}\n";
+        var service = await CreateServiceAsync();
+        service.SetUserAssemblyReference(CompileAssembly("UserAssembly", "namespace Demo; public class Counter {}"));
+
+        var diagnostics = await GetDiagnosticsAsync(service, new Solution
+        {
+            Name = "Demo",
+            Items =
+            [
+                new SolutionItem { Path = ProgramPath, Content = program },
+                new SolutionItem { Path = RazorPath, Content = "<h1>Counter</h1>" }
+            ]
+        });
+
+        diagnostics.ShouldNotContain(d => d.Severity == 8);
+    }
+
     [Fact(DisplayName = "Completion marks user constants with the constant kind")]
     public async Task Completion_MarksConstants()
     {
@@ -193,15 +234,13 @@ public class UserTypeCompletionTests
             Items =
             [
                 new SolutionItem { Path = ProgramPath, Content = ValidProgram },
-                new SolutionItem { Path = FizzBuzzPath, Content = FizzBuzzCs }
+                new SolutionItem { Path = FizzBuzzPath, Content = FizzBuzzCs },
+                new SolutionItem { Path = RazorPath, Content = "<h1>Counter</h1>" }
             ]
         };
 
-        var bytes = await service.GetDiagnosticsAsync(ProgramPath, solution);
+        var diagnostics = await GetDiagnosticsAsync(service, solution);
 
-        var response = JsonSerializer.Deserialize<ResponsePayload>(bytes, JsonOptions);
-        var diagnostics = JsonSerializer.Deserialize<List<Diagnostic>>(response!.Payload!.ToString()!, JsonOptions);
-        diagnostics.ShouldNotBeNull();
         diagnostics.ShouldNotContain(d => d.Message.Contains("conflicts with the imported type"));
     }
 
@@ -263,6 +302,15 @@ public class UserTypeCompletionTests
         var response = JsonSerializer.Deserialize<ResponsePayload>(Encoding.UTF8.GetString(bytes), JsonOptions);
         var wrapper = JsonSerializer.Deserialize<CompletionResponseWrapper>(response!.Payload!.ToString()!, JsonOptions);
         return wrapper?.Payload?.Items?.ToList() ?? [];
+    }
+
+    private static async Task<List<Diagnostic>> GetDiagnosticsAsync(MonacoService service, Solution solution)
+    {
+        var bytes = await service.GetDiagnosticsAsync(ProgramPath, solution);
+        var response = JsonSerializer.Deserialize<ResponsePayload>(bytes, JsonOptions);
+        var diagnostics = JsonSerializer.Deserialize<List<Diagnostic>>(response!.Payload!.ToString()!, JsonOptions);
+        diagnostics.ShouldNotBeNull();
+        return diagnostics;
     }
 
     private static byte[] CompileAssembly(string assemblyName, string source)
