@@ -35,7 +35,7 @@ public class CodeAnalysisStateTests
 
     public CodeAnalysisStateTests()
     {
-        _solutionsState = new SolutionsState(null, new TestMessageBus(), Substitute.For<ISolutionSaveService>(), Substitute.For<IHostingService>());
+        _solutionsState = new SolutionsState(null!, new TestMessageBus(), Substitute.For<ISolutionSaveService>(), Substitute.For<IHostingService>());
         _solutionsState.Solutions.Add(new SolutionModel
         {
             Name = SolutionName,
