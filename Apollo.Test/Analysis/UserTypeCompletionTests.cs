@@ -12,6 +12,7 @@ using OmniSharp.Models.v1.Completion;
 using Shouldly;
 using Xunit;
 using CompletionItem = OmniSharp.Models.v1.Completion.CompletionItem;
+using Diagnostic = Apollo.Contracts.Analysis.Diagnostic;
 using Solution = Apollo.Contracts.Solutions.Solution;
 
 namespace Apollo.Test.Analysis;
@@ -19,6 +20,11 @@ namespace Apollo.Test.Analysis;
 public class UserTypeCompletionTests
 {
     private const string ProgramPath = "virtual/Demo/Program.cs";
+    private const string FizzBuzzPath = "virtual/Demo/FizzBuzz.cs";
+
+    private const string FizzBuzzCs = "namespace Demo;\npublic class FizzBuzz\n{\n    public string GetValue(int i) => i.ToString();\n    public int Count { get; set; }\n}\npublic struct Point { public int X; }\npublic record Person(string Name);\n";
+
+    private const string ValidProgram = "using Demo;\nclass Program\n{\n    static void Main()\n    {\n        var fizzBuzz = new FizzBuzz();\n        System.Console.WriteLine(fizzBuzz.GetValue(1));\n    }\n}\n";
 
     private const string PackageProgram = "using Pkg;\nclass Program\n{\n    static void Main()\n    {\n        var x = new FromP\n    }\n}\n";
 
@@ -54,6 +60,29 @@ public class UserTypeCompletionTests
 
         var items = await GetCompletionsAsync(service, ProgramPath, PackageProgram, line: 5, column: 25);
         items.ShouldContain(i => i.Label == "FromPackage");
+    }
+
+    [Fact(DisplayName = "Source types do not conflict with the same types in the last build's user assembly")]
+    public async Task UserAssembly_DoesNotReportTypeConflicts()
+    {
+        var service = await CreateServiceAsync();
+        service.SetUserAssemblyReference(CompileAssembly("UserAssembly", FizzBuzzCs));
+        var solution = new Solution
+        {
+            Name = "Demo",
+            Items =
+            [
+                new SolutionItem { Path = ProgramPath, Content = ValidProgram },
+                new SolutionItem { Path = FizzBuzzPath, Content = FizzBuzzCs }
+            ]
+        };
+
+        var bytes = await service.GetDiagnosticsAsync(ProgramPath, solution);
+
+        var response = JsonSerializer.Deserialize<ResponsePayload>(bytes, JsonOptions);
+        var diagnostics = JsonSerializer.Deserialize<List<Diagnostic>>(response!.Payload!.ToString()!, JsonOptions);
+        diagnostics.ShouldNotBeNull();
+        diagnostics.ShouldNotContain(d => d.Message.Contains("conflicts with the imported type"));
     }
 
     private async Task<MonacoService> CreateServiceAsync()

@@ -72,7 +72,9 @@ public class RoslynProject
             optimizationLevel: OptimizationLevel.Debug,
             allowUnsafe: true,
             concurrentBuild: true,
-            metadataImportOptions: MetadataImportOptions.Public);
+            metadataImportOptions: MetadataImportOptions.Public,
+            // Source documents shadow the last build's user assembly, so this conflict is expected.
+            specificDiagnosticOptions: [new KeyValuePair<string, ReportDiagnostic>("CS0436", ReportDiagnostic.Suppress)]);
     }
 
     public RoslynProject(string uri, IMetadataReferenceResolver resolver, ILoggerProxy logger)
