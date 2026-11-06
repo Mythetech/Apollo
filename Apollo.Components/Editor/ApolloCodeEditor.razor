@@ -249,7 +249,7 @@
                         {
                             
                             LabelAsString = item.Label,
-                            Kind = MapCompletionKind(item.Kind),
+                            Kind = item.Kind.ToMonacoKind(),
                             Detail = item.Detail,
                             DocumentationAsObject = new MarkdownString { Value = item.Documentation },
                             InsertText = item.TextEdit?.NewText,
@@ -484,25 +484,6 @@
             Logger.LogError(ex, "Signature help error");
             return null;
         }
-    }
-
-    private CompletionItemKind MapCompletionKind(OmniSharp.Models.v1.Completion.CompletionItemKind kind)
-    {
-        return kind switch
-        {
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Class => CompletionItemKind.Class,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Method => CompletionItemKind.Method,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Field => CompletionItemKind.Field,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Property => CompletionItemKind.Property,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Variable => CompletionItemKind.Variable,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Interface => CompletionItemKind.Interface,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Enum => CompletionItemKind.Enum,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.EnumMember => CompletionItemKind.EnumMember,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Keyword => CompletionItemKind.Keyword,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Snippet => CompletionItemKind.Snippet,
-            OmniSharp.Models.v1.Completion.CompletionItemKind.Text => CompletionItemKind.Text,
-            _ => CompletionItemKind.Text
-        };
     }
 
     private CancellationTokenSource? _diagnosticsCancellation;

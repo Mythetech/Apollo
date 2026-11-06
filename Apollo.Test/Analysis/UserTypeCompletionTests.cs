@@ -134,6 +134,28 @@ public class UserTypeCompletionTests
         items.ShouldNotContain(i => i.Label == "Inner");
     }
 
+    [Fact(DisplayName = "Completion marks user constants with the constant kind")]
+    public async Task Completion_MarksConstants()
+    {
+        const string code = "class Limits { public const int Max = 10; }\nclass Program\n{\n    static void Main()\n    {\n        var max = Limits.\n    }\n}\n";
+        var service = await CreateServiceAsync();
+
+        var items = await GetCompletionsAsync(service, ProgramPath, code, line: 5, column: 25, triggerCharacter: '.');
+
+        items.ShouldContain(i => i.Label == "Max" && i.Kind == CompletionItemKind.Constant);
+    }
+
+    [Fact(DisplayName = "Completion marks type parameters with the type parameter kind")]
+    public async Task Completion_MarksTypeParameters()
+    {
+        const string code = "class Program\n{\n    static void Use<TItem>()\n    {\n        TIt\n    }\n}\n";
+        var service = await CreateServiceAsync();
+
+        var items = await GetCompletionsAsync(service, ProgramPath, code, line: 4, column: 11);
+
+        items.ShouldContain(i => i.Label == "TItem" && i.Kind == CompletionItemKind.TypeParameter);
+    }
+
     [Fact(DisplayName = "NuGet references stay in completions after the user assembly updates")]
     public async Task NuGetReferences_SurviveUserAssemblyUpdate()
     {

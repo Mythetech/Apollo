@@ -620,6 +620,8 @@ class Program
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Property;
         if (tags.Contains(WellKnownTags.Field))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Field;
+        if (tags.Contains(WellKnownTags.Constant))
+            return OmniSharp.Models.v1.Completion.CompletionItemKind.Constant;
         if (tags.Contains(WellKnownTags.Event))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Event;
         if (tags.Contains(WellKnownTags.Enum))
@@ -630,6 +632,8 @@ class Program
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Struct;
         if (tags.Contains(WellKnownTags.Interface))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Interface;
+        if (tags.Contains(WellKnownTags.TypeParameter))
+            return OmniSharp.Models.v1.Completion.CompletionItemKind.TypeParameter;
         if (tags.Contains(WellKnownTags.Delegate))
             return OmniSharp.Models.v1.Completion.CompletionItemKind.Method;
         if (tags.Contains(WellKnownTags.Keyword))
