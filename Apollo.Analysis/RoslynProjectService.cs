@@ -248,7 +248,7 @@ public class RoslynProjectService
         try
         {
             _userAssemblyReference = MetadataReference.CreateFromImage(assemblyBytes);
-            UpdateProjectReferences();
+            ApplyProjectReferences();
             _logger.LogTrace("User assembly reference updated");
         }
         catch (Exception ex)
@@ -260,24 +260,20 @@ public class RoslynProjectService
     public void ClearUserAssemblyReference()
     {
         _userAssemblyReference = null;
-        UpdateProjectReferences();
+        ApplyProjectReferences();
         _logger.LogTrace("User assembly reference cleared");
     }
 
-    private void UpdateProjectReferences()
+    private void ApplyProjectReferences()
     {
         var project = _workspace.CurrentSolution.GetProject(_projectId);
         if (project == null) return;
 
-        var references = new List<MetadataReference>(_systemReferences);
-        if (_userAssemblyReference != null)
-        {
-            references.Add(_userAssemblyReference);
-        }
-
-        var newSolution = _workspace.CurrentSolution.WithProjectMetadataReferences(_projectId, references);
+        var allReferences = GetAllReferences().ToList();
+        var newSolution = _workspace.CurrentSolution.WithProjectMetadataReferences(_projectId, allReferences);
         _workspace.TryApplyChanges(newSolution);
         _completionService.UpdateWorkspace(_workspace);
+        _logger.LogTrace($"Updated project with {allReferences.Count} total references");
     }
 
     public async Task<CompletionResponse?> GetCompletionsAsync(string path, int line, int column, CompletionRequest request)
@@ -371,20 +367,8 @@ public class RoslynProjectService
                 }
             }
         }
-        
-        UpdateNugetProjectReferences();
-    }
 
-    private void UpdateNugetProjectReferences()
-    {
-        var currentSolution = _workspace.CurrentSolution;
-        var project = currentSolution.GetProject(_projectId);
-        if (project == null) return;
-
-        var allReferences = GetAllReferences().ToList();
-        var newSolution = currentSolution.WithProjectMetadataReferences(_projectId, allReferences);
-        _workspace.TryApplyChanges(newSolution);
-        _logger.LogTrace($"Updated project with {allReferences.Count} total references");
+        ApplyProjectReferences();
     }
 }
 
