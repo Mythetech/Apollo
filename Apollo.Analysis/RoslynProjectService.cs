@@ -27,6 +27,7 @@ public class RoslynProjectService
     private ProjectId _projectId;
     private string? _currentDocumentPath;
     private MetadataReference? _userAssemblyReference;
+    private bool _solutionHasRazorFiles;
     private readonly List<MetadataReference> _nugetReferences = [];
     private bool _isInitialized;
     private bool _isLoadingReferences;
@@ -145,6 +146,10 @@ public class RoslynProjectService
 
         if (_documentIds.TryGetValue(path, out var existingDocumentId))
         {
+            var existing = _workspace.CurrentSolution.GetDocument(existingDocumentId);
+            if (existing != null && existing.TryGetText(out var currentText) && currentText.ContentEquals(sourceText))
+                return;
+
             var solution = _workspace.CurrentSolution.WithDocumentText(existingDocumentId, sourceText);
             _workspace.TryApplyChanges(solution);
             _logger.LogTrace($"Updated document: {path}");
@@ -204,20 +209,26 @@ public class RoslynProjectService
         _logger.LogTrace($"Removed document: {path}");
     }
 
-    public void UpdateSolution(Solution apolloSolution)
+    public void UpdateSolution(Solution apolloSolution, string? activeDocumentPath = null)
     {
         if (!_isInitialized) return;
 
-        var existingPaths = _documentIds.Keys.ToHashSet();
-        var newPaths = apolloSolution.Items.Select(i => i.Path).ToHashSet();
-        
-        foreach (var pathToRemove in existingPaths.Except(newPaths))
+        var csharpItems = apolloSolution.Items
+            .Where(i => i.Path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var newPaths = csharpItems.Select(i => i.Path).ToHashSet();
+
+        foreach (var pathToRemove in _documentIds.Keys.Except(newPaths).ToList())
         {
             RemoveDocument(pathToRemove);
         }
-        
-        foreach (var item in apolloSolution.Items)
+
+        foreach (var item in csharpItems)
         {
+            // The editor streams the active document's text, so the snapshot's copy may be stale.
+            if (item.Path == activeDocumentPath && _documentIds.ContainsKey(item.Path))
+                continue;
+
             if (!string.IsNullOrWhiteSpace(item.Content))
             {
                 UpdateDocument(item.Path, item.Content);
@@ -225,6 +236,13 @@ public class RoslynProjectService
         }
         
         UpdateProjectType(apolloSolution.Type);
+
+        var hasRazorFiles = apolloSolution.Items.Any(i => i.Path.EndsWith(".razor", StringComparison.OrdinalIgnoreCase));
+        if (hasRazorFiles != _solutionHasRazorFiles)
+        {
+            _solutionHasRazorFiles = hasRazorFiles;
+            ApplyProjectReferences();
+        }
     }
 
     public void UpdateProjectType(ProjectType projectType)
@@ -248,7 +266,7 @@ public class RoslynProjectService
         try
         {
             _userAssemblyReference = MetadataReference.CreateFromImage(assemblyBytes);
-            UpdateProjectReferences();
+            ApplyProjectReferences();
             _logger.LogTrace("User assembly reference updated");
         }
         catch (Exception ex)
@@ -260,24 +278,20 @@ public class RoslynProjectService
     public void ClearUserAssemblyReference()
     {
         _userAssemblyReference = null;
-        UpdateProjectReferences();
+        ApplyProjectReferences();
         _logger.LogTrace("User assembly reference cleared");
     }
 
-    private void UpdateProjectReferences()
+    private void ApplyProjectReferences()
     {
         var project = _workspace.CurrentSolution.GetProject(_projectId);
         if (project == null) return;
 
-        var references = new List<MetadataReference>(_systemReferences);
-        if (_userAssemblyReference != null)
-        {
-            references.Add(_userAssemblyReference);
-        }
-
-        var newSolution = _workspace.CurrentSolution.WithProjectMetadataReferences(_projectId, references);
+        var allReferences = GetAllReferences().ToList();
+        var newSolution = _workspace.CurrentSolution.WithProjectMetadataReferences(_projectId, allReferences);
         _workspace.TryApplyChanges(newSolution);
         _completionService.UpdateWorkspace(_workspace);
+        _logger.LogTrace($"Updated project with {allReferences.Count} total references");
     }
 
     public async Task<CompletionResponse?> GetCompletionsAsync(string path, int line, int column, CompletionRequest request)
@@ -345,7 +359,8 @@ public class RoslynProjectService
     {
         var references = new List<MetadataReference>(_systemReferences);
         references.AddRange(_nugetReferences);
-        if (_userAssemblyReference != null)
+        // Only Razor component types need the last build; elsewhere its copies of source types make extension calls ambiguous.
+        if (_userAssemblyReference != null && _solutionHasRazorFiles)
         {
             references.Add(_userAssemblyReference);
         }
@@ -371,20 +386,8 @@ public class RoslynProjectService
                 }
             }
         }
-        
-        UpdateNugetProjectReferences();
-    }
 
-    private void UpdateNugetProjectReferences()
-    {
-        var currentSolution = _workspace.CurrentSolution;
-        var project = currentSolution.GetProject(_projectId);
-        if (project == null) return;
-
-        var allReferences = GetAllReferences().ToList();
-        var newSolution = currentSolution.WithProjectMetadataReferences(_projectId, allReferences);
-        _workspace.TryApplyChanges(newSolution);
-        _logger.LogTrace($"Updated project with {allReferences.Count} total references");
+        ApplyProjectReferences();
     }
 }
 

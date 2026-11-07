@@ -15,7 +15,9 @@ public interface ICodeAnalysisWorker : IWorkerProxy
     Task<byte[]> GetDiagnosticsAsync(string serializedSolution);
     
     Task<byte[]> UpdateDocumentAsync(string documentUpdateRequest);
-    
+
+    Task<byte[]> UpdateSolutionAsync(string solutionSyncRequest);
+
     Task<byte[]> SetCurrentDocumentAsync(string setCurrentDocumentRequest);
     
     Task<byte[]> UpdateUserAssemblyAsync(string userAssemblyUpdateRequest);

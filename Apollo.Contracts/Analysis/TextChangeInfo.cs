@@ -1,3 +1,5 @@
+using Apollo.Contracts.Solutions;
+
 namespace Apollo.Contracts.Analysis;
 
 public class TextChangeInfo
@@ -32,5 +34,11 @@ public class SetCurrentDocumentRequest
 public class UserAssemblyUpdateRequest
 {
     public byte[]? AssemblyBytes { get; set; }
+}
+
+public class SolutionSyncRequest
+{
+    public Solution Solution { get; set; } = new();
+    public string? ActiveDocumentPath { get; set; }
 }
 

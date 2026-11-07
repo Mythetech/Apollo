@@ -81,6 +81,9 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
                     case "document_update_response":
                         _documentUpdateResponse = Convert.FromBase64String(message.Payload);
                         break;
+                    case "solution_update_response":
+                        _solutionUpdateResponse = Convert.FromBase64String(message.Payload);
+                        break;
                     case "set_current_document_response":
                         _setCurrentDocumentResponse = Convert.FromBase64String(message.Payload);
                         break;
@@ -259,6 +262,7 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
 
     private byte[]? _diagnosticsResponse;
     private byte[]? _documentUpdateResponse;
+    private byte[]? _solutionUpdateResponse;
     private byte[]? _setCurrentDocumentResponse;
     private byte[]? _userAssemblyUpdateResponse;
     private byte[]? _semanticTokensResponse;
@@ -290,6 +294,32 @@ public class CodeAnalysisWorkerProxy : ICodeAnalysisWorker, IWorkerProxy
         }
 
         return _documentUpdateResponse ?? [];
+    }
+
+    public async Task<byte[]> UpdateSolutionAsync(string solutionSyncRequest)
+    {
+        _solutionUpdateResponse = null;
+
+        await _worker.PostMessageAsync(JsonSerializer.Serialize(new WorkerMessage
+        {
+            Action = "update_solution",
+            Payload = solutionSyncRequest
+        }));
+
+        for (int i = 0; i < 30; i++)
+        {
+            if (_solutionUpdateResponse == null)
+            {
+                await Task.Delay(100);
+                await Task.Yield();
+            }
+            else
+            {
+                return _solutionUpdateResponse;
+            }
+        }
+
+        return _solutionUpdateResponse ?? [];
     }
 
     public async Task<byte[]> SetCurrentDocumentAsync(string setCurrentDocumentRequest)
