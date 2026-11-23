@@ -7,10 +7,10 @@
     <PackageVersion Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageVersion Include="BlazorMonaco" Version="3.3.0" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
-    <PackageVersion Include="Mythetech.Framework" Version="0.18.1" />
-    <PackageVersion Include="Mythetech.Framework.WebAssembly" Version="0.18.1" />
+    <PackageVersion Include="Mythetech.Framework" Version="0.23.2" />
+    <PackageVersion Include="Mythetech.Framework.WebAssembly" Version="0.23.1" />
     <!-- Blazor WebAssembly -->
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.5" />
     <PackageVersion Include="KristofferStrube.Blazor.FileSystem" Version="0.3.1" />
     <PackageVersion Include="KristofferStrube.Blazor.FileSystemAccess" Version="3.2.2" />
